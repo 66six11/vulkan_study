@@ -28,7 +28,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# 添加 vcpkg 工具链支持
+# 添加 vcpkg 工具链支持，替换为你的实际路径
 set(CMAKE_TOOLCHAIN_FILE "C:/Users/C66/.vcpkg-clion/vcpkg/scripts/buildsystems/vcpkg.cmake"
         CACHE STRING "Vcpkg toolchain file")
 set(VCPKG_TARGET_TRIPLET "x64-windows" CACHE STRING "Vcpkg target triplet")
