@@ -9,16 +9,33 @@
 #include <set>
 #include <algorithm>
 
+/**
+ * @brief 验证层名称列表
+ * 
+ * 定义要启用的验证层，用于调试和验证Vulkan API调用的正确性
+ */
 const std::vector<const char*> validationLayers = {
     "VK_LAYER_KHRONOS_validation"
 };
 
+/**
+ * @brief 是否启用验证层
+ * 
+ * 在调试模式下启用验证层，在发布模式下禁用以提高性能
+ */
 #ifdef NDEBUG
 const bool enableValidationLayers = false;
 #else
 const bool enableValidationLayers = true;
 #endif
 
+/**
+ * @brief 获取必需的实例扩展
+ * 
+ * 获取GLFW所需的实例扩展，并在启用验证层时添加调试扩展
+ * 
+ * @return 必需的扩展名称列表
+ */
 std::vector<const char*> getRequiredExtensions() {
     uint32_t glfwExtensionCount = 0;
     const char** glfwExtensions;
@@ -33,6 +50,13 @@ std::vector<const char*> getRequiredExtensions() {
     return extensions;
 }
 
+/**
+ * @brief 检查验证层支持
+ * 
+ * 检查系统是否支持所需的验证层
+ * 
+ * @return 如果所有验证层都支持则返回true，否则返回false
+ */
 bool checkValidationLayerSupport() {
     uint32_t layerCount;
     vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
@@ -58,6 +82,14 @@ bool checkValidationLayerSupport() {
     return true;
 }
 
+/**
+ * @brief 创建Vulkan实例
+ * 
+ * 创建Vulkan实例，这是使用Vulkan API的第一步，用于初始化Vulkan库并设置全局状态
+ * 
+ * @param instance [out] 创建的Vulkan实例
+ * @param window 指向GLFW窗口的指针，用于获取必要的扩展
+ */
 void createInstance(VkInstance& instance, GLFWwindow* window) {
     if (enableValidationLayers && !checkValidationLayerSupport()) {
         throw std::runtime_error("validation layers requested, but not available!");
@@ -99,16 +131,41 @@ void createInstance(VkInstance& instance, GLFWwindow* window) {
     }
 }
 
+/**
+ * @brief 设置调试信息回调
+ * 
+ * 配置Vulkan调试信息回调函数，用于捕获验证层的警告和错误信息
+ * 
+ * @param instance Vulkan实例
+ */
 void setupDebugMessenger(VkInstance instance) {
     // 暂时留空，后续可以添加调试信息
 }
 
+/**
+ * @brief 创建窗口表面
+ * 
+ * 创建连接Vulkan和本地窗口系统的表面对象
+ * 
+ * @param instance Vulkan实例
+ * @param window 指向GLFW窗口的指针
+ * @param surface [out] 创建的表面对象
+ */
 void createSurface(VkInstance instance, GLFWwindow* window, VkSurfaceKHR& surface) {
     if (glfwCreateWindowSurface(instance, window, nullptr, &surface) != VK_SUCCESS) {
         throw std::runtime_error("failed to create window surface!");
     }
 }
 
+/**
+ * @brief 选择合适的物理设备
+ * 
+ * 枚举系统中的物理设备并选择一个支持所需功能的设备
+ * 
+ * @param instance Vulkan实例
+ * @param surface 窗口表面，用于检查设备对表面的支持
+ * @param physicalDevice [out] 选中的物理设备
+ */
 void pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface, VkPhysicalDevice& physicalDevice) {
     uint32_t deviceCount = 0;
     vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
@@ -132,6 +189,18 @@ void pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface, VkPhysicalDev
     }
 }
 
+/**
+ * @brief 创建逻辑设备
+ * 
+ * 基于物理设备创建逻辑设备，逻辑设备是与GPU交互的主要接口
+ * 
+ * @param physicalDevice 物理设备
+ * @param surface 窗口表面，用于检查呈现队列的支持
+ * @param device [out] 创建的逻辑设备
+ * @param indices 队列族索引
+ * @param graphicsQueue [out] 图形队列
+ * @param presentQueue [out] 呈现队列
+ */
 void createLogicalDevice(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, VkDevice& device, 
                         QueueFamilyIndices indices, VkQueue& graphicsQueue, VkQueue& presentQueue) {
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;

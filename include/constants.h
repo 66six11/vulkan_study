@@ -4,28 +4,54 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
-// 声明窗口常量
-extern const uint32_t WIDTH;   // 窗口宽度
-extern const uint32_t HEIGHT;  // 窗口高度
+/**
+ * @brief 窗口宽度常量
+ * 
+ * 定义应用程序窗口的宽度（像素）
+ */
+extern const uint32_t WIDTH;
 
-// 定义需要的设备扩展
+/**
+ * @brief 窗口高度常量
+ * 
+ * 定义应用程序窗口的高度（像素）
+ */
+extern const uint32_t HEIGHT;
+
+/**
+ * @brief 设备扩展列表
+ * 
+ * 定义应用程序需要启用的设备扩展列表
+ */
 extern const std::vector<const char*> deviceExtensions;
 
-// 定义交换链支持的细节结构
-// 封装物理设备对交换链的支持信息，包括能力、格式和呈现模式
+/**
+ * @brief 交换链支持详情结构体
+ * 
+ * 封装物理设备对交换链的支持信息，包括能力、格式和呈现模式
+ */
 struct SwapChainSupportDetails {
     VkSurfaceCapabilitiesKHR capabilities;  // 表面能力，包括最小/最大图像数量、尺寸范围等
-    std::vector<VkSurfaceFormatKHR> formats;  // 支持的表面格式
-    std::vector<VkPresentModeKHR> presentModes;  // 支持的呈现模式
+    std::vector<VkSurfaceFormatKHR> formats;  // 支持的表面格式列表
+    std::vector<VkPresentModeKHR> presentModes;  // 支持的呈现模式列表
 };
 
-// 定义队列族索引结构
-// 用于存储图形队列和呈现队列的索引，便于后续创建逻辑设备
+/**
+ * @brief 队列族索引结构体
+ * 
+ * 用于存储图形队列和呈现队列的索引，便于后续创建逻辑设备
+ */
 struct QueueFamilyIndices {
     std::optional<uint32_t> graphicsFamily;  // 图形队列族索引，用于图形命令提交
     std::optional<uint32_t> presentFamily;   // 呈现队列族索引，用于将图像呈现到屏幕
 
-    // 检查是否找到了所有必需的队列族
+    /**
+     * @brief 检查队列族是否完整
+     * 
+     * 检查是否找到了所有必需的队列族（图形队列和呈现队列）
+     * 
+     * @return 如果两个队列族都有值则返回true，否则返回false
+     */
     bool isComplete() const {
         // 如果两个队列族都有值，则返回true
         return graphicsFamily.has_value() && presentFamily.has_value();

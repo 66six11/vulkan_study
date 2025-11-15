@@ -20,11 +20,14 @@
 #include <limits>
 #include <vulkan/vulkan_core.h>
 
-// 引入常量定义
+// 引入常量定义
 #include "../include/constants.h"
 
-// 运行应用程序的主要函数
-// 按顺序执行初始化、主循环和清理操作
+/**
+ * @brief 运行应用程序的主要函数
+ * 
+ * 按顺序执行初始化、主循环和清理操作，是应用程序的主控制流程
+ */
 void Application::run() {
     // 初始化GLFW窗口
     initWindow();
@@ -36,7 +39,11 @@ void Application::run() {
     cleanup();
 }
 
-// 初始化GLFW窗口
+/**
+ * @brief 初始化GLFW窗口
+ * 
+ * 初始化GLFW库并创建应用程序窗口，设置窗口属性
+ */
 void Application::initWindow() {
     glfwInit();
 
@@ -46,7 +53,12 @@ void Application::initWindow() {
     window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan Triangle", nullptr, nullptr);
 }
 
-// 初始化Vulkan
+/**
+ * @brief 初始化Vulkan
+ * 
+ * 初始化所有Vulkan相关对象，包括实例、表面、物理设备、逻辑设备、
+ * 交换链、渲染通道、图形管线、帧缓冲、命令池和同步对象
+ */
 void Application::initVulkan() {
     createInstance(instance, window);
     setupDebugMessenger(instance);
@@ -75,8 +87,11 @@ void Application::initVulkan() {
     }
 }
 
-// 主循环
-// 持续处理窗口事件并渲染帧，直到窗口关闭
+/**
+ * @brief 主循环
+ * 
+ * 持续处理窗口事件并渲染帧，直到窗口关闭，这是应用程序的渲染循环核心
+ */
 void Application::mainLoop() {
     // 循环直到窗口应该关闭
     while (!glfwWindowShouldClose(window)) {
@@ -88,8 +103,12 @@ void Application::mainLoop() {
     }
 }
 
-// 清理资源
-// 按照创建的相反顺序销毁所有Vulkan对象，释放资源
+/**
+ * @brief 清理资源
+ * 
+ * 按照创建的相反顺序销毁所有Vulkan对象，释放资源，防止内存泄漏
+ * 这是Vulkan应用程序生命周期管理的重要部分
+ */
 void Application::cleanup() {
     // 清理同步对象
     // 销毁渲染完成信号量
