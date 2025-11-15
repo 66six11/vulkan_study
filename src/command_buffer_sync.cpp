@@ -4,52 +4,60 @@
 #include <stdexcept>
 #include <vector>
 
-void createCommandPool(VkDevice device, QueueFamilyIndices indices, VkCommandPool& commandPool) {
+void createCommandPool(VkDevice device, QueueFamilyIndices indices, VkCommandPool& commandPool)
+{
     VkCommandPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     poolInfo.queueFamilyIndex = indices.graphicsFamily.value();
 
-    if (vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
+    if (vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS)
+    {
         throw std::runtime_error("failed to create command pool!");
     }
 }
 
-void createCommandBuffers(VkDevice device, VkCommandPool commandPool, 
-                         const std::vector<VkFramebuffer>& swapChainFramebuffers,
-                         VkRenderPass renderPass, VkExtent2D swapChainExtent,
-                         VkPipeline graphicsPipeline, const std::vector<VkImageView>& swapChainImageViews,
-                         std::vector<VkCommandBuffer>& commandBuffers) {
+void createCommandBuffers(VkDevice device, VkCommandPool commandPool,
+                          const std::vector<VkFramebuffer>& swapChainFramebuffers,
+                          VkRenderPass renderPass, VkExtent2D swapChainExtent,
+                          VkPipeline graphicsPipeline, const std::vector<VkImageView>& swapChainImageViews,
+                          std::vector<VkCommandBuffer>& commandBuffers)
+{
     commandBuffers.resize(swapChainFramebuffers.size());
 
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.commandPool = commandPool;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = (uint32_t) commandBuffers.size();
+    allocInfo.commandBufferCount = (uint32_t)commandBuffers.size();
 
-    if (vkAllocateCommandBuffers(device, &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
+    if (vkAllocateCommandBuffers(device, &allocInfo, commandBuffers.data()) != VK_SUCCESS)
+    {
         throw std::runtime_error("failed to allocate command buffers!");
     }
 }
 
-void createSemaphores(VkDevice device, VkSemaphore& imageAvailableSemaphore, VkSemaphore& renderFinishedSemaphore) {
+void createSemaphores(VkDevice device, VkSemaphore& imageAvailableSemaphore, VkSemaphore& renderFinishedSemaphore)
+{
     VkSemaphoreCreateInfo semaphoreInfo{};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
     if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphore) != VK_SUCCESS ||
-        vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphore) != VK_SUCCESS) {
+        vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphore) != VK_SUCCESS)
+    {
         throw std::runtime_error("failed to create semaphores!");
     }
 }
 
-void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex, 
-                        VkRenderPass renderPass, VkExtent2D swapChainExtent,
-                        VkPipeline graphicsPipeline, VkFramebuffer framebuffer) {
+void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex,
+                         VkRenderPass renderPass, VkExtent2D swapChainExtent,
+                         VkPipeline graphicsPipeline, VkFramebuffer framebuffer)
+{
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
-    if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
+    if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS)
+    {
         throw std::runtime_error("failed to begin recording command buffer!");
     }
 
@@ -72,14 +80,16 @@ void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex,
 
     vkCmdEndRenderPass(commandBuffer);
 
-    if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+    if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS)
+    {
         throw std::runtime_error("failed to record command buffer!");
     }
 }
 
 void drawFrame(VkDevice device, VkSwapchainKHR swapChain, VkQueue graphicsQueue, VkQueue presentQueue,
                const std::vector<VkCommandBuffer>& commandBuffers,
-               VkSemaphore imageAvailableSemaphore, VkSemaphore renderFinishedSemaphore) {
+               VkSemaphore imageAvailableSemaphore, VkSemaphore renderFinishedSemaphore)
+{
     uint32_t imageIndex;
     vkAcquireNextImageKHR(device, swapChain, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
 
@@ -99,7 +109,8 @@ void drawFrame(VkDevice device, VkSwapchainKHR swapChain, VkQueue graphicsQueue,
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
-    if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS) {
+    if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS)
+    {
         throw std::runtime_error("failed to submit draw command buffer!");
     }
 

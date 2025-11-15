@@ -1,9 +1,8 @@
-#define GLFW_INCLUDE_VULKAN
+﻿#define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include "../include/rendering.h"
 #include <stdexcept>
 #include <vector>
-#include <iostream>
 #include <fstream>
 
 std::vector<char> readFile(const std::string& filename) {
@@ -68,11 +67,11 @@ void createRenderPass(VkDevice device, VkFormat swapChainImageFormat, VkRenderPa
 
 void createGraphicsPipeline(VkDevice device, VkExtent2D swapChainExtent, VkRenderPass renderPass,
                            VkPipelineLayout& pipelineLayout, VkPipeline& graphicsPipeline) {
-    auto vertShaderCode = readFile("shaders/vert.spv");
-    auto fragShaderCode = readFile("shaders/frag.spv");
+    auto vertShaderCode = readFile("shaders/shader.vert.spv");
+    auto fragShaderCode = readFile("shaders/shader.frag.spv");
 
-    VkShaderModule vertShaderModule = createShaderModule(device, vertShaderCode);
-    VkShaderModule fragShaderModule = createShaderModule(device, fragShaderCode);
+    VkShaderModule vertShaderModule = createShaderModule(device, vertShaderCode.data());
+    VkShaderModule fragShaderModule = createShaderModule(device, fragShaderCode.data());
 
     VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
     vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -101,8 +100,8 @@ void createGraphicsPipeline(VkDevice device, VkExtent2D swapChainExtent, VkRende
     VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
-    viewport.width = (float) swapChainExtent.width;
-    viewport.height = (float) swapChainExtent.height;
+    viewport.width = static_cast<float>(swapChainExtent.width);
+    viewport.height = static_cast<float>(swapChainExtent.height);
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
 

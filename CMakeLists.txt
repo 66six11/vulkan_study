@@ -12,23 +12,11 @@ if(NOT Vulkan_FOUND)
     message(FATAL_ERROR "Vulkan SDK not found. Please install Vulkan SDK from LunarG.")
 endif()
 
-# 尝试查找GLFW
-find_package(glfw3 QUIET)
-
-if(NOT glfw3_FOUND)
-    # 如果未找到glfw3包，尝试使用pkg-config
-    find_package(PkgConfig QUIET)
-    if(PKG_CONFIG_FOUND)
-        pkg_check_modules(GLFW QUIET glfw3)
-    endif()
-    
-    # 如果仍未找到，设置默认路径（需要根据实际安装路径修改）
-    if(NOT GLFW_FOUND)
-        message(WARNING "GLFW not found via find_package or pkg-config. You may need to set GLFW paths manually.")
-        # 设置GLFW的包含目录和库文件路径（请根据实际安装路径修改）
-        # set(GLFW_INCLUDE_DIRS "C:/path/to/glfw/include")
-        # set(GLFW_LIBRARIES "C:/path/to/glfw/lib/glfw3.lib")
-    endif()
+# 查找GLFW
+find_package(glfw3 CONFIG REQUIRED)
+
+if(NOT glfw3_FOUND)
+    message(FATAL_ERROR "GLFW3 not found. Please install via vcpkg or set up your CMake properly.")
 endif()
 
 # 添加可执行文件
@@ -55,14 +43,8 @@ target_link_libraries(vulkan PRIVATE
     Vulkan::Vulkan
 )
 
-# 如果找到了glfw3包
-if(TARGET glfw)
-    target_link_libraries(vulkan PRIVATE glfw)
-elseif(GLFW_LIBRARIES)
-    target_link_libraries(vulkan PRIVATE ${GLFW_LIBRARIES})
-else()
-    message(WARNING "GLFW library not found. You may need to manually specify the GLFW library path.")
-endif()
+# 链接GLFW库
+target_link_libraries(vulkan PRIVATE glfw)
 
 # 包含目录
 target_include_directories(vulkan PRIVATE 
