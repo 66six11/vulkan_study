@@ -19,23 +19,24 @@ if(NOT glfw3_FOUND)
     message(FATAL_ERROR "GLFW3 not found. Please install via vcpkg or set up your CMake properly.")
 endif()
 
-# 添加可执行文件
-
-add_executable(vulkan
-    src/main.cpp
-    src/HelloTriangleApplication.cpp
-    src/vulkan_init.cpp
-    src/swapchain_management.cpp
-    src/rendering.cpp
-    src/command_buffer_sync.cpp
-    src/utils.cpp
-    include/Application.h
-    include/constants.h
-    include/vulkan_init.h
-    include/swapchain_management.h
-    include/rendering.h
-    include/command_buffer_sync.h
-    include/utils.h
+# 添加可执行文件
+
+add_executable(vulkan
+    src/main.cpp
+    src/HelloTriangleApplication.cpp
+    src/vulkan_init.cpp
+    src/swapchain_management.cpp
+    src/rendering.cpp
+    src/command_buffer_sync.cpp
+    src/utils.cpp
+    src/constants.cpp
+    include/Application.h
+    include/constants.h
+    include/vulkan_init.h
+    include/swapchain_management.h
+    include/rendering.h
+    include/command_buffer_sync.h
+    include/utils.h
 )
 
 # 链接库

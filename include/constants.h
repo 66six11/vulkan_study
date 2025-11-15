@@ -2,6 +2,7 @@
 
 #include <optional>
 #include <vector>
+#include <vulkan/vulkan_core.h>
 
 // 声明窗口常量
 extern const uint32_t WIDTH;   // 窗口宽度
