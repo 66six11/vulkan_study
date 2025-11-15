@@ -32,11 +32,21 @@ if(NOT glfw3_FOUND)
     message(FATAL_ERROR "GLFW not found. Please install GLFW via vcpkg: vcpkg install glfw3:x64-windows")
 endif()
 
-# 添加可执行文件
-add_executable(vulkan
-    main.cpp
-    HelloTriangleApplication.cpp
-    HelloTriangleApplication.h
+# 添加可执行文件
+add_executable(vulkan
+    src/main.cpp
+    src/HelloTriangleApplication.cpp
+    src/vulkan_init.cpp
+    src/swapchain_management.cpp
+    src/rendering.cpp
+    src/command_buffer_sync.cpp
+    src/utils.cpp
+    include/HelloTriangleApplication.h
+    include/vulkan_init.h
+    include/swapchain_management.h
+    include/rendering.h
+    include/command_buffer_sync.h
+    include/utils.h
 )
 
 # 链接库
@@ -45,10 +55,11 @@ target_link_libraries(vulkan PRIVATE
     glfw
 )
 
-# 包含目录
-if(Vulkan_INCLUDE_DIRS)
-    target_include_directories(vulkan PRIVATE ${Vulkan_INCLUDE_DIRS})
-endif()
+# 包含目录
+target_include_directories(vulkan PRIVATE 
+    ${CMAKE_SOURCE_DIR}/include
+    ${Vulkan_INCLUDE_DIRS}
+)
 
 # 设置Visual Studio调试工作目录
 set_target_properties(vulkan PROPERTIES
