@@ -73,7 +73,7 @@ target_sources(VulkanCppModule
 
 add_executable(${PROJECT_NAME} main.cpp
         HelloTriangleApplication.cpp
-        HelloTriangleApplication.h
+        Application.h
 )
 
 target_link_libraries(${PROJECT_NAME}

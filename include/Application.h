@@ -1,4 +1,4 @@
-﻿// HelloTriangleApplication.h
+﻿// Application.h
 #pragma once // 防止头文件被多次包含 - 避免重复包含导致的重定义错误
 
 // 包含Vulkan头文件 - 使用GLFW的宏定义来自动包含Vulkan.h
@@ -42,7 +42,7 @@ struct QueueFamilyIndices {
     }
 };
 
-class HelloTriangleApplication {
+class Application {
 public:
     // 运行应用程序的主要函数
     void run();
@@ -83,13 +83,43 @@ private:
     std::vector<VkCommandBuffer> commandBuffers;       // 命令缓冲，用于记录命令
 
     // 同步相关成员变量
+
     VkSemaphore imageAvailableSemaphore = VK_NULL_HANDLE;  // 图像可用信号量
+
     VkSemaphore renderFinishedSemaphore = VK_NULL_HANDLE;  // 渲染完成信号量
 
+
+
+    // 命令缓冲和同步相关函数
+
+    void createCommandPool();
+
+    void createCommandBuffers();
+
+    void createSemaphores();
+
+    void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
+
+    void drawFrame();
+
+
+
     // Vulkan初始化相关函数
+
     void initWindow();       // 初始化GLFW窗口
+
     void initVulkan();       // 初始化Vulkan
+
     void mainLoop();         // 主循环
+
     void cleanup();          // 清理资源
+
+
+
+    // 渲染相关函数
+
+    VkShaderModule createShaderModule(const std::string& code);
+
 };
+
 

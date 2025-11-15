@@ -5,14 +5,14 @@
 #include <stdexcept>
 #include <cstdlib>
 
-#include "HelloTriangleApplication.h"
+#include "Application.h"
 
 // 程序入口点
 int main() {
     // 使用try-catch块捕获Vulkan可能抛出的异常
     try {
         // 创建应用程序实例
-        HelloTriangleApplication app;
+        Application app;
         // 运行应用程序的主要逻辑
         app.run();
     } catch (const std::exception &e) {
