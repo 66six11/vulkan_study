@@ -40,5 +40,17 @@
 # debug information files
 *.dwo
 
+# Build directories
+build/
+build_*/
+
+# IDE files
 .idea/
+.iflow/
 .vscode/
+
+# CLion build directories
+cmake-build-*/
+
+# CMake files
+CMakeLists.simple

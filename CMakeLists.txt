@@ -1,61 +1,56 @@
-﻿cmake_minimum_required(VERSION 4.0)
-project(vulkan)
+cmake_minimum_required(VERSION 3.20)
+project(vulkan LANGUAGES CXX C)
 
-set(CMAKE_CXX_SCAN_FOR_MODULES ON)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-# 添加 vcpkg 工具链支持
-set(CMAKE_TOOLCHAIN_FILE "C:/Users/C66/.vcpkg-clion/vcpkg/scripts/buildsystems/vcpkg.cmake"
-        CACHE STRING "Vcpkg toolchain file")
-set(VCPKG_TARGET_TRIPLET "x64-windows" CACHE STRING "Vcpkg target triplet")
+# 设置Vulkan SDK路径
+if(DEFINED ENV{VULKAN_SDK})
+    set(VULKAN_SDK_PATH $ENV{VULKAN_SDK})
+else()
+    set(VULKAN_SDK_PATH "C:/VulkanSDK/1.4.321.1")
+endif()
 
-set(VULKAN_SDK "C:/VulkanSDK/1.4.321.1")
-set(Vulkan_INCLUDE_DIR "${VULKAN_SDK}/Include")
-set(Vulkan_LIBRARY "${VULKAN_SDK}/Lib/vulkan-1.lib")
-
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/CMake")
-
-
+# 尝试使用find_package查找Vulkan
 find_package(Vulkan REQUIRED)
-find_package(glfw3 CONFIG REQUIRED)
-find_package(glm REQUIRED)
+if(NOT Vulkan_FOUND)
+    message(FATAL_ERROR "Vulkan SDK not found. Please install Vulkan SDK from LunarG.")
+endif()
 
-add_library(VulkanCppModule)
-add_library(Vulkan::cppm ALIAS VulkanCppModule)
+# 设置vcpkg工具链文件路径
+set(VCPKG_ROOT_PATH "C:/Users/C66/.vcpkg-clion/vcpkg")
+if(EXISTS "${VCPKG_ROOT_PATH}/scripts/buildsystems/vcpkg.cmake")
+    set(CMAKE_TOOLCHAIN_FILE "${VCPKG_ROOT_PATH}/scripts/buildsystems/vcpkg.cmake"
+            CACHE STRING "Vcpkg toolchain file")
+    set(VCPKG_TARGET_TRIPLET "x64-windows" CACHE STRING "Vcpkg target triplet")
+endif()
 
-target_compile_definitions(VulkanCppModule PUBLIC
-        VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1
-        VULKAN_HPP_NO_STRUCT_CONSTRUCTORS=1
-)
-target_include_directories(VulkanCppModule
-        PRIVATE
-        "${Vulkan_INCLUDE_DIR}"
-)
-target_link_libraries(VulkanCppModule
-        PUBLIC
-        Vulkan::Vulkan
-)
+# 查找GLFW
+find_package(glfw3 REQUIRED CONFIG)
+if(NOT glfw3_FOUND)
+    message(FATAL_ERROR "GLFW not found. Please install GLFW via vcpkg: vcpkg install glfw3:x64-windows")
+endif()
 
-set_target_properties(VulkanCppModule PROPERTIES CXX_STANDARD 20)
-
-target_sources(VulkanCppModule
-        PUBLIC
-        FILE_SET cxx_modules TYPE CXX_MODULES
-        BASE_DIRS
-        "${Vulkan_INCLUDE_DIR}"
-        FILES
-        "${Vulkan_INCLUDE_DIR}/vulkan/vulkan.cppm"
+# 添加可执行文件
+add_executable(vulkan
+    main.cpp
+    HelloTriangleApplication.cpp
+    HelloTriangleApplication.h
 )
 
-add_executable(${PROJECT_NAME} main.cpp
-        HelloTriangleApplication.cpp
-        HelloTriangleApplication.h
+# 链接库
+target_link_libraries(vulkan PRIVATE 
+    Vulkan::Vulkan
+    glfw
 )
 
-target_link_libraries(${PROJECT_NAME}
-        Vulkan::cppm
-        glfw
-        glm::glm
+# 包含目录
+if(Vulkan_INCLUDE_DIRS)
+    target_include_directories(vulkan PRIVATE ${Vulkan_INCLUDE_DIRS})
+endif()
+
+# 设置Visual Studio调试工作目录
+set_target_properties(vulkan PROPERTIES
+    VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 )
