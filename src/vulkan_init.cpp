@@ -1,33 +1,11 @@
-﻿#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-#include "../include/vulkan_init.h"
-#include "../include/utils.h"
+﻿#include "vulkan_init.h"
+#include "utils.h"
 #include <iostream>
 #include <stdexcept>
 #include <vector>
 #include <cstring>
 #include <set>
 #include <algorithm>
-
-/**
- * @brief 验证层名称列表
- * 
- * 定义要启用的验证层，用于调试和验证Vulkan API调用的正确性
- */
-const std::vector<const char*> validationLayers = {
-    "VK_LAYER_KHRONOS_validation"
-};
-
-/**
- * @brief 是否启用验证层
- * 
- * 在调试模式下启用验证层，在发布模式下禁用以提高性能
- */
-#ifdef NDEBUG
-const bool enableValidationLayers = false;
-#else
-const bool enableValidationLayers = true;
-#endif
 
 /**
  * @brief 获取必需的实例扩展

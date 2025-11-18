@@ -1,6 +1,6 @@
 ﻿#define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-#include "../include/rendering.h"
+#include "rendering.h"
 #include <stdexcept>
 #include <vector>
 #include <fstream>
@@ -98,8 +98,8 @@ void createGraphicsPipeline(VkDevice device, VkExtent2D swapChainExtent, VkRende
     auto vertShaderCode = readFile("shaders/shader.vert.spv");
     auto fragShaderCode = readFile("shaders/shader.frag.spv");
 
-    VkShaderModule vertShaderModule = createShaderModule(device, vertShaderCode.data());
-    VkShaderModule fragShaderModule = createShaderModule(device, fragShaderCode.data());
+    VkShaderModule vertShaderModule = createShaderModule(device, vertShaderCode);
+    VkShaderModule fragShaderModule = createShaderModule(device, fragShaderCode);
 
     VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
     vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -251,7 +251,7 @@ void createFramebuffers(VkDevice device, const std::vector<VkImageView>& swapCha
  * @param code 着色器代码（SPIR-V字节码）
  * @return 创建的着色器模块对象
  */
-VkShaderModule createShaderModule(VkDevice device, const std::string& code) {
+VkShaderModule createShaderModule(VkDevice device, const std::vector<char>& code) {
     VkShaderModuleCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     createInfo.codeSize = code.size();

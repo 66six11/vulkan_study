@@ -1,6 +1,4 @@
-﻿#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-#include "../include/command_buffer_sync.h"
+﻿#include "command_buffer_sync.h"
 #include <stdexcept>
 #include <vector>
 
@@ -183,7 +181,13 @@ void drawFrame(VkDevice device, VkSwapchainKHR swapChain, VkQueue graphicsQueue,
 
     presentInfo.pImageIndices = &imageIndex;
 
-    vkQueuePresentKHR(presentQueue, &presentInfo);
-
+    VkResult result = vkQueuePresentKHR(presentQueue, &presentInfo);
+    if (result != VK_SUCCESS)
+    {
+        // 简单处理：当前 demo 直接抛异常；将来支持窗口 resize 时这里要针对
+        // VK_ERROR_OUT_OF_DATE_KHR / VK_SUBOPTIMAL_KHR 做重建 swapchain
+        throw std::runtime_error("failed to present swap chain image!");
+    }
+     
     vkQueueWaitIdle(presentQueue);
 }

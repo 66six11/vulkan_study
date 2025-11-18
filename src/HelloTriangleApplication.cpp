@@ -1,13 +1,12 @@
 ﻿// HelloTriangleApplication.cpp
 // 定义GLFW包含Vulkan头文件的宏，这样GLFW会自动包含Vulkan头文件
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-#include "../include/Application.h"
-#include "../include/vulkan_init.h"
-#include "../include/swapchain_management.h"
-#include "../include/rendering.h"
-#include "../include/command_buffer_sync.h"
-#include "../include/utils.h"
+
+#include "Application.h"
+#include "vulkan_init.h"
+#include "swapchain_management.h"
+#include "rendering.h"
+#include "command_buffer_sync.h"
+#include "utils.h"
 #include <iostream>
 #include <stdexcept>
 #include <cstdlib>
@@ -19,6 +18,7 @@
 #include <algorithm>
 #include <limits>
 #include <vulkan/vulkan_core.h>
+#include "constants.h"
 
 // 引入常量定义
 #include "../include/constants.h"
@@ -28,7 +28,8 @@
  * 
  * 按顺序执行初始化、主循环和清理操作，是应用程序的主控制流程
  */
-void Application::run() {
+void Application::run()
+{
     // 初始化GLFW窗口
     initWindow();
     // 初始化Vulkan相关对象
@@ -44,13 +45,20 @@ void Application::run() {
  * 
  * 初始化GLFW库并创建应用程序窗口，设置窗口属性
  */
-void Application::initWindow() {
+void Application::initWindow()
+{
     glfwInit();
-
+    if (!glfwInit()) {
+        throw std::runtime_error("failed to initialize GLFW");
+    }
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
     window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan Triangle", nullptr, nullptr);
+    if (!window) {
+        glfwTerminate();
+        throw std::runtime_error("failed to create GLFW window");
+    }
 }
 
 /**
@@ -59,31 +67,41 @@ void Application::initWindow() {
  * 初始化所有Vulkan相关对象，包括实例、表面、物理设备、逻辑设备、
  * 交换链、渲染通道、图形管线、帧缓冲、命令池和同步对象
  */
-void Application::initVulkan() {
+
+void Application::initVulkan()
+{
+    // 1. Vulkan 实例 & 调试
     createInstance(instance, window);
     setupDebugMessenger(instance);
+
+    // 2. Surface & 物理/逻辑设备
     createSurface(instance, window, surface);
+    // 先选择物理设备
     pickPhysicalDevice(instance, surface, physicalDevice);
-    createLogicalDevice(physicalDevice, surface, device, 
-                       findQueueFamilies(physicalDevice, surface), 
-                       graphicsQueue, presentQueue);
-    createSwapChain(physicalDevice, device, surface,
-                   findQueueFamilies(physicalDevice, surface),
-                   swapChain, swapChainImages, swapChainImageFormat, swapChainExtent);
+    // 再基于选定的物理设备查询队列族
+    QueueFamilyIndices indices = findQueueFamilies(physicalDevice, surface);
+    createLogicalDevice(physicalDevice, surface, device, indices, graphicsQueue, presentQueue);
+
+    // 3. Swapchain（交换链） & image view
+    createSwapChain(physicalDevice, device, surface, indices, swapChain,swapChainImages, swapChainImageFormat, swapChainExtent);
     createImageViews(device, swapChainImages, swapChainImageFormat, swapChainImageViews);
+
+    // 4. Render pass & pipeline & framebuffer
     createRenderPass(device, swapChainImageFormat, renderPass);
     createGraphicsPipeline(device, swapChainExtent, renderPass, pipelineLayout, graphicsPipeline);
     createFramebuffers(device, swapChainImageViews, renderPass, swapChainExtent, swapChainFramebuffers);
-    createCommandPool(device, findQueueFamilies(physicalDevice, surface), commandPool);
-    createCommandBuffers(device, commandPool, swapChainFramebuffers, renderPass, swapChainExtent,
-                        graphicsPipeline, swapChainImageViews, commandBuffers);
+
+    // 5. Command pool/buffers & sync
+    createCommandPool(device, indices, commandPool);
+    createCommandBuffers(device, commandPool, swapChainFramebuffers, renderPass, swapChainExtent,graphicsPipeline, swapChainImageViews, commandBuffers);
     createSemaphores(device, imageAvailableSemaphore, renderFinishedSemaphore);
-    
-    // 记录命令缓冲
-    for (size_t i = 0; i < commandBuffers.size(); i++) {
-        recordCommandBuffer(commandBuffers[i], static_cast<uint32_t>(i), 
-                           renderPass, swapChainExtent, graphicsPipeline, 
-                           swapChainFramebuffers[i]);
+
+    // 6. 录制命令缓冲（如果你以后要支持窗口 resize，这一部分可以提取出来重用）
+    for (size_t i = 0; i < commandBuffers.size(); i++)
+    {
+        recordCommandBuffer(commandBuffers[i], static_cast<uint32_t>(i),
+                            renderPass, swapChainExtent, graphicsPipeline,
+                            swapChainFramebuffers[i]);
     }
 }
 
@@ -92,14 +110,16 @@ void Application::initVulkan() {
  * 
  * 持续处理窗口事件并渲染帧，直到窗口关闭，这是应用程序的渲染循环核心
  */
-void Application::mainLoop() {
+void Application::mainLoop()
+{
     // 循环直到窗口应该关闭
-    while (!glfwWindowShouldClose(window)) {
+    while (!glfwWindowShouldClose(window))
+    {
         // 处理窗口事件（如键盘输入、鼠标移动等）
         glfwPollEvents();
         // 绘制一帧
         drawFrame(device, swapChain, graphicsQueue, presentQueue, commandBuffers,
-                 imageAvailableSemaphore, renderFinishedSemaphore);
+                  imageAvailableSemaphore, renderFinishedSemaphore);
     }
 }
 
@@ -109,7 +129,8 @@ void Application::mainLoop() {
  * 按照创建的相反顺序销毁所有Vulkan对象，释放资源，防止内存泄漏
  * 这是Vulkan应用程序生命周期管理的重要部分
  */
-void Application::cleanup() {
+void Application::cleanup()
+{
     // 清理同步对象
     // 销毁渲染完成信号量
     vkDestroySemaphore(device, renderFinishedSemaphore, nullptr);
@@ -121,7 +142,8 @@ void Application::cleanup() {
 
     // 清理帧缓冲
     // 遍历并销毁所有帧缓冲对象
-    for (auto framebuffer : swapChainFramebuffers) {
+    for (auto framebuffer : swapChainFramebuffers)
+    {
         vkDestroyFramebuffer(device, framebuffer, nullptr);
     }
 
@@ -135,7 +157,8 @@ void Application::cleanup() {
 
     // 清理图像视图
     // 遍历并销毁所有图像视图
-    for (auto imageView : swapChainImageViews) {
+    for (auto imageView : swapChainImageViews)
+    {
         vkDestroyImageView(device, imageView, nullptr);
     }
 
@@ -155,5 +178,3 @@ void Application::cleanup() {
     glfwDestroyWindow(window);
     glfwTerminate();
 }
-
-

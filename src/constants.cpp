@@ -1,4 +1,4 @@
-#include "../include/constants.h"
+﻿#include "constants.h"
 
 #include <vulkan/vulkan_core.h>
 
@@ -24,4 +24,14 @@ const uint32_t HEIGHT = 600;
  */
 const std::vector<const char*> deviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME
+};
+
+#ifdef NDEBUG
+const bool enableValidationLayers = false;
+#else
+const bool enableValidationLayers = true;
+#endif
+     
+const std::vector<const char*> validationLayers = {
+    "VK_LAYER_KHRONOS_validation"
 };

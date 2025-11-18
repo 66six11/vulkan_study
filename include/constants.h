@@ -1,9 +1,8 @@
 ﻿#pragma once
-
+//该文件是全局persistent的常量定义文件，包含了一些常用的常量定义，比如窗口宽度、高度、设备扩展列表、交换链支持详情结构体、队列族索引结构体等。
 #include <optional>
 #include <vector>
 #include <vulkan/vulkan_core.h>
-
 /**
  * @brief 窗口宽度常量
  * 
@@ -57,3 +56,9 @@ struct QueueFamilyIndices {
         return graphicsFamily.has_value() && presentFamily.has_value();
     }
 };
+
+// 是否启用验证层（调试构建为 true，发布构建为 false）
+extern const bool enableValidationLayers;
+     
+// 验证层列表
+extern const std::vector<const char*> validationLayers;

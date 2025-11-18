@@ -1,7 +1,6 @@
 ﻿#pragma once
 
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
+
 #include "constants.h"
 #include <vector>
 #include <string>
@@ -55,4 +54,4 @@ void createFramebuffers(VkDevice device, const std::vector<VkImageView>& swapCha
  * @param code 着色器代码（SPIR-V字节码）
  * @return 创建的着色器模块对象
  */
-VkShaderModule createShaderModule(VkDevice device, const std::string& code);
+VkShaderModule createShaderModule(VkDevice device, const std::vector<char>& code);

@@ -12,31 +12,42 @@ if(NOT Vulkan_FOUND)
     message(FATAL_ERROR "Vulkan SDK not found. Please install Vulkan SDK from LunarG.")
 endif()
 
-# 查找GLFW
-find_package(glfw3 CONFIG REQUIRED)
-
-if(NOT glfw3_FOUND)
-    message(FATAL_ERROR "GLFW3 not found. Please install via vcpkg or set up your CMake properly.")
+# 查找GLFW
+
+find_package(glfw3 CONFIG REQUIRED)
+
+
+
+if(NOT glfw3_FOUND)
+
+    message(FATAL_ERROR "GLFW3 not found. Please install via vcpkg or set up your CMake properly.")
+
 endif()
 
-# 添加可执行文件
-
-add_executable(vulkan
-    src/main.cpp
-    src/HelloTriangleApplication.cpp
-    src/vulkan_init.cpp
-    src/swapchain_management.cpp
-    src/rendering.cpp
-    src/command_buffer_sync.cpp
-    src/utils.cpp
-    src/constants.cpp
-    include/Application.h
-    include/constants.h
-    include/vulkan_init.h
-    include/swapchain_management.h
-    include/rendering.h
-    include/command_buffer_sync.h
-    include/utils.h
+# 添加可执行文件
+
+
+
+add_executable(vulkan
+    src/main.cpp
+    src/HelloTriangleApplication.cpp
+    src/vulkan_init.cpp
+    src/swapchain_management.cpp
+    src/rendering.cpp
+    src/command_buffer_sync.cpp
+    src/utils.cpp
+    src/constants.cpp
+    include/Application.h
+    include/constants.h
+    include/vulkan_init.h
+    include/swapchain_management.h
+    include/rendering.h
+    include/command_buffer_sync.h
+    include/utils.h
+    include/Platform.h
+    src/utils.cpp
+    src/utils.cpp
+
 )
 
 # 链接库
@@ -44,7 +55,8 @@ target_link_libraries(vulkan PRIVATE
     Vulkan::Vulkan
 )
 
-# 链接GLFW库
+# 链接GLFW库
+
 target_link_libraries(vulkan PRIVATE glfw)
 
 # 包含目录
@@ -127,7 +139,7 @@ else()
         DEPENDS ${COMPILED_SHADER_DIR}/shader.vert.spv ${COMPILED_SHADER_DIR}/shader.frag.spv
 
     )
-
+    add_dependencies(vulkan compile_shaders)
 
 
     # 设置输出目录为运行时目录

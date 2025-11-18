@@ -2,8 +2,7 @@
 #pragma once // 防止头文件被多次包含 - 避免重复包含导致的重定义错误
 
 // 包含Vulkan头文件 - 使用GLFW的宏定义来自动包含Vulkan.h
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
+#include "Platform.h"
 #include <iostream>
 #include <stdexcept>
 #include <cstdlib>
