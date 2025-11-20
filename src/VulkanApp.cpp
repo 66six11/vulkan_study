@@ -224,15 +224,15 @@ void Application::mainLoop()
  */
 void Application::cleanup()
 {
-    // 1. 先让与 swapchain 相关的 RAII 对象析构
-    swapchainResources.~SwapchainResources();
+    // 1. 清理 swapchain 相关资源（如果用 SwapchainResources，这里只需要：）
+    swapchainResources.destroy(); // 或依靠它的析构，不要两边都 destroy
 
-    // 2. 同步/队列相关资源
+    // 2. 同步对象和命令池
     vkDestroySemaphore(device, renderFinishedSemaphore, nullptr);
     vkDestroySemaphore(device, imageAvailableSemaphore, nullptr);
     vkDestroyCommandPool(device, commandPool, nullptr);
 
-    // 3. 设备 & surface & instance & GLFW
+    // 3. 最后销毁 device / surface / instance
     vkDestroyDevice(device, nullptr);
     vkDestroySurfaceKHR(instance, surface, nullptr);
     vkDestroyInstance(instance, nullptr);

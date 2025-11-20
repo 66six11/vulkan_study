@@ -45,6 +45,8 @@ add_executable(vulkan
         include/Platform.h
         src/utils.cpp
         src/utils.cpp
+        include/SwapchainResources.h
+        src/SwapchainResources.cpp
 
 )
 

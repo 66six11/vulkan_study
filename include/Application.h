@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <cstdlib>
 #include "Platform.h"
+#include "SwapchainResources.h"
 #include <vector>
 #include <optional>
 #include <set>
@@ -35,126 +36,7 @@ class Application
 
         bool framebufferResized = false;
 
-        struct SwapchainResources
-        {
-            // 非拥有：由外部保证生命周期
-            VkDevice      device      = VK_NULL_HANDLE;
-            VkCommandPool commandPool = VK_NULL_HANDLE;
-
-            // 拥有：由本结构的析构函数负责销毁
-            VkSwapchainKHR               swapchain = VK_NULL_HANDLE;
-            std::vector<VkImage>         images;
-            VkFormat                     imageFormat = VK_FORMAT_UNDEFINED;
-            VkExtent2D                   extent      = {0, 0};
-            std::vector<VkImageView>     imageViews;
-            VkRenderPass                 renderPass       = VK_NULL_HANDLE;
-            VkPipelineLayout             pipelineLayout   = VK_NULL_HANDLE;
-            VkPipeline                   graphicsPipeline = VK_NULL_HANDLE;
-            std::vector<VkFramebuffer>   framebuffers;
-            std::vector<VkCommandBuffer> commandBuffers;
-
-            SwapchainResources() = default;
-
-            explicit SwapchainResources(VkDevice device_, VkCommandPool commandPool_) : device(device_),
-                commandPool(commandPool_)
-            {
-            }
-
-            ~SwapchainResources()
-            {
-                destroy();
-            }
-
-            // 禁拷贝
-            SwapchainResources(const SwapchainResources&)            = delete;
-            SwapchainResources& operator=(const SwapchainResources&) = delete;
-
-            // 允许移动
-            SwapchainResources(SwapchainResources&& other) noexcept
-            {
-                moveFrom(std::move(other));
-            }
-
-            SwapchainResources& operator=(SwapchainResources&& other) noexcept
-            {
-                if (this != &other)
-                {
-                    destroy();
-                    moveFrom(std::move(other));
-                }
-                return *this;
-            }
-
-            void destroy()
-            {
-                if (device == VK_NULL_HANDLE)
-                    return;
-
-                for (VkFramebuffer fb : framebuffers)
-                    vkDestroyFramebuffer(device, fb, nullptr);
-                framebuffers.clear();
-
-                if (graphicsPipeline != VK_NULL_HANDLE)
-                {
-                    vkDestroyPipeline(device, graphicsPipeline, nullptr);
-                    graphicsPipeline = VK_NULL_HANDLE;
-                }
-
-                if (pipelineLayout != VK_NULL_HANDLE)
-                {
-                    vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
-                    pipelineLayout = VK_NULL_HANDLE;
-                }
-
-                if (renderPass != VK_NULL_HANDLE)
-                {
-                    vkDestroyRenderPass(device, renderPass, nullptr);
-                    renderPass = VK_NULL_HANDLE;
-                }
-
-                for (VkImageView view : imageViews)
-                    vkDestroyImageView(device, view, nullptr);
-                imageViews.clear();
-
-                if (swapchain != VK_NULL_HANDLE)
-                {
-                    vkDestroySwapchainKHR(device, swapchain, nullptr);
-                    swapchain = VK_NULL_HANDLE;
-                }
-
-                images.clear();
-                commandBuffers.clear();
-                imageFormat = VK_FORMAT_UNDEFINED;
-                extent      = {0, 0};
-            }
-
-            private:
-                void moveFrom(SwapchainResources&& other) noexcept
-                {
-                    device           = other.device;
-                    commandPool      = other.commandPool;
-                    swapchain        = other.swapchain;
-                    images           = std::move(other.images);
-                    imageFormat      = other.imageFormat;
-                    extent           = other.extent;
-                    imageViews       = std::move(other.imageViews);
-                    renderPass       = other.renderPass;
-                    pipelineLayout   = other.pipelineLayout;
-                    graphicsPipeline = other.graphicsPipeline;
-                    framebuffers     = std::move(other.framebuffers);
-                    commandBuffers   = std::move(other.commandBuffers);
-
-                    // 把 other 置为“空壳”，避免二次销毁
-                    other.swapchain        = VK_NULL_HANDLE;
-                    other.renderPass       = VK_NULL_HANDLE;
-                    other.pipelineLayout   = VK_NULL_HANDLE;
-                    other.graphicsPipeline = VK_NULL_HANDLE;
-                    other.device           = VK_NULL_HANDLE;
-                    other.commandPool      = VK_NULL_HANDLE;
-                    other.imageFormat      = VK_FORMAT_UNDEFINED;
-                    other.extent           = {0, 0};
-                }
-        };
+        
 
     private:
         // 窗口和Vulkan实例相关成员变量
