@@ -14,8 +14,8 @@
 void createCommandPool(VkDevice device, QueueFamilyIndices indices, VkCommandPool& commandPool)
 {
     VkCommandPoolCreateInfo poolInfo{};
-    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    poolInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    poolInfo.flags            = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     poolInfo.queueFamilyIndex = indices.graphicsFamily.value();
 
     if (vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS)
@@ -38,18 +38,21 @@ void createCommandPool(VkDevice device, QueueFamilyIndices indices, VkCommandPoo
  * @param swapChainImageViews 交换链图像视图集合
  * @param commandBuffers [out] 创建的命令缓冲集合
  */
-void createCommandBuffers(VkDevice device, VkCommandPool commandPool,
+void createCommandBuffers(VkDevice                          device,
+                          VkCommandPool                     commandPool,
                           const std::vector<VkFramebuffer>& swapChainFramebuffers,
-                          VkRenderPass renderPass, VkExtent2D swapChainExtent,
-                          VkPipeline graphicsPipeline, const std::vector<VkImageView>& swapChainImageViews,
-                          std::vector<VkCommandBuffer>& commandBuffers)
+                          VkRenderPass                      renderPass,
+                          VkExtent2D                        swapChainExtent,
+                          VkPipeline                        graphicsPipeline,
+                          const std::vector<VkImageView>&   swapChainImageViews,
+                          std::vector<VkCommandBuffer>&     commandBuffers)
 {
     commandBuffers.resize(swapChainFramebuffers.size());
 
     VkCommandBufferAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool = commandPool;
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.commandPool        = commandPool;
+    allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     allocInfo.commandBufferCount = (uint32_t)commandBuffers.size();
 
     if (vkAllocateCommandBuffers(device, &allocInfo, commandBuffers.data()) != VK_SUCCESS)
@@ -91,9 +94,12 @@ void createSemaphores(VkDevice device, VkSemaphore& imageAvailableSemaphore, VkS
  * @param graphicsPipeline 图形管线
  * @param framebuffer 帧缓冲
  */
-void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex,
-                         VkRenderPass renderPass, VkExtent2D swapChainExtent,
-                         VkPipeline graphicsPipeline, VkFramebuffer framebuffer)
+void recordCommandBuffer(VkCommandBuffer commandBuffer,
+                         uint32_t        imageIndex,
+                         VkRenderPass    renderPass,
+                         VkExtent2D      swapChainExtent,
+                         VkPipeline      graphicsPipeline,
+                         VkFramebuffer   framebuffer)
 {
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -104,15 +110,15 @@ void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex,
     }
 
     VkRenderPassBeginInfo renderPassInfo{};
-    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderPassInfo.renderPass = renderPass;
-    renderPassInfo.framebuffer = framebuffer;
+    renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.renderPass        = renderPass;
+    renderPassInfo.framebuffer       = framebuffer;
     renderPassInfo.renderArea.offset = {0, 0};
     renderPassInfo.renderArea.extent = swapChainExtent;
 
-    VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+    VkClearValue clearColor        = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
     renderPassInfo.clearValueCount = 1;
-    renderPassInfo.pClearValues = &clearColor;
+    renderPassInfo.pClearValues    = &clearColor;
 
     vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -141,28 +147,49 @@ void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex,
  * @param imageAvailableSemaphore 图像可用信号量
  * @param renderFinishedSemaphore 渲染完成信号量
  */
-void drawFrame(VkDevice device, VkSwapchainKHR swapChain, VkQueue graphicsQueue, VkQueue presentQueue,
+void drawFrame(VkDevice                            device,
+               VkSwapchainKHR                      swapChain,
+               VkQueue                             graphicsQueue,
+               VkQueue                             presentQueue,
                const std::vector<VkCommandBuffer>& commandBuffers,
-               VkSemaphore imageAvailableSemaphore, VkSemaphore renderFinishedSemaphore)
+               VkSemaphore                         imageAvailableSemaphore,
+               VkSemaphore                         renderFinishedSemaphore)
 {
     uint32_t imageIndex;
-    vkAcquireNextImageKHR(device, swapChain, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+    VkResult result = vkAcquireNextImageKHR(device,
+                                            swapChain,
+                                            UINT64_MAX,
+                                            imageAvailableSemaphore,
+                                            VK_NULL_HANDLE,
+                                            &imageIndex);
+
+    // 如果交换链已经过期（典型场景：窗口 resize），这里不再抛异常，而是交给外层重建
+    if (result == VK_ERROR_OUT_OF_DATE_KHR)
+    {
+        // 外层（Application::mainLoop 或 drawFrame 的调用者）应在合适时机调用 recreateSwapChain()
+        return;
+    }
+    else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+    {
+        throw std::runtime_error("failed to acquire swap chain image!");
+    }
+
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-    VkSemaphore waitSemaphores[] = {imageAvailableSemaphore};
-    VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-    submitInfo.waitSemaphoreCount = 1;
-    submitInfo.pWaitSemaphores = waitSemaphores;
-    submitInfo.pWaitDstStageMask = waitStages;
+    VkSemaphore          waitSemaphores[] = {imageAvailableSemaphore};
+    VkPipelineStageFlags waitStages[]     = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+    submitInfo.waitSemaphoreCount         = 1;
+    submitInfo.pWaitSemaphores            = waitSemaphores;
+    submitInfo.pWaitDstStageMask          = waitStages;
 
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &commandBuffers[imageIndex];
+    submitInfo.pCommandBuffers    = &commandBuffers[imageIndex];
 
-    VkSemaphore signalSemaphores[] = {renderFinishedSemaphore};
+    VkSemaphore signalSemaphores[]  = {renderFinishedSemaphore};
     submitInfo.signalSemaphoreCount = 1;
-    submitInfo.pSignalSemaphores = signalSemaphores;
+    submitInfo.pSignalSemaphores    = signalSemaphores;
 
     if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS)
     {
@@ -173,21 +200,26 @@ void drawFrame(VkDevice device, VkSwapchainKHR swapChain, VkQueue graphicsQueue,
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
     presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = signalSemaphores;
+    presentInfo.pWaitSemaphores    = signalSemaphores;
 
     VkSwapchainKHR swapChains[] = {swapChain};
-    presentInfo.swapchainCount = 1;
-    presentInfo.pSwapchains = swapChains;
+    presentInfo.swapchainCount  = 1;
+    presentInfo.pSwapchains     = swapChains;
 
     presentInfo.pImageIndices = &imageIndex;
 
-    VkResult result = vkQueuePresentKHR(presentQueue, &presentInfo);
-    if (result != VK_SUCCESS)
+    result = vkQueuePresentKHR(presentQueue, &presentInfo);
+    // 如果呈现时发现交换链过期/次优，也交给外层去重建
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
     {
-        // 简单处理：当前 demo 直接抛异常；将来支持窗口 resize 时这里要针对
-        // VK_ERROR_OUT_OF_DATE_KHR / VK_SUBOPTIMAL_KHR 做重建 swapchain
+        // 这里不抛异常，调用者在下一帧可以检查窗口 resize 状态并调用 recreateSwapChain()
+        // 例如在 Application::mainLoop 中检测到 framebufferResized 或记录一个标志位
+    }
+    else if (result != VK_SUCCESS)
+    {
         throw std::runtime_error("failed to present swap chain image!");
     }
-     
+
+    // demo 简化：等待呈现队列空闲，真实项目中一般会做更细粒度的同步
     vkQueueWaitIdle(presentQueue);
 }

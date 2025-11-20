@@ -27,8 +27,11 @@ void createRenderPass(VkDevice device, VkFormat swapChainImageFormat, VkRenderPa
  * @param pipelineLayout [out] 管线布局
  * @param graphicsPipeline [out] 图形管线
  */
-void createGraphicsPipeline(VkDevice device, VkExtent2D swapChainExtent, VkRenderPass renderPass,
-                           VkPipelineLayout& pipelineLayout, VkPipeline& graphicsPipeline);
+void createGraphicsPipeline(VkDevice          device,
+                            VkExtent2D        swapChainExtent,
+                            VkRenderPass      renderPass,
+                            VkPipelineLayout& pipelineLayout,
+                            VkPipeline&       graphicsPipeline);
 
 /**
  * @brief 创建帧缓冲
@@ -41,9 +44,11 @@ void createGraphicsPipeline(VkDevice device, VkExtent2D swapChainExtent, VkRende
  * @param swapChainExtent 交换链图像尺寸
  * @param swapChainFramebuffers [out] 创建的帧缓冲集合
  */
-void createFramebuffers(VkDevice device, const std::vector<VkImageView>& swapChainImageViews,
-                       VkRenderPass renderPass, VkExtent2D swapChainExtent,
-                       std::vector<VkFramebuffer>& swapChainFramebuffers);
+void createFramebuffers(VkDevice                        device,
+                        const std::vector<VkImageView>& swapChainImageViews,
+                        VkRenderPass                    renderPass,
+                        VkExtent2D                      swapChainExtent,
+                        std::vector<VkFramebuffer>&     swapChainFramebuffers);
 
 /**
  * @brief 创建着色器模块

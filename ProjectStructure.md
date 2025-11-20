@@ -29,7 +29,9 @@ Vulkan/
 ## 文件组织说明
 
 ### src/ 目录
+
 包含所有C++源代码文件(.cpp)，按功能模块组织：
+
 - `main.cpp`: 程序入口点
 - `HelloTriangleApplication.*`: 核心应用程序类
 - `vulkan_init.*`: Vulkan初始化相关功能
@@ -39,22 +41,27 @@ Vulkan/
 - `utils.*`: 辅助工具函数
 
 ### include/ 目录
+
 包含所有头文件(.h)，与src目录中的源文件一一对应。
 
 ### shaders/ 目录
+
 预留用于存放着色器文件，包括顶点着色器(.vert)、片段着色器(.frag)等。
 
 ### assets/ 目录
+
 预留用于存放纹理、模型等资源文件。
 
 ## 构建说明
 
 请确保已安装以下依赖：
+
 - Vulkan SDK
 - GLFW3 (通过vcpkg安装)
 - CMake 3.20+
 
 使用以下命令构建项目：
+
 ```bash
 mkdir build
 cd build

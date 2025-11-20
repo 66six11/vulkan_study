@@ -37,6 +37,7 @@ _2025-11-18T07:38:27.505Z_
 **Intent:** List all files to understand project structure
 
 **Arguments:**
+
 ```json
 {
   "command": "Get-ChildItem -Recurse",
@@ -47,6 +48,7 @@ _2025-11-18T07:38:27.505Z_
 ```
 
 **Result:** ❌ Failure
+
 ```
 <exited with error: PowerShell 6+ (pwsh) is not available. Please install it from https://aka.ms/powershell. Error: Error: Command failed: pwsh.exe --version
 'pwsh.exe' is not recognized as an internal or external command,
@@ -63,6 +65,7 @@ _2025-11-18T07:38:28.988Z_
 **Intent:** view the file at D:\TechArt\Vulkan.
 
 **Arguments:**
+
 ```json
 {
   "path": "D:\\TechArt\\Vulkan",
@@ -74,6 +77,7 @@ _2025-11-18T07:38:28.988Z_
 ```
 
 **Result:** ✅ Success
+
 ```
 
 diff --git a/D:/TechArt/Vulkan b/D:/TechArt/Vulkan
@@ -113,6 +117,7 @@ _2025-11-18T07:38:31.173Z_
 **Intent:** view the file at D:\TechArt\Vulkan\src.
 
 **Arguments:**
+
 ```json
 {
   "path": "D:\\TechArt\\Vulkan\\src",
@@ -124,6 +129,7 @@ _2025-11-18T07:38:31.173Z_
 ```
 
 **Result:** ✅ Success
+
 ```
 
 diff --git a/D:/TechArt/Vulkan/src b/D:/TechArt/Vulkan/src
@@ -152,6 +158,7 @@ _2025-11-18T07:38:31.173Z_
 **Intent:** view the file at D:\TechArt\Vulkan\include.
 
 **Arguments:**
+
 ```json
 {
   "path": "D:\\TechArt\\Vulkan\\include",
@@ -163,6 +170,7 @@ _2025-11-18T07:38:31.173Z_
 ```
 
 **Result:** ✅ Success
+
 ```
 
 diff --git a/D:/TechArt/Vulkan/include b/D:/TechArt/Vulkan/include
@@ -190,6 +198,7 @@ _2025-11-18T07:38:31.187Z_
 **Intent:** view the file at D:\TechArt\Vulkan\CMakeLists.txt.
 
 **Arguments:**
+
 ```json
 {
   "path": "D:\\TechArt\\Vulkan\\CMakeLists.txt",
@@ -201,6 +210,7 @@ _2025-11-18T07:38:31.187Z_
 ```
 
 **Result:** ✅ Success
+
 ```
 
 diff --git a/D:/TechArt/Vulkan/CMakeLists.txt b/D:/TechArt/Vulkan/CMakeLists.txt
@@ -363,6 +373,7 @@ _2025-11-18T07:38:32.528Z_
 **Intent:** view the file at D:\TechArt\Vulkan\src\HelloTriangleApplication.cpp.
 
 **Arguments:**
+
 ```json
 {
   "path": "D:\\TechArt\\Vulkan\\src\\HelloTriangleApplication.cpp",
@@ -374,6 +385,7 @@ _2025-11-18T07:38:32.528Z_
 ```
 
 **Result:** ✅ Success
+
 ```
 
 diff --git a/D:/TechArt/Vulkan/src/HelloTriangleApplication.cpp b/D:/TechArt/Vulkan/src/HelloTriangleApplication.cpp
@@ -565,6 +577,7 @@ _2025-11-18T07:38:32.538Z_
 **Intent:** view the file at D:\TechArt\Vulkan\include\Application.h.
 
 **Arguments:**
+
 ```json
 {
   "path": "D:\\TechArt\\Vulkan\\include\\Application.h",
@@ -576,6 +589,7 @@ _2025-11-18T07:38:32.538Z_
 ```
 
 **Result:** ✅ Success
+
 ```
 
 diff --git a/D:/TechArt/Vulkan/include/Application.h b/D:/TechArt/Vulkan/include/Application.h
@@ -774,47 +788,67 @@ _2025-11-18T07:38:33.589Z_
 
 目前可以改进/注意的点：
 
-1. 头文件 & 包含关系  
-   - `Application.h` 已经 `#define GLFW_INCLUDE_VULKAN` 并包含 `<GLFW/glfw3.h>`，`HelloTriangleApplication.cpp` 里重复 `#define GLFW_INCLUDE_VULKAN` 和同样的 include，容易造成宏冲突和编译警告，建议 cpp 里删掉这两行，只保留 `#include "Application.h"`。  
-   - cpp 中 `#include "../include/xxx.h"` 建议改为在 CMake 中通过 `target_include_directories` 加上 `${CMAKE_SOURCE_DIR}/include`，然后在代码里直接 `#include "Application.h"`、`"vulkan_init.h"`，路径更简洁，也方便以后迁移。  
-   - `Application.h` 里已经包含 `<vector> <optional> <set> <string>`，但 HelloTriangleApplication.cpp 又重复包含 `<vector> <cstring> <optional> <set> <algorithm> <limits>`，可以按需保留，减少不必要的 include，让依赖更清晰（比如只在真正用到 `<algorithm>` 的源文件里包含它）。
+1. 头文件 & 包含关系
+    - `Application.h` 已经 `#define GLFW_INCLUDE_VULKAN` 并包含 `<GLFW/glfw3.h>`，`HelloTriangleApplication.cpp` 里重复
+      `#define GLFW_INCLUDE_VULKAN` 和同样的 include，容易造成宏冲突和编译警告，建议 cpp 里删掉这两行，只保留
+      `#include "Application.h"`。
+    - cpp 中 `#include "../include/xxx.h"` 建议改为在 CMake 中通过 `target_include_directories` 加上
+      `${CMAKE_SOURCE_DIR}/include`，然后在代码里直接 `#include "Application.h"`、`"vulkan_init.h"`，路径更简洁，也方便以后迁移。
+    - `Application.h` 里已经包含 `<vector> <optional> <set> <string>`，但 HelloTriangleApplication.cpp 又重复包含
+      `<vector> <cstring> <optional> <set> <algorithm> <limits>`，可以按需保留，减少不必要的 include，让依赖更清晰（比如只在真正用到
+      `<algorithm>` 的源文件里包含它）。
 
-2. 初始化 / 资源管理安全性  
-   - `Application::cleanup()` 里直接销毁各种 Vulkan 对象，没有判空检查；虽然你初始化为 `VK_NULL_HANDLE`，但如果中途抛异常或者初始化失败时调用 `cleanup()`，可能会向 Vulkan 传入非法句柄。建议在每次 Destroy 前加简单判空，例如：  
-     ```cpp
-     if (graphicsPipeline != VK_NULL_HANDLE) {
-         vkDestroyPipeline(device, graphicsPipeline, nullptr);
-         graphicsPipeline = VK_NULL_HANDLE;
-     }
-     ```  
-   - 建议在 `initVulkan()` 中检查每一步返回值（`VkResult`），一旦失败抛出异常或返回错误，再由 `run()` 捕获并保证 `cleanup()` 至少只销毁已成功创建的对象。
+2. 初始化 / 资源管理安全性
+    - `Application::cleanup()` 里直接销毁各种 Vulkan 对象，没有判空检查；虽然你初始化为 `VK_NULL_HANDLE`
+      ，但如果中途抛异常或者初始化失败时调用 `cleanup()`，可能会向 Vulkan 传入非法句柄。建议在每次 Destroy 前加简单判空，例如：
+      ```cpp
+      if (graphicsPipeline != VK_NULL_HANDLE) {
+          vkDestroyPipeline(device, graphicsPipeline, nullptr);
+          graphicsPipeline = VK_NULL_HANDLE;
+      }
+      ```  
+    - 建议在 `initVulkan()` 中检查每一步返回值（`VkResult`），一旦失败抛出异常或返回错误，再由 `run()` 捕获并保证
+      `cleanup()` 至少只销毁已成功创建的对象。
 
-3. 队列族选择顺序问题  
-   - `initVulkan()` 里顺序是：`createSurface` → `QueueFamilyIndices indices = findQueueFamilies(physicalDevice, surface);` → `pickPhysicalDevice(...)` → `createLogicalDevice(...)`。  
-     但此时 `physicalDevice` 还没被 pick，就调用了 `findQueueFamilies(physicalDevice, surface)`，这是逻辑 bug：应该先 `pickPhysicalDevice`，在里面找到合适的 queue family，或者 pick 之后再调用 `findQueueFamilies`。建议改为：  
-     ```cpp
-     createSurface(instance, window, surface);
-     pickPhysicalDevice(instance, surface, physicalDevice);
-     QueueFamilyIndices indices = findQueueFamilies(physicalDevice, surface);
-     createLogicalDevice(physicalDevice, surface, device, indices, graphicsQueue, presentQueue);
-     ```
+3. 队列族选择顺序问题
+    - `initVulkan()` 里顺序是：`createSurface` →
+      `QueueFamilyIndices indices = findQueueFamilies(physicalDevice, surface);` → `pickPhysicalDevice(...)` →
+      `createLogicalDevice(...)`。  
+      但此时 `physicalDevice` 还没被 pick，就调用了 `findQueueFamilies(physicalDevice, surface)`，这是逻辑 bug：应该先
+      `pickPhysicalDevice`，在里面找到合适的 queue family，或者 pick 之后再调用 `findQueueFamilies`。建议改为：
+      ```cpp
+      createSurface(instance, window, surface);
+      pickPhysicalDevice(instance, surface, physicalDevice);
+      QueueFamilyIndices indices = findQueueFamilies(physicalDevice, surface);
+      createLogicalDevice(physicalDevice, surface, device, indices, graphicsQueue, presentQueue);
+      ```
 
-4. 同步对象与帧循环  
-   - 当前设计只有一对 `VkSemaphore imageAvailableSemaphore` 和 `renderFinishedSemaphore`，在简单 demo 中可行，但如果之后要引入多帧并行（典型做法：frames in flight = 2 或 3），结构要调整为每帧一套同步对象并在 `drawFrame` 中轮换。  
-   - 即便现在先不改，实现上也建议让 `drawFrame` 显式接收当前 frame index，将来扩展时更容易。
+4. 同步对象与帧循环
+    - 当前设计只有一对 `VkSemaphore imageAvailableSemaphore` 和 `renderFinishedSemaphore`，在简单 demo
+      中可行，但如果之后要引入多帧并行（典型做法：frames in flight = 2 或 3），结构要调整为每帧一套同步对象并在 `drawFrame`
+      中轮换。
+    - 即便现在先不改，实现上也建议让 `drawFrame` 显式接收当前 frame index，将来扩展时更容易。
 
-5. CMake 配置改进  
-   - `target_link_libraries(vulkan PRIVATE Vulkan::Vulkan)` 与 `find_package(Vulkan REQUIRED)` 搭配是对的，但你在 CMakeLists 里没有把编译的 shader 作为依赖加到可执行文件上，只是单独 `add_custom_target(compile_shaders ...)`。为了保证每次构建 exe 时 shader 也是最新的，可以让 exe 依赖 `compile_shaders`：  
-     ```cmake
-     add_dependencies(vulkan compile_shaders)
-     ```  
-   - 目前 `target_include_directories` 只设置了 `${CMAKE_SOURCE_DIR}/include` 和 `${Vulkan_INCLUDE_DIRS}`，但你使用了 GLFW 的头文件且通过 `find_package(glfw3 CONFIG REQUIRED)` 找到它，最好也加上 `target_link_libraries(vulkan PRIVATE glfw)`（你已添加）以及通过 `GLFW_INCLUDE_DIRS` 或 `glfw3` 的 target 来确保 include 路径正确——这一点你已经用 `if(GLFW_INCLUDE_DIRS)` 处理了，整体没问题。
+5. CMake 配置改进
+    - `target_link_libraries(vulkan PRIVATE Vulkan::Vulkan)` 与 `find_package(Vulkan REQUIRED)` 搭配是对的，但你在
+      CMakeLists 里没有把编译的 shader 作为依赖加到可执行文件上，只是单独 `add_custom_target(compile_shaders ...)`
+      。为了保证每次构建 exe 时 shader 也是最新的，可以让 exe 依赖 `compile_shaders`：
+      ```cmake
+      add_dependencies(vulkan compile_shaders)
+      ```  
+    - 目前 `target_include_directories` 只设置了 `${CMAKE_SOURCE_DIR}/include` 和 `${Vulkan_INCLUDE_DIRS}`，但你使用了
+      GLFW 的头文件且通过 `find_package(glfw3 CONFIG REQUIRED)` 找到它，最好也加上
+      `target_link_libraries(vulkan PRIVATE glfw)`（你已添加）以及通过 `GLFW_INCLUDE_DIRS` 或 `glfw3` 的 target 来确保
+      include 路径正确——这一点你已经用 `if(GLFW_INCLUDE_DIRS)` 处理了，整体没问题。
 
-6. 设计与可维护性  
-   - `Application` 类目前承担了大量 Vulkan 资源句柄的直接管理，已经比较胖；后续可以考虑按功能分拆，比如将 swapchain、pipeline、command buffers、sync 分到各自的小类或结构体中，由 Application 做生命周期协调。  
-   - 你的中文注释非常详细，这对学习和复习很好，但在部分地方略显冗长，可以把“显然的”注释（如“// 析构时释放内存”之类）适当精简，把注释留给“为什么这样做”和“容易出错的点”。
+6. 设计与可维护性
+    - `Application` 类目前承担了大量 Vulkan 资源句柄的直接管理，已经比较胖；后续可以考虑按功能分拆，比如将
+      swapchain、pipeline、command buffers、sync 分到各自的小类或结构体中，由 Application 做生命周期协调。
+    - 你的中文注释非常详细，这对学习和复习很好，但在部分地方略显冗长，可以把“显然的”注释（如“//
+      析构时释放内存”之类）适当精简，把注释留给“为什么这样做”和“容易出错的点”。
 
-如果你愿意，可以告诉我你最关心的是：性能、代码风格、架构设计还是 Vulkan API 使用是否规范，我可以针对其中一块继续深入审查其它 .cpp/.h 文件。
+如果你愿意，可以告诉我你最关心的是：性能、代码风格、架构设计还是 Vulkan API 使用是否规范，我可以针对其中一块继续深入审查其它
+.cpp/.h 文件。
 
 ---
 
@@ -833,6 +867,7 @@ _2025-11-18T07:40:10.785Z_
 **Intent:** view the file at D:\TechArt\Vulkan\src\vulkan_init.cpp.
 
 **Arguments:**
+
 ```json
 {
   "path": "D:\\TechArt\\Vulkan\\src\\vulkan_init.cpp",
@@ -844,6 +879,7 @@ _2025-11-18T07:40:10.785Z_
 ```
 
 **Result:** ✅ Success
+
 ```
 
 diff --git a/D:/TechArt/Vulkan/src/vulkan_init.cpp b/D:/TechArt/Vulkan/src/vulkan_init.cpp
@@ -1089,6 +1125,7 @@ _2025-11-18T07:40:10.789Z_
 **Intent:** view the file at D:\TechArt\Vulkan\src\swapchain_management.cpp.
 
 **Arguments:**
+
 ```json
 {
   "path": "D:\\TechArt\\Vulkan\\src\\swapchain_management.cpp",
@@ -1100,6 +1137,7 @@ _2025-11-18T07:40:10.789Z_
 ```
 
 **Result:** ✅ Success
+
 ```
 
 diff --git a/D:/TechArt/Vulkan/src/swapchain_management.cpp b/D:/TechArt/Vulkan/src/swapchain_management.cpp
@@ -1231,6 +1269,7 @@ _2025-11-18T07:40:10.773Z_
 **Intent:** view the file at D:\TechArt\Vulkan\src\rendering.cpp.
 
 **Arguments:**
+
 ```json
 {
   "path": "D:\\TechArt\\Vulkan\\src\\rendering.cpp",
@@ -1242,6 +1281,7 @@ _2025-11-18T07:40:10.773Z_
 ```
 
 **Result:** ✅ Success
+
 ```
 
 diff --git a/D:/TechArt/Vulkan/src/rendering.cpp b/D:/TechArt/Vulkan/src/rendering.cpp
@@ -1521,6 +1561,7 @@ _2025-11-18T07:40:10.793Z_
 **Intent:** view the file at D:\TechArt\Vulkan\src\command_buffer_sync.cpp.
 
 **Arguments:**
+
 ```json
 {
   "path": "D:\\TechArt\\Vulkan\\src\\command_buffer_sync.cpp",
@@ -1532,6 +1573,7 @@ _2025-11-18T07:40:10.793Z_
 ```
 
 **Result:** ✅ Success
+
 ```
 
 diff --git a/D:/TechArt/Vulkan/src/command_buffer_sync.cpp b/D:/TechArt/Vulkan/src/command_buffer_sync.cpp
@@ -1740,6 +1782,7 @@ _2025-11-18T07:40:10.799Z_
 **Intent:** view the file at D:\TechArt\Vulkan\src\utils.cpp.
 
 **Arguments:**
+
 ```json
 {
   "path": "D:\\TechArt\\Vulkan\\src\\utils.cpp",
@@ -1751,6 +1794,7 @@ _2025-11-18T07:40:10.799Z_
 ```
 
 **Result:** ✅ Success
+
 ```
 
 diff --git a/D:/TechArt/Vulkan/src/utils.cpp b/D:/TechArt/Vulkan/src/utils.cpp
@@ -1961,6 +2005,7 @@ _2025-11-18T07:40:10.802Z_
 **Intent:** view the file at D:\TechArt\Vulkan\include\vulkan_init.h.
 
 **Arguments:**
+
 ```json
 {
   "path": "D:\\TechArt\\Vulkan\\include\\vulkan_init.h",
@@ -1972,6 +2017,7 @@ _2025-11-18T07:40:10.802Z_
 ```
 
 **Result:** ✅ Success
+
 ```
 
 diff --git a/D:/TechArt/Vulkan/include/vulkan_init.h b/D:/TechArt/Vulkan/include/vulkan_init.h
@@ -2054,6 +2100,7 @@ _2025-11-18T07:40:10.804Z_
 **Intent:** view the file at D:\TechArt\Vulkan\include\swapchain_management.h.
 
 **Arguments:**
+
 ```json
 {
   "path": "D:\\TechArt\\Vulkan\\include\\swapchain_management.h",
@@ -2065,6 +2112,7 @@ _2025-11-18T07:40:10.804Z_
 ```
 
 **Result:** ✅ Success
+
 ```
 
 diff --git a/D:/TechArt/Vulkan/include/swapchain_management.h b/D:/TechArt/Vulkan/include/swapchain_management.h
@@ -2120,6 +2168,7 @@ _2025-11-18T07:40:10.818Z_
 **Intent:** view the file at D:\TechArt\Vulkan\include\rendering.h.
 
 **Arguments:**
+
 ```json
 {
   "path": "D:\\TechArt\\Vulkan\\include\\rendering.h",
@@ -2131,6 +2180,7 @@ _2025-11-18T07:40:10.818Z_
 ```
 
 **Result:** ✅ Success
+
 ```
 
 diff --git a/D:/TechArt/Vulkan/include/rendering.h b/D:/TechArt/Vulkan/include/rendering.h
@@ -2207,6 +2257,7 @@ _2025-11-18T07:40:10.807Z_
 **Intent:** view the file at D:\TechArt\Vulkan\include\command_buffer_sync.h.
 
 **Arguments:**
+
 ```json
 {
   "path": "D:\\TechArt\\Vulkan\\include\\command_buffer_sync.h",
@@ -2218,6 +2269,7 @@ _2025-11-18T07:40:10.807Z_
 ```
 
 **Result:** ✅ Success
+
 ```
 
 diff --git a/D:/TechArt/Vulkan/include/command_buffer_sync.h b/D:/TechArt/Vulkan/include/command_buffer_sync.h
@@ -2318,6 +2370,7 @@ _2025-11-18T07:40:10.811Z_
 **Intent:** view the file at D:\TechArt\Vulkan\include\utils.h.
 
 **Arguments:**
+
 ```json
 {
   "path": "D:\\TechArt\\Vulkan\\include\\utils.h",
@@ -2329,6 +2382,7 @@ _2025-11-18T07:40:10.811Z_
 ```
 
 **Result:** ✅ Success
+
 ```
 
 diff --git a/D:/TechArt/Vulkan/include/utils.h b/D:/TechArt/Vulkan/include/utils.h
@@ -2425,187 +2479,205 @@ _2025-11-18T07:40:12.825Z_
 
 ### Copilot Response
 
-下面按“架构设计 / Vulkan 使用 / 安全性 / 性能 / 代码风格与可维护性 / CMake & 资源路径”几个方面给出规范化建议，你可以按模块逐步修改。  
+下面按“架构设计 / Vulkan 使用 / 安全性 / 性能 / 代码风格与可维护性 / CMake & 资源路径”几个方面给出规范化建议，你可以按模块逐步修改。
 
 ---
 
 ## 一、架构设计（模块划分 / 依赖关系）
 
-1. 头文件与宏定义职责  
-   - 问题：`Application.h`、`vulkan_init.h`、`command_buffer_sync.h` 等头文件内都 `#define GLFW_INCLUDE_VULKAN` 并 `#include <GLFW/glfw3.h>`，cpp 中也有同样的宏和 include，宏定义重复、依赖扩散。  
-   - 建议：  
-     - 建一个专门的 `Platform.h`（或类似）集中处理 `#define GLFW_INCLUDE_VULKAN` 和 `<GLFW/glfw3.h>` 的包含，其他头文件只 include 这个公共头。  
-     - cpp 中删除重复的 `#define GLFW_INCLUDE_VULKAN`，只保留对自己头文件的 include。  
+1. 头文件与宏定义职责
+    - 问题：`Application.h`、`vulkan_init.h`、`command_buffer_sync.h` 等头文件内都 `#define GLFW_INCLUDE_VULKAN` 并
+      `#include <GLFW/glfw3.h>`，cpp 中也有同样的宏和 include，宏定义重复、依赖扩散。
+    - 建议：
+        - 建一个专门的 `Platform.h`（或类似）集中处理 `#define GLFW_INCLUDE_VULKAN` 和 `<GLFW/glfw3.h>` 的包含，其他头文件只
+          include 这个公共头。
+        - cpp 中删除重复的 `#define GLFW_INCLUDE_VULKAN`，只保留对自己头文件的 include。
 
-2. 层次关系与职责  
-   - 优点：你已经把初始化（`vulkan_init`）、swapchain（`swapchain_management`）、渲染（`rendering`）、命令/同步（`command_buffer_sync`）、工具（`utils`）拆成独立模块，接口清晰。  
-   - 建议：  
-     - `Application` 作为“编排者”已经持有所有 Vulkan 对象，当前设计还可以接受，但后续扩展时可以进一步拆分：  
-       - `DeviceContext`（Instance/PhysicalDevice/Device/Queues/Surface）  
-       - `SwapchainContext`（SwapChain/ImageViews/Framebuffers/RenderPass）  
-       - `PipelineContext`（PipelineLayout/Pipeline）  
-     - 现在不必立刻重构，但可以在命名和注释中按“上下文”思路组织，避免 `Application` 过度膨胀。  
+2. 层次关系与职责
+    - 优点：你已经把初始化（`vulkan_init`）、swapchain（`swapchain_management`）、渲染（`rendering`）、命令/同步（
+      `command_buffer_sync`）、工具（`utils`）拆成独立模块，接口清晰。
+    - 建议：
+        - `Application` 作为“编排者”已经持有所有 Vulkan 对象，当前设计还可以接受，但后续扩展时可以进一步拆分：
+            - `DeviceContext`（Instance/PhysicalDevice/Device/Queues/Surface）
+            - `SwapchainContext`（SwapChain/ImageViews/Framebuffers/RenderPass）
+            - `PipelineContext`（PipelineLayout/Pipeline）
+        - 现在不必立刻重构，但可以在命名和注释中按“上下文”思路组织，避免 `Application` 过度膨胀。
 
-3. 接口风格统一  
-   - 现状：大部分函数采用“输出参数 + 引用”的 C 风格接口，例如 `void createSwapChain(..., VkSwapchainKHR& swapChain, ...)`。  
-   - 建议：  
-     - 保持风格统一即可，要么全部采用这种“填充输出参数”的风格；要么对一些逻辑独立的小函数采用返回值形式，例如：  
-       ```cpp
-       VkShaderModule createShaderModule(VkDevice device, const std::vector<char>& code);
-       ```
-       你已经这么做了，可以视为“对象构造函数式接口”，很好。  
+3. 接口风格统一
+    - 现状：大部分函数采用“输出参数 + 引用”的 C 风格接口，例如
+      `void createSwapChain(..., VkSwapchainKHR& swapChain, ...)`。
+    - 建议：
+        - 保持风格统一即可，要么全部采用这种“填充输出参数”的风格；要么对一些逻辑独立的小函数采用返回值形式，例如：
+          ```cpp
+          VkShaderModule createShaderModule(VkDevice device, const std::vector<char>& code);
+          ```
+          你已经这么做了，可以视为“对象构造函数式接口”，很好。
 
 ---
 
 ## 二、Vulkan API 使用与逻辑正确性
 
-1. 调用顺序问题（重要逻辑 bug）  
-   - 问题：在 `Application::initVulkan()` 中，你现在是：  
-     ```cpp
-     createSurface(instance, window, surface);
-     QueueFamilyIndices indices = findQueueFamilies(physicalDevice, surface); // 此时 physicalDevice 还没赋值
-     pickPhysicalDevice(instance, surface, physicalDevice);
-     createLogicalDevice(physicalDevice, surface, device, indices, graphicsQueue, presentQueue);
-     ```  
-   - 正确顺序应是先选物理设备，再基于选中的设备查询 queue families：  
-     ```cpp
-     createSurface(instance, window, surface);
-     pickPhysicalDevice(instance, surface, physicalDevice);
-     QueueFamilyIndices indices = findQueueFamilies(physicalDevice, surface);
-     createLogicalDevice(physicalDevice, surface, device, indices, graphicsQueue, presentQueue);
-     ```  
-   - 这是最优先要改的一处，否则在 Release 构建或未初始化的句柄下，行为是未定义的。  
+1. 调用顺序问题（重要逻辑 bug）
+    - 问题：在 `Application::initVulkan()` 中，你现在是：
+      ```cpp
+      createSurface(instance, window, surface);
+      QueueFamilyIndices indices = findQueueFamilies(physicalDevice, surface); // 此时 physicalDevice 还没赋值
+      pickPhysicalDevice(instance, surface, physicalDevice);
+      createLogicalDevice(physicalDevice, surface, device, indices, graphicsQueue, presentQueue);
+      ```  
+    - 正确顺序应是先选物理设备，再基于选中的设备查询 queue families：
+      ```cpp
+      createSurface(instance, window, surface);
+      pickPhysicalDevice(instance, surface, physicalDevice);
+      QueueFamilyIndices indices = findQueueFamilies(physicalDevice, surface);
+      createLogicalDevice(physicalDevice, surface, device, indices, graphicsQueue, presentQueue);
+      ```  
+    - 这是最优先要改的一处，否则在 Release 构建或未初始化的句柄下，行为是未定义的。
 
-2. 验证层与调试信息  
-   - 现状：`createInstance` 中已经预留了 `debugCreateInfo`，但相关代码被注释掉，`setupDebugMessenger` 目前是空实现。  
-   - 建议：  
-     - 在 debug 配置或 `enableValidationLayers == true` 时，真正填充 `VkDebugUtilsMessengerCreateInfoEXT` 并创建 `VkDebugUtilsMessengerEXT`，在 `cleanup()` 中销毁它。  
-     - 这能显著提高调试体验，捕获错误使用、越界访问等问题。  
+2. 验证层与调试信息
+    - 现状：`createInstance` 中已经预留了 `debugCreateInfo`，但相关代码被注释掉，`setupDebugMessenger` 目前是空实现。
+    - 建议：
+        - 在 debug 配置或 `enableValidationLayers == true` 时，真正填充 `VkDebugUtilsMessengerCreateInfoEXT` 并创建
+          `VkDebugUtilsMessengerEXT`，在 `cleanup()` 中销毁它。
+        - 这能显著提高调试体验，捕获错误使用、越界访问等问题。
 
-3. 对象生命周期与 Destroy 调用  
-   - 现状：`cleanup()` 按反向顺序销毁对象，整体顺序基本正确：  
-     - sync → command pool → framebuffers → pipeline/pipelineLayout/renderPass → imageViews → swapchain → device → surface → instance → GLFW。  
-   - 建议：  
-     - 在销毁前加简单判空（句柄是否为 `VK_NULL_HANDLE`）→ 更安全地应对“初始化中途失败但仍调用 cleanup”的情况。  
-     - 考虑在销毁后将成员设回 `VK_NULL_HANDLE`，便于后续二次初始化或防止误用。  
+3. 对象生命周期与 Destroy 调用
+    - 现状：`cleanup()` 按反向顺序销毁对象，整体顺序基本正确：
+        - sync → command pool → framebuffers → pipeline/pipelineLayout/renderPass → imageViews → swapchain → device →
+          surface → instance → GLFW。
+    - 建议：
+        - 在销毁前加简单判空（句柄是否为 `VK_NULL_HANDLE`）→ 更安全地应对“初始化中途失败但仍调用 cleanup”的情况。
+        - 考虑在销毁后将成员设回 `VK_NULL_HANDLE`，便于后续二次初始化或防止误用。
 
-4. 错误处理覆盖度  
-   - 优点：你对几乎所有 Vulkan 创建函数都检查了返回值并在失败时抛 `std::runtime_error`，这非常好。  
-   - 建议：  
-     - 对于 `vkQueueSubmit`、`vkQueuePresentKHR` 等“每帧调用”的函数，你已经在 `vkQueueSubmit` 失败时抛异常，但 `vkQueuePresentKHR` 目前没有检查返回值，应该也检查并处理 `VK_ERROR_OUT_OF_DATE_KHR` / `VK_SUBOPTIMAL_KHR` 等典型情况。  
-     - 如果后面要支持窗口 resize，那么这部分错误处理是必做项；当前 demo 可以先加上错误类型判断和注释。  
+4. 错误处理覆盖度
+    - 优点：你对几乎所有 Vulkan 创建函数都检查了返回值并在失败时抛 `std::runtime_error`，这非常好。
+    - 建议：
+        - 对于 `vkQueueSubmit`、`vkQueuePresentKHR` 等“每帧调用”的函数，你已经在 `vkQueueSubmit` 失败时抛异常，但
+          `vkQueuePresentKHR` 目前没有检查返回值，应该也检查并处理 `VK_ERROR_OUT_OF_DATE_KHR` / `VK_SUBOPTIMAL_KHR`
+          等典型情况。
+        - 如果后面要支持窗口 resize，那么这部分错误处理是必做项；当前 demo 可以先加上错误类型判断和注释。
 
 ---
 
 ## 三、安全性与健壮性
 
-1. GLFW 初始化与失败检查  
-   - 问题：`initWindow()` 中调用 `glfwInit()`、`glfwCreateWindow()` 没有检查返回值，如果失败会在后面使用空指针。  
-   - 建议：  
-     ```cpp
-     if (!glfwInit()) {
-         throw std::runtime_error("failed to initialize GLFW");
-     }
-     window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan Triangle", nullptr, nullptr);
-     if (!window) {
-         glfwTerminate();
-         throw std::runtime_error("failed to create GLFW window");
-     }
-     ```  
+1. GLFW 初始化与失败检查
+    - 问题：`initWindow()` 中调用 `glfwInit()`、`glfwCreateWindow()` 没有检查返回值，如果失败会在后面使用空指针。
+    - 建议：
+      ```cpp
+      if (!glfwInit()) {
+          throw std::runtime_error("failed to initialize GLFW");
+      }
+      window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan Triangle", nullptr, nullptr);
+      if (!window) {
+          glfwTerminate();
+          throw std::runtime_error("failed to create GLFW window");
+      }
+      ```  
 
-2. 资源路径与文件读取  
-   - `readFile("shaders/shader.vert.spv")` 假定工作目录是可执行文件所在目录 + `shaders`；你在 CMake 中用 `copy_directory` 把编译后的 shader 复制到 `TARGET_FILE_DIR/shaders`，逻辑是自洽的。  
-   - 建议：  
-     - 若要提高健壮性，可以把 shader 路径作为参数传入 `Application` 或在 `constants.h` 中定义 `SHADER_DIR`，避免“写死相对路径”。  
+2. 资源路径与文件读取
+    - `readFile("shaders/shader.vert.spv")` 假定工作目录是可执行文件所在目录 + `shaders`；你在 CMake 中用
+      `copy_directory` 把编译后的 shader 复制到 `TARGET_FILE_DIR/shaders`，逻辑是自洽的。
+    - 建议：
+        - 若要提高健壮性，可以把 shader 路径作为参数传入 `Application` 或在 `constants.h` 中定义 `SHADER_DIR`，避免“写死相对路径”。
 
-3. run() 中异常处理  
-   - 现状：`Application::run()` 按顺序调用 `initWindow() -> initVulkan() -> mainLoop() -> cleanup()`，但没有 try/catch。  
-   - 建议：  
-     - 在 `main.cpp` 调用 `Application::run()` 的地方加一层 try/catch，捕获 `std::exception` 打印信息后再调用 `cleanup()` 或确保终止 GLFW：  
-       ```cpp
-       int main() {
-           Application app;
-           try {
-               app.run();
-           } catch (const std::exception& e) {
-               std::cerr << e.what() << std::endl;
-               return EXIT_FAILURE;
-           }
-           return EXIT_SUCCESS;
-       }
-       ```  
+3. run() 中异常处理
+    - 现状：`Application::run()` 按顺序调用 `initWindow() -> initVulkan() -> mainLoop() -> cleanup()`，但没有 try/catch。
+    - 建议：
+        - 在 `main.cpp` 调用 `Application::run()` 的地方加一层 try/catch，捕获 `std::exception` 打印信息后再调用
+          `cleanup()` 或确保终止 GLFW：
+          ```cpp
+          int main() {
+              Application app;
+              try {
+                  app.run();
+              } catch (const std::exception& e) {
+                  std::cerr << e.what() << std::endl;
+                  return EXIT_FAILURE;
+              }
+              return EXIT_SUCCESS;
+          }
+          ```  
 
 ---
 
 ## 四、性能与扩展性
 
-1. 每帧 `vkQueueWaitIdle`  
-   - 现状：`drawFrame()` 最后调用 `vkQueueWaitIdle(presentQueue)`，这会在每帧都阻塞：性能上等价于 CPU/GPU 完全同步，无法并行提交。  
-   - 建议：  
-     - 对于学习 demo 可以保留，但如果考虑性能，应改为多帧 in-flight 模型 + `VkFence` 同步（例如 2–3 帧轮换），不在每帧等待队列空闲。  
+1. 每帧 `vkQueueWaitIdle`
+    - 现状：`drawFrame()` 最后调用 `vkQueueWaitIdle(presentQueue)`，这会在每帧都阻塞：性能上等价于 CPU/GPU 完全同步，无法并行提交。
+    - 建议：
+        - 对于学习 demo 可以保留，但如果考虑性能，应改为多帧 in-flight 模型 + `VkFence` 同步（例如 2–3 帧轮换），不在每帧等待队列空闲。
 
-2. 单一 semaphore 对 vs 多帧  
-   - 现状：只有一对 `imageAvailableSemaphore` 和 `renderFinishedSemaphore`，配合 `vkQueueWaitIdle` 可以工作，但无法扩展到多帧 in-flight。  
-   - 建议：  
-     - 如果以后要扩展，可以设计为：`MAX_FRAMES_IN_FLIGHT` 个“帧上下文”，每帧有自己的 `VkSemaphore` 和 `VkFence`，在 `drawFrame` 中使用当前帧索引访问。  
+2. 单一 semaphore 对 vs 多帧
+    - 现状：只有一对 `imageAvailableSemaphore` 和 `renderFinishedSemaphore`，配合 `vkQueueWaitIdle` 可以工作，但无法扩展到多帧
+      in-flight。
+    - 建议：
+        - 如果以后要扩展，可以设计为：`MAX_FRAMES_IN_FLIGHT` 个“帧上下文”，每帧有自己的 `VkSemaphore` 和 `VkFence`，在
+          `drawFrame` 中使用当前帧索引访问。
 
-3. 临时对象与 STL 使用  
-   - 你的 `std::vector` 使用比较合理，不过在频繁调用的路径（例如未来支持动态重建 swapchain）中，注意减少临时分配（可以将某些 vector 作为成员缓存）。  
-   - 当前 demo 对性能不是瓶颈，这一块属于“以后扩展再考虑”的层级。  
+3. 临时对象与 STL 使用
+    - 你的 `std::vector` 使用比较合理，不过在频繁调用的路径（例如未来支持动态重建 swapchain）中，注意减少临时分配（可以将某些
+      vector 作为成员缓存）。
+    - 当前 demo 对性能不是瓶颈，这一块属于“以后扩展再考虑”的层级。
 
 ---
 
 ## 五、代码风格与可维护性
 
-1. include 路径与依赖收缩  
-   - 问题：cpp 文件大量使用 `"../include/xxx.h"`，头文件中也混合使用 STL 头文件和 `<GLFW/glfw3.h>` 等。  
-   - 建议：  
-     - 在 CMake 中已经 `target_include_directories(vulkan PRIVATE ${CMAKE_SOURCE_DIR}/include)`，因此在代码里可以直接写：  
-       ```cpp
-       #include "Application.h"
-       #include "vulkan_init.h"
-       #include "swapchain_management.h"
-       ```  
-       而不需要 `../include/`。  
-     - 在头文件中只包含真正需要的最小集合，避免“工具头文件”互相包含形成隐式依赖。  
+1. include 路径与依赖收缩
+    - 问题：cpp 文件大量使用 `"../include/xxx.h"`，头文件中也混合使用 STL 头文件和 `<GLFW/glfw3.h>` 等。
+    - 建议：
+        - 在 CMake 中已经 `target_include_directories(vulkan PRIVATE ${CMAKE_SOURCE_DIR}/include)`，因此在代码里可以直接写：
+          ```cpp
+          #include "Application.h"
+          #include "vulkan_init.h"
+          #include "swapchain_management.h"
+          ```  
+          而不需要 `../include/`。
+        - 在头文件中只包含真正需要的最小集合，避免“工具头文件”互相包含形成隐式依赖。
 
-2. 命名与一致性  
-   - 命名整体清晰（`createSwapChain` / `createImageViews` / `createRenderPass` 等非常直观），英文注释与中文解释配合很好。  
-   - 建议：  
-     - 保持形参命名统一：例如有的函数是 `device`、有的是 `logicalDevice`，尽量统一为 `device`，`physicalDevice` 用于物理设备。  
-     - 若要进一步规范，可以为所有输出参数加上 `out` 前缀或通过注释统一标注。  
+2. 命名与一致性
+    - 命名整体清晰（`createSwapChain` / `createImageViews` / `createRenderPass` 等非常直观），英文注释与中文解释配合很好。
+    - 建议：
+        - 保持形参命名统一：例如有的函数是 `device`、有的是 `logicalDevice`，尽量统一为 `device`，`physicalDevice` 用于物理设备。
+        - 若要进一步规范，可以为所有输出参数加上 `out` 前缀或通过注释统一标注。
 
-3. 注释密度  
-   - 优点：面向学习的注释很详细，对自己和读者都友好。  
-   - 建议：  
-     - 对一些“显而易见”的注释（例如 “vkDestroyPipelineLayout 销毁管线布局”）可以适度精简，更多写“为什么要这样配置某个字段”（如某个 present mode、attachment layout 的选择理由），更利于长期维护。  
+3. 注释密度
+    - 优点：面向学习的注释很详细，对自己和读者都友好。
+    - 建议：
+        - 对一些“显而易见”的注释（例如 “vkDestroyPipelineLayout 销毁管线布局”）可以适度精简，更多写“为什么要这样配置某个字段”（如某个
+          present mode、attachment layout 的选择理由），更利于长期维护。
 
 ---
 
 ## 六、CMake 与构建系统
 
-1. 库链接与 include  
-   - `find_package(Vulkan REQUIRED)` + `target_link_libraries(vulkan PRIVATE Vulkan::Vulkan)` 是正确用法，`find_package(glfw3 CONFIG REQUIRED)` + `target_link_libraries(vulkan PRIVATE glfw)` 也没问题。  
-   - 建议：  
-     - 你已经在 CMake 中对 `${GLFW_INCLUDE_DIRS}` 做了可选 include，若后期迁移到“target-based”用法（`target_link_libraries(vulkan PRIVATE glfw)` 即可自动获得头文件路径）可以删除该分支；目前可以保持现状。  
+1. 库链接与 include
+    - `find_package(Vulkan REQUIRED)` + `target_link_libraries(vulkan PRIVATE Vulkan::Vulkan)` 是正确用法，
+      `find_package(glfw3 CONFIG REQUIRED)` + `target_link_libraries(vulkan PRIVATE glfw)` 也没问题。
+    - 建议：
+        - 你已经在 CMake 中对 `${GLFW_INCLUDE_DIRS}` 做了可选 include，若后期迁移到“target-based”用法（
+          `target_link_libraries(vulkan PRIVATE glfw)` 即可自动获得头文件路径）可以删除该分支；目前可以保持现状。
 
-2. shader 构建规则  
-   - 现状：`add_custom_target(compile_shaders DEPENDS ... )` 但没有将 `compile_shaders` 与可执行程序建立依赖关系。  
-   - 建议：  
-     ```cmake
-     add_dependencies(vulkan compile_shaders)
-     ```  
-     这样每次构建可执行文件时保证 shader 已经编译；否则首次构建可能出现找不到 `.spv` 的问题（尤其是在直接运行 exe 而没显式执行 `compile_shaders` 目标时）。  
+2. shader 构建规则
+    - 现状：`add_custom_target(compile_shaders DEPENDS ... )` 但没有将 `compile_shaders` 与可执行程序建立依赖关系。
+    - 建议：
+      ```cmake
+      add_dependencies(vulkan compile_shaders)
+      ```  
+      这样每次构建可执行文件时保证 shader 已经编译；否则首次构建可能出现找不到 `.spv` 的问题（尤其是在直接运行 exe 而没显式执行
+      `compile_shaders` 目标时）。
 
 ---
 
 ## 七、具体可优先修改的点（排序）
 
-1. 修正 `initVulkan()` 中 `findQueueFamilies` 调用顺序（重大逻辑问题）。  
-2. 移除重复的 `#define GLFW_INCLUDE_VULKAN`，建立一个统一平台/窗口头文件，清理 include 路径（从 `../include/...` 改为直接 `"xxx.h"`）。  
-3. 为 `glfwInit`、`glfwCreateWindow`、`vkQueuePresentKHR` 等增加错误检查。  
-4. 在 `cleanup()` 中增加判空销毁，并在销毁后将句柄重置为 `VK_NULL_HANDLE`。  
-5. CMake 中为 `vulkan` 目标添加对 `compile_shaders` 的依赖。  
-6. 视需要实现 `setupDebugMessenger` 和 debug messenger 的创建/销毁，以提升调试体验。  
+1. 修正 `initVulkan()` 中 `findQueueFamilies` 调用顺序（重大逻辑问题）。
+2. 移除重复的 `#define GLFW_INCLUDE_VULKAN`，建立一个统一平台/窗口头文件，清理 include 路径（从 `../include/...` 改为直接
+   `"xxx.h"`）。
+3. 为 `glfwInit`、`glfwCreateWindow`、`vkQueuePresentKHR` 等增加错误检查。
+4. 在 `cleanup()` 中增加判空销毁，并在销毁后将句柄重置为 `VK_NULL_HANDLE`。
+5. CMake 中为 `vulkan` 目标添加对 `compile_shaders` 的依赖。
+6. 视需要实现 `setupDebugMessenger` 和 debug messenger 的创建/销毁，以提升调试体验。
 
 如果你愿意，我可以接下来按“先修逻辑 bug + 头文件/宏清理”的顺序，帮你写出具体的修改代码片段（逐个函数/文件给出改动前后对比）。

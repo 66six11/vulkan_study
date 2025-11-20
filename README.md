@@ -5,14 +5,14 @@
 ## 项目特点
 
 - 基于现代 C++20 标准
-- 使用 CMake 构建系统  
+- 使用 CMake 构建系统
 - 集成 vcpkg 包管理器
 - 结构化的 Vulkan 学习代码
 
 ## 依赖
 
 - CMake 4.0+
-- C++20 兼容编译器 MSVC
+- C++17/20 兼容编译器 MSVC
 - Vulkan SDK 1.4.321.11.4.321.1
 - GLFW3
 - GLM
@@ -96,6 +96,7 @@ target_link_libraries(${PROJECT_NAME}
 ## FAQ
 
 ### 如何配置 Vulkan SDK？
+
 安装vulkan的时候可以将组件全选
 
 请确保已正确安装 Vulkan SDK 并设置了相应的环境变量。
@@ -105,6 +106,7 @@ target_link_libraries(${PROJECT_NAME}
 安装好sdk后可以运行Vulkan Cube.exe检查是否支持
 
 ### 构建时遇到依赖问题怎么办？
+
 确保 vcpkg 已正确配置，并且所有依赖包都已安装。
 
 ## 许可证

@@ -3,6 +3,7 @@
 #include "constants.h"
 #include <vector>
 
+
 /**
  * @brief 创建交换链
  * 
@@ -17,10 +18,14 @@
  * @param swapChainImageFormat [out] 交换链图像格式
  * @param swapChainExtent [out] 交换链图像尺寸
  */
-void createSwapChain(VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR surface,
-                    QueueFamilyIndices indices, VkSwapchainKHR& swapChain, 
-                    std::vector<VkImage>& swapChainImages, VkFormat& swapChainImageFormat, 
-                    VkExtent2D& swapChainExtent);
+void createSwapChain(VkPhysicalDevice      physicalDevice,
+                     VkDevice              device,
+                     VkSurfaceKHR          surface,
+                     QueueFamilyIndices    indices,
+                     VkSwapchainKHR&       swapChain,
+                     std::vector<VkImage>& swapChainImages,
+                     VkFormat&             swapChainImageFormat,
+                     VkExtent2D&           swapChainExtent);
 
 /**
  * @brief 创建图像视图
@@ -32,5 +37,9 @@ void createSwapChain(VkPhysicalDevice physicalDevice, VkDevice device, VkSurface
  * @param swapChainImageFormat 交换链图像格式
  * @param swapChainImageViews [out] 创建的图像视图集合
  */
-void createImageViews(VkDevice device, const std::vector<VkImage>& swapChainImages, 
-                     VkFormat swapChainImageFormat, std::vector<VkImageView>& swapChainImageViews);
+void createImageViews(VkDevice                    device,
+                      const std::vector<VkImage>& swapChainImages,
+                      VkFormat                    swapChainImageFormat,
+                      std::vector<VkImageView>&   swapChainImageViews);
+
+

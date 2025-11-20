@@ -58,5 +58,9 @@ void pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface, VkPhysicalDev
  * @param graphicsQueue [out] 图形队列
  * @param presentQueue [out] 呈现队列
  */
-void createLogicalDevice(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, VkDevice& device, 
-                        QueueFamilyIndices indices, VkQueue& graphicsQueue, VkQueue& presentQueue);
+void createLogicalDevice(VkPhysicalDevice   physicalDevice,
+                         VkSurfaceKHR       surface,
+                         VkDevice&          device,
+                         QueueFamilyIndices indices,
+                         VkQueue&           graphicsQueue,
+                         VkQueue&           presentQueue);

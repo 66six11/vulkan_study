@@ -31,7 +31,7 @@ int main()
         std::cerr << e.what() << std::endl;
         return EXIT_FAILURE;
     }
-    
+
     // 程序正常退出
     return EXIT_SUCCESS;
 }

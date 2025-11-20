@@ -29,11 +29,14 @@ void createCommandPool(VkDevice device, QueueFamilyIndices indices, VkCommandPoo
  * @param swapChainImageViews 交换链图像视图集合
  * @param commandBuffers [out] 创建的命令缓冲集合
  */
-void createCommandBuffers(VkDevice device, VkCommandPool commandPool, 
-                         const std::vector<VkFramebuffer>& swapChainFramebuffers,
-                         VkRenderPass renderPass, VkExtent2D swapChainExtent,
-                         VkPipeline graphicsPipeline, const std::vector<VkImageView>& swapChainImageViews,
-                         std::vector<VkCommandBuffer>& commandBuffers);
+void createCommandBuffers(VkDevice                          device,
+                          VkCommandPool                     commandPool,
+                          const std::vector<VkFramebuffer>& swapChainFramebuffers,
+                          VkRenderPass                      renderPass,
+                          VkExtent2D                        swapChainExtent,
+                          VkPipeline                        graphicsPipeline,
+                          const std::vector<VkImageView>&   swapChainImageViews,
+                          std::vector<VkCommandBuffer>&     commandBuffers);
 
 /**
  * @brief 创建信号量
@@ -58,9 +61,12 @@ void createSemaphores(VkDevice device, VkSemaphore& imageAvailableSemaphore, VkS
  * @param graphicsPipeline 图形管线
  * @param framebuffer 帧缓冲
  */
-void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex, 
-                        VkRenderPass renderPass, VkExtent2D swapChainExtent,
-                        VkPipeline graphicsPipeline, VkFramebuffer framebuffer);
+void recordCommandBuffer(VkCommandBuffer commandBuffer,
+                         uint32_t        imageIndex,
+                         VkRenderPass    renderPass,
+                         VkExtent2D      swapChainExtent,
+                         VkPipeline      graphicsPipeline,
+                         VkFramebuffer   framebuffer);
 
 /**
  * @brief 绘制一帧
@@ -75,6 +81,10 @@ void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex,
  * @param imageAvailableSemaphore 图像可用信号量
  * @param renderFinishedSemaphore 渲染完成信号量
  */
-void drawFrame(VkDevice device, VkSwapchainKHR swapChain, VkQueue graphicsQueue, VkQueue presentQueue,
+void drawFrame(VkDevice                            device,
+               VkSwapchainKHR                      swapChain,
+               VkQueue                             graphicsQueue,
+               VkQueue                             presentQueue,
                const std::vector<VkCommandBuffer>& commandBuffers,
-               VkSemaphore imageAvailableSemaphore, VkSemaphore renderFinishedSemaphore);
+               VkSemaphore                         imageAvailableSemaphore,
+               VkSemaphore                         renderFinishedSemaphore);
