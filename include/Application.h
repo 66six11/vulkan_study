@@ -37,6 +37,11 @@ class Application
 
         struct SwapchainResources
         {
+            // 非拥有：由外部保证生命周期
+            VkDevice      device      = VK_NULL_HANDLE;
+            VkCommandPool commandPool = VK_NULL_HANDLE;
+
+            // 拥有：由本结构的析构函数负责销毁
             VkSwapchainKHR               swapchain = VK_NULL_HANDLE;
             std::vector<VkImage>         images;
             VkFormat                     imageFormat = VK_FORMAT_UNDEFINED;
@@ -48,57 +53,107 @@ class Application
             std::vector<VkFramebuffer>   framebuffers;
             std::vector<VkCommandBuffer> commandBuffers;
 
-            // 非拥有指针/句柄：由外部提供（device, commandPool 等），这里不负责销毁
-            VkDevice      device      = VK_NULL_HANDLE;
-            VkCommandPool commandPool = VK_NULL_HANDLE;
+            SwapchainResources() = default;
 
-            // 析构函数只在 device 非空时销毁 Vulkan 资源
-            ~SwapchainResources()
+            explicit SwapchainResources(VkDevice device_, VkCommandPool commandPool_) : device(device_),
+                commandPool(commandPool_)
             {
-                if (device == VK_NULL_HANDLE)
-                    return;
-
-                for (auto framebuffer : framebuffers)
-                    vkDestroyFramebuffer(device, framebuffer, nullptr);
-
-                if (graphicsPipeline != VK_NULL_HANDLE)
-                    vkDestroyPipeline(device, graphicsPipeline, nullptr);
-
-                if (pipelineLayout != VK_NULL_HANDLE)
-                    vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
-
-                if (renderPass != VK_NULL_HANDLE)
-                    vkDestroyRenderPass(device, renderPass, nullptr);
-
-                for (auto view : imageViews)
-                    vkDestroyImageView(device, view, nullptr);
-
-                if (swapchain != VK_NULL_HANDLE)
-                    vkDestroySwapchainKHR(device, swapchain, nullptr);
             }
 
-            // 禁止拷贝，允许移动（真实项目中通常这么做）
-            SwapchainResources()                                     = default;
+            ~SwapchainResources()
+            {
+                destroy();
+            }
+
+            // 禁拷贝
             SwapchainResources(const SwapchainResources&)            = delete;
             SwapchainResources& operator=(const SwapchainResources&) = delete;
 
-            SwapchainResources(SwapchainResources&& other) noexcept { *this = std::move(other); }
+            // 允许移动
+            SwapchainResources(SwapchainResources&& other) noexcept
+            {
+                moveFrom(std::move(other));
+            }
 
             SwapchainResources& operator=(SwapchainResources&& other) noexcept
             {
                 if (this != &other)
                 {
-                    this->~SwapchainResources();
-                    std::memcpy(this, &other, sizeof(SwapchainResources));
-                    // 把 other 置为默认状态，避免 double free
-                    other.device           = VK_NULL_HANDLE;
+                    destroy();
+                    moveFrom(std::move(other));
+                }
+                return *this;
+            }
+
+            void destroy()
+            {
+                if (device == VK_NULL_HANDLE)
+                    return;
+
+                for (VkFramebuffer fb : framebuffers)
+                    vkDestroyFramebuffer(device, fb, nullptr);
+                framebuffers.clear();
+
+                if (graphicsPipeline != VK_NULL_HANDLE)
+                {
+                    vkDestroyPipeline(device, graphicsPipeline, nullptr);
+                    graphicsPipeline = VK_NULL_HANDLE;
+                }
+
+                if (pipelineLayout != VK_NULL_HANDLE)
+                {
+                    vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
+                    pipelineLayout = VK_NULL_HANDLE;
+                }
+
+                if (renderPass != VK_NULL_HANDLE)
+                {
+                    vkDestroyRenderPass(device, renderPass, nullptr);
+                    renderPass = VK_NULL_HANDLE;
+                }
+
+                for (VkImageView view : imageViews)
+                    vkDestroyImageView(device, view, nullptr);
+                imageViews.clear();
+
+                if (swapchain != VK_NULL_HANDLE)
+                {
+                    vkDestroySwapchainKHR(device, swapchain, nullptr);
+                    swapchain = VK_NULL_HANDLE;
+                }
+
+                images.clear();
+                commandBuffers.clear();
+                imageFormat = VK_FORMAT_UNDEFINED;
+                extent      = {0, 0};
+            }
+
+            private:
+                void moveFrom(SwapchainResources&& other) noexcept
+                {
+                    device           = other.device;
+                    commandPool      = other.commandPool;
+                    swapchain        = other.swapchain;
+                    images           = std::move(other.images);
+                    imageFormat      = other.imageFormat;
+                    extent           = other.extent;
+                    imageViews       = std::move(other.imageViews);
+                    renderPass       = other.renderPass;
+                    pipelineLayout   = other.pipelineLayout;
+                    graphicsPipeline = other.graphicsPipeline;
+                    framebuffers     = std::move(other.framebuffers);
+                    commandBuffers   = std::move(other.commandBuffers);
+
+                    // 把 other 置为“空壳”，避免二次销毁
                     other.swapchain        = VK_NULL_HANDLE;
                     other.renderPass       = VK_NULL_HANDLE;
                     other.pipelineLayout   = VK_NULL_HANDLE;
                     other.graphicsPipeline = VK_NULL_HANDLE;
+                    other.device           = VK_NULL_HANDLE;
+                    other.commandPool      = VK_NULL_HANDLE;
+                    other.imageFormat      = VK_FORMAT_UNDEFINED;
+                    other.extent           = {0, 0};
                 }
-                return *this;
-            }
         };
 
     private:
@@ -113,7 +168,7 @@ class Application
 
 
         SwapchainResources swapchainResources;
-        VkCommandPool                commandPool = VK_NULL_HANDLE; // 命令池，用于分配命令缓冲，管理命令缓冲的内存
+        VkCommandPool      commandPool = VK_NULL_HANDLE; // 命令池，用于分配命令缓冲，管理命令缓冲的内存
         // 同步相关成员变量
         VkSemaphore imageAvailableSemaphore = VK_NULL_HANDLE; // 图形-呈现同步信号量，用于同步图像获取和渲染开始
         VkSemaphore renderFinishedSemaphore = VK_NULL_HANDLE; // 呈现-图形同步信号量，用于同步渲染完成和图像呈现
