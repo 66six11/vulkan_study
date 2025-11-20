@@ -32,8 +32,74 @@ class Application
          * 4. cleanup() - 清理所有分配的资源
          */
         void run();
-        
+
         bool framebufferResized = false;
+
+        struct SwapchainResources
+        {
+            VkSwapchainKHR               swapchain = VK_NULL_HANDLE;
+            std::vector<VkImage>         images;
+            VkFormat                     imageFormat = VK_FORMAT_UNDEFINED;
+            VkExtent2D                   extent      = {0, 0};
+            std::vector<VkImageView>     imageViews;
+            VkRenderPass                 renderPass       = VK_NULL_HANDLE;
+            VkPipelineLayout             pipelineLayout   = VK_NULL_HANDLE;
+            VkPipeline                   graphicsPipeline = VK_NULL_HANDLE;
+            std::vector<VkFramebuffer>   framebuffers;
+            std::vector<VkCommandBuffer> commandBuffers;
+
+            // 非拥有指针/句柄：由外部提供（device, commandPool 等），这里不负责销毁
+            VkDevice      device      = VK_NULL_HANDLE;
+            VkCommandPool commandPool = VK_NULL_HANDLE;
+
+            // 析构函数只在 device 非空时销毁 Vulkan 资源
+            ~SwapchainResources()
+            {
+                if (device == VK_NULL_HANDLE)
+                    return;
+
+                for (auto framebuffer : framebuffers)
+                    vkDestroyFramebuffer(device, framebuffer, nullptr);
+
+                if (graphicsPipeline != VK_NULL_HANDLE)
+                    vkDestroyPipeline(device, graphicsPipeline, nullptr);
+
+                if (pipelineLayout != VK_NULL_HANDLE)
+                    vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
+
+                if (renderPass != VK_NULL_HANDLE)
+                    vkDestroyRenderPass(device, renderPass, nullptr);
+
+                for (auto view : imageViews)
+                    vkDestroyImageView(device, view, nullptr);
+
+                if (swapchain != VK_NULL_HANDLE)
+                    vkDestroySwapchainKHR(device, swapchain, nullptr);
+            }
+
+            // 禁止拷贝，允许移动（真实项目中通常这么做）
+            SwapchainResources()                                     = default;
+            SwapchainResources(const SwapchainResources&)            = delete;
+            SwapchainResources& operator=(const SwapchainResources&) = delete;
+
+            SwapchainResources(SwapchainResources&& other) noexcept { *this = std::move(other); }
+
+            SwapchainResources& operator=(SwapchainResources&& other) noexcept
+            {
+                if (this != &other)
+                {
+                    this->~SwapchainResources();
+                    std::memcpy(this, &other, sizeof(SwapchainResources));
+                    // 把 other 置为默认状态，避免 double free
+                    other.device           = VK_NULL_HANDLE;
+                    other.swapchain        = VK_NULL_HANDLE;
+                    other.renderPass       = VK_NULL_HANDLE;
+                    other.pipelineLayout   = VK_NULL_HANDLE;
+                    other.graphicsPipeline = VK_NULL_HANDLE;
+                }
+                return *this;
+            }
+        };
 
     private:
         // 窗口和Vulkan实例相关成员变量
@@ -45,35 +111,16 @@ class Application
         VkPhysicalDevice physicalDevice = VK_NULL_HANDLE; // 物理设备（GPU），代表系统中的实际图形硬件
         VkDevice         device         = VK_NULL_HANDLE; // 逻辑设备，用于与GPU进行交互，是应用程序与物理设备通信的主要接口
 
-        // 队列相关成员变量
-        VkQueue graphicsQueue = VK_NULL_HANDLE; // 图形队列，用于提交图形命令（如绘制操作、内存传输等）
-        VkQueue presentQueue  = VK_NULL_HANDLE; // 呈现队列，用于将渲染完成的图像呈现到屏幕
 
-        // 交换链相关成员变量
-        VkSwapchainKHR           swapChain = VK_NULL_HANDLE;                 // 交换链，用于管理呈现图像，实现双缓冲或三缓冲以避免画面撕裂
-        std::vector<VkImage>     swapChainImages;                            // 交换链中的图像集合，每个图像代表一个可渲染的表面
-        VkFormat                 swapChainImageFormat = VK_FORMAT_UNDEFINED; // 交换链图像格式，定义图像中像素的存储格式（如RGBA、BGRA等）
-        VkExtent2D               swapChainExtent      = {0, 0};              // 交换链图像尺寸（宽度和高度），通常与窗口大小一致
-        std::vector<VkImageView> swapChainImageViews;                        // 图像视图集合，用于访问图像数据，是图像与着色器之间的接口
-
-        // 渲染通道相关成员变量
-        VkRenderPass renderPass = VK_NULL_HANDLE; // 渲染通道，定义渲染操作的附件和子通道，描述完整的渲染流程
-
-        // 图形管线相关成员变量
-        VkPipelineLayout pipelineLayout   = VK_NULL_HANDLE; // 管线布局，定义着色器使用的资源布局（如uniform缓冲区、采样器等）
-        VkPipeline       graphicsPipeline = VK_NULL_HANDLE; // 图形管线，定义图形渲染的完整状态（顶点输入、装配、光栅化、片段处理等）
-
-        // 帧缓冲相关成员变量
-        std::vector<VkFramebuffer> swapChainFramebuffers; // 帧缓冲集合，用于存储渲染附件，每个帧缓冲对应一个交换链图像
-
-        // 命令相关成员变量
+        SwapchainResources swapchainResources;
         VkCommandPool                commandPool = VK_NULL_HANDLE; // 命令池，用于分配命令缓冲，管理命令缓冲的内存
-        std::vector<VkCommandBuffer> commandBuffers;               // 命令缓冲集合，用于记录命令序列，提交给队列执行
-
         // 同步相关成员变量
         VkSemaphore imageAvailableSemaphore = VK_NULL_HANDLE; // 图形-呈现同步信号量，用于同步图像获取和渲染开始
         VkSemaphore renderFinishedSemaphore = VK_NULL_HANDLE; // 呈现-图形同步信号量，用于同步渲染完成和图像呈现
 
+        // 队列相关成员变量
+        VkQueue graphicsQueue = VK_NULL_HANDLE; // 图形队列，用于提交图形命令（如绘制操作、内存传输等）
+        VkQueue presentQueue  = VK_NULL_HANDLE; // 呈现队列，用于将渲染完成的图像呈现到屏幕
         // 应用程序主要函数
         /**
          * @brief 初始化GLFW窗口
@@ -89,6 +136,14 @@ class Application
          * 交换链、图像视图、渲染通道、图形管线、帧缓冲、命令池、命令缓冲和同步对象
          */
         void initVulkan();
+
+        /**
+        * @brief 创建或重新创建交换链及相关资源
+        * 
+        * 如果交换链不存在则创建它，否则销毁旧的交换链资源并重新
+        */
+        void createOrRecreateSwapchain();
+
 
         /**
         * @brief 重建交换链及相关资源

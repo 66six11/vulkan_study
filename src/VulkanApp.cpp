@@ -49,6 +49,7 @@ void framebufferResizeCallback(GLFWwindow* window, int width, int height)
         app->framebufferResized = true;
     }
 }
+
 /**
  * @brief 初始化GLFW窗口
  * 
@@ -91,55 +92,27 @@ void Application::initVulkan()
 
     // 2. Surface & 物理/逻辑设备
     createSurface(instance, window, surface);
-    // 先选择物理设备
     pickPhysicalDevice(instance, surface, physicalDevice);
-    // 再基于选定的物理设备查询队列族
+
     QueueFamilyIndices indices = findQueueFamilies(physicalDevice, surface);
-    createLogicalDevice(physicalDevice, surface, device, indices, graphicsQueue, presentQueue);
+    createLogicalDevice(physicalDevice,
+                        surface,
+                        device,
+                        indices,
+                        graphicsQueue,
+                        presentQueue);
 
-    // 3. Swapchain（交换链） & image view
-    createSwapChain(physicalDevice,
-                    device,
-                    surface,
-                    indices,
-                    swapChain,
-                    swapChainImages,
-                    swapChainImageFormat,
-                    swapChainExtent);
-    createImageViews(device, swapChainImages, swapChainImageFormat, swapChainImageViews);
-
-    // 4. Render pass & pipeline & framebuffer
-    createRenderPass(device, swapChainImageFormat, renderPass);
-    createGraphicsPipeline(device, swapChainExtent, renderPass, pipelineLayout, graphicsPipeline);
-    createFramebuffers(device, swapChainImageViews, renderPass, swapChainExtent, swapChainFramebuffers);
-
-    // 5. Command pool/buffers & sync
+    // 3. 只创建一次的、与窗口大小无关的资源：命令池 + 信号量
     createCommandPool(device, indices, commandPool);
-    createCommandBuffers(device,
-                         commandPool,
-                         swapChainFramebuffers,
-                         renderPass,
-                         swapChainExtent,
-                         graphicsPipeline,
-                         swapChainImageViews,
-                         commandBuffers);
     createSemaphores(device, imageAvailableSemaphore, renderFinishedSemaphore);
 
-    // 6. 录制命令缓冲（如果你以后要支持窗口 resize，这一部分可以提取出来重用）
-    for (size_t i = 0; i < commandBuffers.size(); i++)
-    {
-        recordCommandBuffer(commandBuffers[i],
-                            static_cast<uint32_t>(i),
-                            renderPass,
-                            swapChainExtent,
-                            graphicsPipeline,
-                            swapChainFramebuffers[i]);
-    }
+    // 4. 第一次创建整套与窗口大小相关的 swapchain 资源
+    createOrRecreateSwapchain();
 }
 
-void Application::recreateSwapChain()
+void Application::createOrRecreateSwapchain()
 {
-    // 1. 处理窗口被最小化为 0x0 的情况：此时不能创建 swapchain，等待恢复
+    // 1. 处理 0x0（最小化）窗口
     int width  = 0;
     int height = 0;
     glfwGetFramebufferSize(window, &width, &height);
@@ -149,100 +122,69 @@ void Application::recreateSwapChain()
         glfwWaitEvents();
     }
 
-    // 2. 等待设备空闲，确保没有命令在使用旧的 swapchain 资源
     vkDeviceWaitIdle(device);
 
-    // 3. 按依赖关系的逆序销毁旧的与 swapchain 相关的资源
-    // 3.1 销毁帧缓冲
-    for (auto framebuffer : swapChainFramebuffers)
-    {
-        vkDestroyFramebuffer(device, framebuffer, nullptr);
-    }
-    swapChainFramebuffers.clear();
+    // 2. 先销毁旧的（通过 RAII 完成）
+    swapchainResources.~SwapchainResources();
+    new(&swapchainResources) SwapchainResources();
 
-    // 3.2 销毁图形管线和管线布局
-    if (graphicsPipeline != VK_NULL_HANDLE)
-    {
-        vkDestroyPipeline(device, graphicsPipeline, nullptr);
-        graphicsPipeline = VK_NULL_HANDLE;
-    }
-    if (pipelineLayout != VK_NULL_HANDLE)
-    {
-        vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
-        pipelineLayout = VK_NULL_HANDLE;
-    }
+    // 3. 填写基础字段（非拥有句柄）
+    swapchainResources.device      = device;
+    swapchainResources.commandPool = commandPool;
 
-    // 3.3 销毁渲染通道
-    if (renderPass != VK_NULL_HANDLE)
-    {
-        vkDestroyRenderPass(device, renderPass, nullptr);
-        renderPass = VK_NULL_HANDLE;
-    }
-
-    // 3.4 销毁图像视图
-    for (auto imageView : swapChainImageViews)
-    {
-        vkDestroyImageView(device, imageView, nullptr);
-    }
-    swapChainImageViews.clear();
-
-    // 3.5 销毁旧的交换链
-    if (swapChain != VK_NULL_HANDLE)
-    {
-        vkDestroySwapchainKHR(device, swapChain, nullptr);
-        swapChain = VK_NULL_HANDLE;
-    }
-
-    // 4. 重新创建与 swapchain 相关的所有资源
-    //    顺序基本与 initVulkan 中的 3~5 步一致
-
-    // 4.1 我们仍然使用之前挑选好的 physicalDevice / surface / 队列族
-    //     注意：这里需要重新获取队列族索引
+    // 4. 像原来的 initVulkan 一样创建整条链
     QueueFamilyIndices indices = findQueueFamilies(physicalDevice, surface);
 
-    // 4.2 创建新的交换链和交换链图像
     createSwapChain(physicalDevice,
                     device,
                     surface,
                     indices,
-                    swapChain,
-                    swapChainImages,
-                    swapChainImageFormat,
-                    swapChainExtent);
+                    swapchainResources.swapchain,
+                    swapchainResources.images,
+                    swapchainResources.imageFormat,
+                    swapchainResources.extent);
 
-    // 4.3 为新的交换链图像创建图像视图
-    createImageViews(device, swapChainImages, swapChainImageFormat, swapChainImageViews);
+    createImageViews(device,
+                     swapchainResources.images,
+                     swapchainResources.imageFormat,
+                     swapchainResources.imageViews);
 
-    // 4.4 创建新的渲染通道
-    createRenderPass(device, swapChainImageFormat, renderPass);
+    createRenderPass(device,
+                     swapchainResources.imageFormat,
+                     swapchainResources.renderPass);
 
-    // 4.5 基于新的 extent 和 render pass 创建图形管线
-    createGraphicsPipeline(device, swapChainExtent, renderPass, pipelineLayout, graphicsPipeline);
+    createGraphicsPipeline(device,
+                           swapchainResources.extent,
+                           swapchainResources.renderPass,
+                           swapchainResources.pipelineLayout,
+                           swapchainResources.graphicsPipeline);
 
-    // 4.6 为每个图像视图创建新的帧缓冲
-    createFramebuffers(device, swapChainImageViews, renderPass, swapChainExtent, swapChainFramebuffers);
+    createFramebuffers(device,
+                       swapchainResources.imageViews,
+                       swapchainResources.renderPass,
+                       swapchainResources.extent,
+                       swapchainResources.framebuffers);
 
-    // 4.7 重新分配 / 录制命令缓冲
-    //     这里沿用原来的 commandPool，直接重新创建一批命令缓冲并录制
     createCommandBuffers(device,
                          commandPool,
-                         swapChainFramebuffers,
-                         renderPass,
-                         swapChainExtent,
-                         graphicsPipeline,
-                         swapChainImageViews,
-                         commandBuffers);
+                         swapchainResources.framebuffers,
+                         swapchainResources.renderPass,
+                         swapchainResources.extent,
+                         swapchainResources.graphicsPipeline,
+                         swapchainResources.imageViews,
+                         swapchainResources.commandBuffers);
 
-    for (size_t i = 0; i < commandBuffers.size(); i++)
+    for (size_t i = 0; i < swapchainResources.commandBuffers.size(); ++i)
     {
-        recordCommandBuffer(commandBuffers[i],
+        recordCommandBuffer(swapchainResources.commandBuffers[i],
                             static_cast<uint32_t>(i),
-                            renderPass,
-                            swapChainExtent,
-                            graphicsPipeline,
-                            swapChainFramebuffers[i]);
+                            swapchainResources.renderPass,
+                            swapchainResources.extent,
+                            swapchainResources.graphicsPipeline,
+                            swapchainResources.framebuffers[i]);
     }
 }
+
 
 /**
  * @brief 主循环
@@ -254,23 +196,23 @@ void Application::mainLoop()
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
-     
+
         if (framebufferResized)
         {
             framebufferResized = false;
-            recreateSwapChain();
-            continue; // 本轮循环不再 drawFrame，避免对已销毁资源提交命令
+            createOrRecreateSwapchain(); // 或者内部实现调用同一套逻辑的 recreateSwapChain()
+            continue;
         }
-     
+
         drawFrame(device,
-                  swapChain,
+                  swapchainResources.swapchain,
                   graphicsQueue,
                   presentQueue,
-                  commandBuffers,
+                  swapchainResources.commandBuffers,
                   imageAvailableSemaphore,
                   renderFinishedSemaphore);
     }
-     
+
     vkDeviceWaitIdle(device);
 }
 
@@ -282,52 +224,19 @@ void Application::mainLoop()
  */
 void Application::cleanup()
 {
-    // 清理同步对象
-    // 销毁渲染完成信号量
-    vkDestroySemaphore(device, renderFinishedSemaphore, nullptr);
-    // 销毁图像可用信号量
-    vkDestroySemaphore(device, imageAvailableSemaphore, nullptr);
+    // 1. 先让与 swapchain 相关的 RAII 对象析构
+    swapchainResources.~SwapchainResources();
 
-    // 清理命令池（这会自动释放所有从该池分配的命令缓冲）
+    // 2. 同步/队列相关资源
+    vkDestroySemaphore(device, renderFinishedSemaphore, nullptr);
+    vkDestroySemaphore(device, imageAvailableSemaphore, nullptr);
     vkDestroyCommandPool(device, commandPool, nullptr);
 
-    // 清理帧缓冲
-    // 遍历并销毁所有帧缓冲对象
-    for (auto framebuffer : swapChainFramebuffers)
-    {
-        vkDestroyFramebuffer(device, framebuffer, nullptr);
-    }
-
-    // 清理管线相关对象
-    // 销毁图形管线
-    vkDestroyPipeline(device, graphicsPipeline, nullptr);
-    // 销毁管线布局
-    vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
-    // 销毁渲染通道
-    vkDestroyRenderPass(device, renderPass, nullptr);
-
-    // 清理图像视图
-    // 遍历并销毁所有图像视图
-    for (auto imageView : swapChainImageViews)
-    {
-        vkDestroyImageView(device, imageView, nullptr);
-    }
-
-    // 清理交换链
-    vkDestroySwapchainKHR(device, swapChain, nullptr);
-
-    // 清理逻辑设备
+    // 3. 设备 & surface & instance & GLFW
     vkDestroyDevice(device, nullptr);
-
-    // 清理窗口表面
     vkDestroySurfaceKHR(instance, surface, nullptr);
-
-    // 清理实例
     vkDestroyInstance(instance, nullptr);
 
-    // 清理GLFW相关资源
     glfwDestroyWindow(window);
     glfwTerminate();
 }
-
-
