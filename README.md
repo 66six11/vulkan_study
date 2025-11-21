@@ -18,6 +18,10 @@
 - Swapchain 管理与窗口大小调整（完全支持 Swapchain 的销毁与重建）。
 - 将所有与窗口尺寸相关的资源聚合到 `SwapchainResources`：
   - `VkSwapchainKHR`、swapchain images & image views、`VkRenderPass`、`VkPipelineLayout`、`VkPipeline`、`VkFramebuffer`、与之对应的 `VkCommandBuffer` 列表。
+- **动态渲染管线（Dynamic Pipeline）**：
+  - 支持动态视口（Viewport）和裁剪矩形（Scissor）
+  - 支持动态线宽（Line Width）和深度偏移（Depth Bias）
+  - 在命令缓冲录制时动态设置管线状态，提高灵活性
 - 渲染流程：
   - 通过独立模块创建 render pass 与 graphics pipeline（使用预编译 SPIR-V）。
   - 为每个 swapchain image 创建 framebuffer，并录制对应命令缓冲。
@@ -113,11 +117,14 @@ createOrRecreateSwapchain 要点：
 注意：正确处理 VK_ERROR_OUT_OF_DATE_KHR 与 VK_SUBOPTIMAL_KHR 返回码，确保在这些情况下触发重建。
 
 ## 开发路线图（简明）
+- [x] **动态管线实现**（v0.2 已完成）
 - [ ] 将 SwapchainResources 与 Application 解耦，提取 VulkanRenderer。
 - [ ] 增加深度缓冲（Depth）与 MSAA 支持。
 - [ ] 引入 descriptor sets 与 uniform buffers（矩阵、材质等）。
 - [ ] 支持多对象渲染（多个三角形 / 网格）。
 - [ ] 探索 Render Graph / Frame Graph 设计。
+
+📘 **详细的工程化规划和路线图请参见 [PROJECT_PLAN.md](PROJECT_PLAN.md)**
 
 ## 调试与常见问题
 - 确保 Vulkan SDK 安装且 VULKAN_SDK 环境变量正确。
