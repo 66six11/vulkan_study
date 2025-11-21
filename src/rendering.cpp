@@ -4,6 +4,15 @@
 #include <vector>
 #include <fstream>
 
+// 动态状态配置 - 允许在命令缓冲录制时动态修改这些管线状态
+// Dynamic state configuration - allows modifying these pipeline states during command buffer recording
+static std::vector<VkDynamicState> dynamicStates = {
+    VK_DYNAMIC_STATE_VIEWPORT,      // 视口可以动态设置
+    VK_DYNAMIC_STATE_SCISSOR,       // 裁剪矩形可以动态设置
+    VK_DYNAMIC_STATE_LINE_WIDTH,    // 线宽可以动态设置
+    VK_DYNAMIC_STATE_DEPTH_BIAS     // 深度偏移可以动态设置（用于阴影映射等）
+}
+
 /**
  * @brief 读取文件内容
  * 
@@ -132,24 +141,14 @@ void createGraphicsPipeline(VkDevice          device,
     inputAssembly.topology               = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     inputAssembly.primitiveRestartEnable = VK_FALSE;
 
-    VkViewport viewport{};
-    viewport.x        = 0.0f;
-    viewport.y        = 0.0f;
-    viewport.width    = static_cast<float>(swapChainExtent.width);
-    viewport.height   = static_cast<float>(swapChainExtent.height);
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
-
-    VkRect2D scissor{};
-    scissor.offset = {0, 0};
-    scissor.extent = swapChainExtent;
-
+    // 使用动态视口和裁剪，因此在管线创建时只需要指定数量，不需要提供具体值
+    // Using dynamic viewport and scissor, so only count is needed during pipeline creation
     VkPipelineViewportStateCreateInfo viewportState{};
     viewportState.sType         = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     viewportState.viewportCount = 1;
-    viewportState.pViewports    = &viewport;
+    viewportState.pViewports    = nullptr; // 动态设置
     viewportState.scissorCount  = 1;
-    viewportState.pScissors     = &scissor;
+    viewportState.pScissors     = nullptr; // 动态设置
 
     VkPipelineRasterizationStateCreateInfo rasterizer{};
     rasterizer.sType                   = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
