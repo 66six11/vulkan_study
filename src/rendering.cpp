@@ -6,10 +6,12 @@
 
 // 动态状态配置 - 允许在命令缓冲录制时动态修改这些管线状态
 // Dynamic state configuration - allows modifying these pipeline states during command buffer recording
+// 注意：LINE_WIDTH > 1.0 需要启用 wideLines 设备特性，当前实现使用 1.0 不需要特殊特性
+// Note: LINE_WIDTH > 1.0 requires wideLines device feature, current implementation uses 1.0 (no special feature required)
 static std::vector<VkDynamicState> dynamicStates = {
     VK_DYNAMIC_STATE_VIEWPORT,      // 视口可以动态设置
     VK_DYNAMIC_STATE_SCISSOR,       // 裁剪矩形可以动态设置
-    VK_DYNAMIC_STATE_LINE_WIDTH,    // 线宽可以动态设置
+    VK_DYNAMIC_STATE_LINE_WIDTH,    // 线宽可以动态设置（当前使用 1.0，不需要 wideLines 特性）
     VK_DYNAMIC_STATE_DEPTH_BIAS     // 深度偏移可以动态设置（用于阴影映射等）
 }
 
