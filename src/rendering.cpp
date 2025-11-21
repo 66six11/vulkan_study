@@ -1,19 +1,22 @@
-﻿
-#include "rendering.h"
+﻿#include "rendering.h"
+#include <fstream>
 #include <stdexcept>
 #include <vector>
-#include <fstream>
 
 // 动态状态配置 - 允许在命令缓冲录制时动态修改这些管线状态
 // Dynamic state configuration - allows modifying these pipeline states during command buffer recording
 // 注意：LINE_WIDTH > 1.0 需要启用 wideLines 设备特性，当前实现使用 1.0 不需要特殊特性
 // Note: LINE_WIDTH > 1.0 requires wideLines device feature, current implementation uses 1.0 (no special feature required)
 static std::vector<VkDynamicState> dynamicStates = {
-    VK_DYNAMIC_STATE_VIEWPORT,      // 视口可以动态设置
-    VK_DYNAMIC_STATE_SCISSOR,       // 裁剪矩形可以动态设置
-    VK_DYNAMIC_STATE_LINE_WIDTH,    // 线宽可以动态设置（当前使用 1.0，不需要 wideLines 特性）
-    VK_DYNAMIC_STATE_DEPTH_BIAS     // 深度偏移可以动态设置（用于阴影映射等）
-}
+    // 视口可以动态设置
+    VK_DYNAMIC_STATE_VIEWPORT,
+    // 裁剪矩形可以动态设置
+    VK_DYNAMIC_STATE_SCISSOR,
+    // 线宽可以动态设置（当前使用 1.0，不需要 wideLines 特性）
+    VK_DYNAMIC_STATE_LINE_WIDTH,
+    // 深度偏移可以动态设置（用于阴影映射等）
+    VK_DYNAMIC_STATE_DEPTH_BIAS
+};
 
 /**
  * @brief 读取文件内容
@@ -194,10 +197,10 @@ void createGraphicsPipeline(VkDevice          device,
     }
     // 设置动态状态
     VkPipelineDynamicStateCreateInfo dynamicState{};
-    dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    dynamicState.sType             = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
     dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
-    dynamicState.pDynamicStates = dynamicStates.data();
-    
+    dynamicState.pDynamicStates    = dynamicStates.data();
+
     VkGraphicsPipelineCreateInfo pipelineInfo{};
     pipelineInfo.sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipelineInfo.stageCount          = 2;
