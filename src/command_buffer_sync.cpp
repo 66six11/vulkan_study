@@ -116,6 +116,36 @@ void recordCommandBuffer(VkCommandBuffer commandBuffer,
 
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
+    // 设置动态状态 - Set dynamic states
+    // 这些状态已在管线创建时声明为动态，因此必须在每个命令缓冲中显式设置
+    // These states are declared as dynamic during pipeline creation, so they must be explicitly set in each command buffer
+    
+    // 设置视口 - Set viewport
+    VkViewport viewport{};
+    viewport.x        = 0.0f;
+    viewport.y        = 0.0f;
+    viewport.width    = static_cast<float>(swapChainExtent.width);
+    viewport.height   = static_cast<float>(swapChainExtent.height);
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+
+    // 设置裁剪矩形 - Set scissor
+    VkRect2D scissor{};
+    scissor.offset = {0, 0};
+    scissor.extent = swapChainExtent;
+    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
+    // 设置线宽（当前设置为1.0，将来可以根据需要动态调整）
+    // Set line width (currently 1.0, can be dynamically adjusted in the future)
+    // 注意：设置线宽 > 1.0 需要启用 wideLines 设备特性
+    // Note: Setting line width > 1.0 requires enabling wideLines device feature
+    vkCmdSetLineWidth(commandBuffer, 1.0f);
+
+    // 设置深度偏移（当前禁用，将来添加深度缓冲时可以使用）
+    // Set depth bias (currently disabled, can be used when depth buffer is added)
+    vkCmdSetDepthBias(commandBuffer, 0.0f, 0.0f, 0.0f);
+
     vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 
     vkCmdEndRenderPass(commandBuffer);
