@@ -5,6 +5,13 @@
 #include <vector>
 #include <string>
 
+std::vector<VkDynamicState> dynamicStates = {
+    VK_DYNAMIC_STATE_VIEWPORT,
+    VK_DYNAMIC_STATE_SCISSOR
+};
+
+
+
 /**
  * @brief 创建渲染通道
  * 
