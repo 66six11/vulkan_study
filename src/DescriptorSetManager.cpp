@@ -53,7 +53,7 @@ DescriptorSetManager::~DescriptorSetManager()
         {
             if (pool.pool != VK_NULL_HANDLE)
             {
-                vkDestroyDescriptorPool(device_.vkDevice(), pool.pool, nullptr);
+                vkDestroyDescriptorPool(device_.device(), pool.pool, nullptr);
             }
         }
     }
@@ -96,7 +96,7 @@ std::vector<VkDescriptorSet> DescriptorSetManager::allocateSets(
         allocInfo.descriptorSetCount = toAllocate;
         allocInfo.pSetLayouts        = layouts.data();
 
-        VkResult res = vkAllocateDescriptorSets(device_.vkDevice(), &allocInfo, result.data() + offset);
+        VkResult res = vkAllocateDescriptorSets(device_.device(), &allocInfo, result.data() + offset);
         if (res == VK_ERROR_OUT_OF_POOL_MEMORY || res == VK_ERROR_FRAGMENTED_POOL)
         {
             // 当前池空间不足，标记为已满并创建新池再试
@@ -125,7 +125,7 @@ void DescriptorSetManager::resetFrame()
         {
             if (pool.pool != VK_NULL_HANDLE)
             {
-                vkResetDescriptorPool(device_.vkDevice(), pool.pool, 0);
+                vkResetDescriptorPool(device_.device(), pool.pool, 0);
                 pool.usedSets = 0;
             }
         }
@@ -147,7 +147,7 @@ void DescriptorSetManager::updateDescriptorSet(
         // VkWriteDescriptorSet 里必须填好 dstSet，这里不强制覆盖
     }
 
-    vkUpdateDescriptorSets(device_.vkDevice(),
+    vkUpdateDescriptorSets(device_.device(),
                            static_cast<uint32_t>(writes.size()),
                            writes.data(),
                            static_cast<uint32_t>(copies.size()),
@@ -192,7 +192,7 @@ VkDescriptorPool DescriptorSetManager::createPool(const PoolSizes& sizes, uint32
     poolInfo.pPoolSizes    = poolSizes.data();
 
     VkDescriptorPool pool = VK_NULL_HANDLE;
-    if (vkCreateDescriptorPool(device_.vkDevice(), &poolInfo, nullptr, &pool) != VK_SUCCESS)
+    if (vkCreateDescriptorPool(device_.device(), &poolInfo, nullptr, &pool) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create descriptor pool");
     }

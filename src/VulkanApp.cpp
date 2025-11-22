@@ -86,31 +86,32 @@ void Application::initWindow()
 
 void Application::initVulkan()
 {
-    // 1. Vulkan 实例 & 调试
-    createInstance(instance, window);
-    setupDebugMessenger(instance);
+    // instance + debug
+    createInstance(rc.instance, window);
+    setupDebugMessenger(rc.instance);
 
-    // 2. Surface & 物理/逻辑设备
-    createSurface(instance, window, surface);
-    pickPhysicalDevice(instance, surface, physicalDevice);
+    // surface
+    createSurface(rc.instance, window, rc.surface);
 
-    QueueFamilyIndices indices = findQueueFamilies(physicalDevice, surface);
-    createLogicalDevice(physicalDevice,
-                        surface,
-                        device,
-                        indices,
-                        graphicsQueue,
-                        presentQueue);
+    // 设备
+    VulkanDeviceConfig cfg{};
+    cfg.requiredExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+    rc.device              = std::make_unique<VulkanDevice>(rc.instance, rc.surface, cfg);
 
-    // 3. 只创建一次的、与窗口大小无关的资源：命令池 + 信号量
-    createCommandPool(device, indices, commandPool);
-    createSemaphores(device, imageAvailableSemaphore, renderFinishedSemaphore);
+    // 资源/描述符管理器
+    rc.resources   = std::make_unique<ResourceManager>(*rc.device);
+    rc.descriptors = std::make_unique<DescriptorSetManager>(*rc.device);
 
-    // 4. 第一次创建整套与窗口大小相关的 swapchain 资源
-    createOrRecreateSwapchain();
+    // 主命令池和同步对象
+    QueueFamilyIndices indices = findQueueFamilies(rc.device->physicalDevice(), rc.surface);
+    createCommandPool(rc.device->device(), indices, rc.mainCommandPool);
+    createSemaphores(rc.device->device(), rc.imageAvailable, rc.renderFinished);
+
+    // 初次创建 swapchain
+    createOrRecreateSwapchain(rc);
 }
 
-void Application::createOrRecreateSwapchain()
+void Application::createOrRecreateSwapchain(RenderContext& rc)
 {
     // 1. 处理 0x0（最小化）窗口
     int width  = 0;
@@ -122,66 +123,56 @@ void Application::createOrRecreateSwapchain()
         glfwWaitEvents();
     }
 
-    vkDeviceWaitIdle(device);
 
-    // 2. 先销毁旧的（通过 RAII 完成）
-    swapchainResources.~SwapchainResources();
-    new(&swapchainResources) SwapchainResources();
+    vkDeviceWaitIdle(rc.device->device());
 
-    // 3. 填写基础字段（非拥有句柄）
-    swapchainResources.device      = device;
-    swapchainResources.commandPool = commandPool;
+    rc.swapchain.destroy();
+    new(&rc.swapchain) SwapchainResources(rc.device->device(), rc.mainCommandPool);
 
-    // 4. 像原来的 initVulkan 一样创建整条链
-    QueueFamilyIndices indices = findQueueFamilies(physicalDevice, surface);
-    // 创建交换链及相关资源
-    createSwapChain(physicalDevice,
-                    device,
-                    surface,
+    QueueFamilyIndices indices = findQueueFamilies(rc.device->physicalDevice(), rc.surface);
+
+    createSwapChain(rc.device->physicalDevice(),
+                    rc.device->device(),
+                    rc.surface,
                     indices,
-                    swapchainResources.swapchain,
-                    swapchainResources.images,
-                    swapchainResources.imageFormat,
-                    swapchainResources.extent);
-    // 创建图像视图
-    createImageViews(device,
-                     swapchainResources.images,
-                     swapchainResources.imageFormat,
-                     swapchainResources.imageViews);
-    // 创建渲染通道
-    createRenderPass(device,
-                     swapchainResources.imageFormat,
-                     swapchainResources.renderPass);
-    // 创建图形管线
-    createGraphicsPipeline(device,
-                           swapchainResources.extent,
-                           swapchainResources.renderPass,
-                           swapchainResources.pipelineLayout,
-                           swapchainResources.graphicsPipeline);
-    // 创建帧缓冲
-    createFramebuffers(device,
-                       swapchainResources.imageViews,
-                       swapchainResources.renderPass,
-                       swapchainResources.extent,
-                       swapchainResources.framebuffers);
-    // 创建命令缓冲
-    createCommandBuffers(device,
-                         commandPool,
-                         swapchainResources.framebuffers,
-                         swapchainResources.renderPass,
-                         swapchainResources.extent,
-                         swapchainResources.graphicsPipeline,
-                         swapchainResources.imageViews,
-                         swapchainResources.commandBuffers);
-    // 记录命令缓冲
-    for (size_t i = 0; i < swapchainResources.commandBuffers.size(); ++i)
+                    rc.swapchain.swapchain,
+                    rc.swapchain.images,
+                    rc.swapchain.imageFormat,
+                    rc.swapchain.extent);
+
+    createImageViews(rc.device->device(), rc.swapchain.images, rc.swapchain.imageFormat, rc.swapchain.imageViews);
+
+    createRenderPass(rc.device->device(), rc.swapchain.imageFormat, rc.swapchain.renderPass);
+
+    createGraphicsPipeline(rc.device->device(),
+                           rc.swapchain.extent,
+                           rc.swapchain.renderPass,
+                           rc.swapchain.pipelineLayout,
+                           rc.swapchain.graphicsPipeline);
+
+    createFramebuffers(rc.device->device(),
+                       rc.swapchain.imageViews,
+                       rc.swapchain.renderPass,
+                       rc.swapchain.extent,
+                       rc.swapchain.framebuffers);
+
+    createCommandBuffers(rc.device->device(),
+                         rc.mainCommandPool,
+                         rc.swapchain.framebuffers,
+                         rc.swapchain.renderPass,
+                         rc.swapchain.extent,
+                         rc.swapchain.graphicsPipeline,
+                         rc.swapchain.imageViews,
+                         rc.swapchain.commandBuffers);
+
+    for (size_t i = 0; i < rc.swapchain.commandBuffers.size(); ++i)
     {
-        recordCommandBuffer(swapchainResources.commandBuffers[i],
+        recordCommandBuffer(rc.swapchain.commandBuffers[i],
                             static_cast<uint32_t>(i),
-                            swapchainResources.renderPass,
-                            swapchainResources.extent,
-                            swapchainResources.graphicsPipeline,
-                            swapchainResources.framebuffers[i]);
+                            rc.swapchain.renderPass,
+                            rc.swapchain.extent,
+                            rc.swapchain.graphicsPipeline,
+                            rc.swapchain.framebuffers[i]);
     }
 }
 
@@ -200,20 +191,20 @@ void Application::mainLoop()
         if (framebufferResized)
         {
             framebufferResized = false;
-            createOrRecreateSwapchain(); // 或者内部实现调用同一套逻辑的 recreateSwapChain()
+            createOrRecreateSwapchain(rc); // 或者内部实现调用同一套逻辑的 recreateSwapChain()
             continue;
         }
 
-        drawFrame(device,
-                  swapchainResources.swapchain,
-                  graphicsQueue,
-                  presentQueue,
-                  swapchainResources.commandBuffers,
-                  imageAvailableSemaphore,
-                  renderFinishedSemaphore);
+        drawFrame(rc.device->device(),
+                  rc.swapchain.swapchain,
+                  rc.device->graphicsQueue().handle,
+                  rc.device->presentQueue().handle,
+                  rc.swapchain.commandBuffers,
+                  rc.imageAvailable,
+                  rc.renderFinished);
     }
 
-    vkDeviceWaitIdle(device);
+    vkDeviceWaitIdle(rc.device->device());
 }
 
 /**
@@ -224,19 +215,21 @@ void Application::mainLoop()
  */
 void Application::cleanup()
 {
-    // 1. 清理 swapchain 相关资源（如果用 SwapchainResources，这里只需要：）
-    swapchainResources.destroy(); // 或依靠它的析构，不要两边都 destroy
+    vkDeviceWaitIdle(rc.device->device());
 
-    // 2. 同步对象和命令池
-    vkDestroySemaphore(device, renderFinishedSemaphore, nullptr);
-    vkDestroySemaphore(device, imageAvailableSemaphore, nullptr);
-    vkDestroyCommandPool(device, commandPool, nullptr);
+    rc.swapchain.destroy(); // 内部使用 rc.device->device() free cmd buffers + destroy pipeline/fb/...
 
-    // 3. 最后销毁 device / surface / instance
-    vkDestroyDevice(device, nullptr);
-    vkDestroySurfaceKHR(instance, surface, nullptr);
-    vkDestroyInstance(instance, nullptr);
+    vkDestroySemaphore(rc.device->device(), rc.renderFinished, nullptr);
+    vkDestroySemaphore(rc.device->device(), rc.imageAvailable, nullptr);
+    vkDestroyCommandPool(rc.device->device(), rc.mainCommandPool, nullptr);
 
-    glfwDestroyWindow(window);
-    glfwTerminate();
+    rc.descriptors.reset();
+    rc.resources.reset();
+
+    VkDevice raw = rc.device->device();
+    rc.device.reset(); // 不再 destroy VkDevice，只丢弃封装
+    vkDestroyDevice(raw, nullptr);
+
+    vkDestroySurfaceKHR(rc.instance, rc.surface, nullptr);
+    vkDestroyInstance(rc.instance, nullptr);
 }

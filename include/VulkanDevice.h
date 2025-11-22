@@ -65,13 +65,13 @@ class VulkanDevice
          * @brief 获取Vulkan逻辑设备句柄
          * @return VkDevice 逻辑设备句柄
          */
-        VkDevice vkDevice() const noexcept { return device_; }
+        VkDevice device() const noexcept { return device_; }
 
         /**
          * @brief 获取Vulkan物理设备句柄
          * @return VkPhysicalDevice 物理设备句柄
          */
-        VkPhysicalDevice vkPhysicalDevice() const noexcept { return physicalDevice_; }
+        VkPhysicalDevice physicalDevice() const noexcept { return physicalDevice_; }
 
         /**
          * @brief 获取Vulkan实例句柄

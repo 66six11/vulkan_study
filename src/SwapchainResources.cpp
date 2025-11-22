@@ -17,6 +17,15 @@ void SwapchainResources::destroy()
 {
     if (device == VK_NULL_HANDLE)
         return;
+    // 先释放命令缓冲
+    if (!commandBuffers.empty())
+    {
+        vkFreeCommandBuffers(device,
+                             commandPool,
+                             static_cast<uint32_t>(commandBuffers.size()),
+                             commandBuffers.data());
+        commandBuffers.clear();
+    }
 
     for (auto fb : framebuffers)
         vkDestroyFramebuffer(device, fb, nullptr);
@@ -36,11 +45,11 @@ void SwapchainResources::destroy()
     if (swapchain)
         vkDestroySwapchainKHR(device, swapchain, nullptr);
     swapchain = VK_NULL_HANDLE;
-
     images.clear();
-    commandBuffers.clear();
     imageFormat = VK_FORMAT_UNDEFINED;
     extent      = {0, 0};
+    device      = VK_NULL_HANDLE;
+    commandPool = VK_NULL_HANDLE;
 }
 
 SwapchainResources::SwapchainResources(SwapchainResources&& other) noexcept

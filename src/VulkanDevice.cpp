@@ -255,12 +255,10 @@ VulkanDevice::VulkanDevice(VkInstance instance, VkSurfaceKHR surface, const Vulk
 
 VulkanDevice::~VulkanDevice()
 {
-    if (device_ != VK_NULL_HANDLE)
-    {
-        vkDeviceWaitIdle(device_);
-        vkDestroyDevice(device_, nullptr);
-        device_ = VK_NULL_HANDLE;
-    }
+    // 这里不再调用 vkDestroyDevice，由 RenderContext/Application 统一管理。
+    instance_       = VK_NULL_HANDLE;
+    physicalDevice_ = VK_NULL_HANDLE;
+    device_         = VK_NULL_HANDLE;
 }
 
 std::optional<VulkanDevice::QueueInfo> VulkanDevice::computeQueue() const noexcept

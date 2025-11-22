@@ -12,6 +12,24 @@
 #include <set>
 #include <string>
 #include "constants.h"
+#include "DescriptorSetManager.h"
+#include "ResourceManager.h"
+#include "VulkanDevice.h"
+
+struct RenderContext
+{
+    VkInstance                            instance{};
+    VkSurfaceKHR                          surface{};
+    std::unique_ptr<VulkanDevice>         device;      // 封装 physical + logical + queues
+    std::unique_ptr<ResourceManager>      resources;   // Buffer/Image/Sampler
+    std::unique_ptr<DescriptorSetManager> descriptors; // Descriptor pools/sets
+
+    VkCommandPool mainCommandPool{}; // 用于 frame command buffers
+    VkSemaphore   imageAvailable{};
+    VkSemaphore   renderFinished{};
+
+    SwapchainResources swapchain; // 当前 swapchain 的所有资源
+};
 
 /**
  * @brief Vulkan应用程序主类
@@ -36,28 +54,15 @@ class Application
 
         bool framebufferResized = false;
 
-        
-
     private:
         // 窗口和Vulkan实例相关成员变量
-        GLFWwindow*  window   = nullptr;        // GLFW窗口对象，用于创建和管理应用程序窗口
-        VkInstance   instance = VK_NULL_HANDLE; // Vulkan实例，是与Vulkan驱动程序交互的入口点
-        VkSurfaceKHR surface  = VK_NULL_HANDLE; // 窗口表面，用于连接窗口系统和Vulkan，实现图像呈现
-
-        // 物理和逻辑设备相关成员变量
-        VkPhysicalDevice physicalDevice = VK_NULL_HANDLE; // 物理设备（GPU），代表系统中的实际图形硬件
-        VkDevice         device         = VK_NULL_HANDLE; // 逻辑设备，用于与GPU进行交互，是应用程序与物理设备通信的主要接口
-
-
-        SwapchainResources swapchainResources;
-        VkCommandPool      commandPool = VK_NULL_HANDLE; // 命令池，用于分配命令缓冲，管理命令缓冲的内存
-        // 同步相关成员变量
-        VkSemaphore imageAvailableSemaphore = VK_NULL_HANDLE; // 图形-呈现同步信号量，用于同步图像获取和渲染开始
-        VkSemaphore renderFinishedSemaphore = VK_NULL_HANDLE; // 呈现-图形同步信号量，用于同步渲染完成和图像呈现
-
+        GLFWwindow*   window = nullptr; // GLFW窗口对象，用于创建和管理应用程序窗口
+        RenderContext rc     = {};      // 渲染上下文，封装Vulkan实例、设备和资源管理器等
         // 队列相关成员变量
         VkQueue graphicsQueue = VK_NULL_HANDLE; // 图形队列，用于提交图形命令（如绘制操作、内存传输等）
         VkQueue presentQueue  = VK_NULL_HANDLE; // 呈现队列，用于将渲染完成的图像呈现到屏幕
+
+
         // 应用程序主要函数
         /**
          * @brief 初始化GLFW窗口
@@ -79,7 +84,7 @@ class Application
         * 
         * 如果交换链不存在则创建它，否则销毁旧的交换链资源并重新
         */
-        void createOrRecreateSwapchain();
+        void createOrRecreateSwapchain(RenderContext&);
 
 
         /**
@@ -87,7 +92,7 @@ class Application
         *
         * 当窗口大小变化或交换链失效时，销毁并重新创建所有依赖交换链的资源。
         */
-        void recreateSwapChain();
+        void recreateSwapchain(RenderContext&);
 
         /**
          * @brief 主循环

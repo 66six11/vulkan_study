@@ -36,7 +36,7 @@ ResourceManager::~ResourceManager()
     {
         if (sampler.alive)
         {
-            vkDestroySampler(device_.vkDevice(), sampler.sampler, nullptr);
+            vkDestroySampler(device_.device(), sampler.sampler, nullptr);
         }
     }
 
@@ -46,15 +46,15 @@ ResourceManager::~ResourceManager()
         {
             if (image.defaultView)
             {
-                vkDestroyImageView(device_.vkDevice(), image.defaultView, nullptr);
+                vkDestroyImageView(device_.device(), image.defaultView, nullptr);
             }
             if (image.image)
             {
-                vkDestroyImage(device_.vkDevice(), image.image, nullptr);
+                vkDestroyImage(device_.device(), image.image, nullptr);
             }
             if (image.memory)
             {
-                vkFreeMemory(device_.vkDevice(), image.memory, nullptr);
+                vkFreeMemory(device_.device(), image.memory, nullptr);
             }
         }
     }
@@ -65,11 +65,11 @@ ResourceManager::~ResourceManager()
         {
             if (buffer.buffer)
             {
-                vkDestroyBuffer(device_.vkDevice(), buffer.buffer, nullptr);
+                vkDestroyBuffer(device_.device(), buffer.buffer, nullptr);
             }
             if (buffer.memory)
             {
-                vkFreeMemory(device_.vkDevice(), buffer.memory, nullptr);
+                vkFreeMemory(device_.device(), buffer.memory, nullptr);
             }
         }
     }
@@ -99,13 +99,13 @@ ResourceManager::BufferHandle ResourceManager::createBuffer(const BufferDesc& de
     bufferInfo.usage       = desc.usage;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    if (vkCreateBuffer(device_.vkDevice(), &bufferInfo, nullptr, &entry.buffer) != VK_SUCCESS)
+    if (vkCreateBuffer(device_.device(), &bufferInfo, nullptr, &entry.buffer) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create buffer");
     }
 
     VkMemoryRequirements memReq{};
-    vkGetBufferMemoryRequirements(device_.vkDevice(), entry.buffer, &memReq);
+    vkGetBufferMemoryRequirements(device_.device(), entry.buffer, &memReq);
 
     const auto& memProps = device_.memoryProperties();
     uint32_t    typeIdx  = findMemoryType(memReq.memoryTypeBits, desc.memoryFlags, memProps);
@@ -115,12 +115,12 @@ ResourceManager::BufferHandle ResourceManager::createBuffer(const BufferDesc& de
     allocInfo.allocationSize  = memReq.size;
     allocInfo.memoryTypeIndex = typeIdx;
 
-    if (vkAllocateMemory(device_.vkDevice(), &allocInfo, nullptr, &entry.memory) != VK_SUCCESS)
+    if (vkAllocateMemory(device_.device(), &allocInfo, nullptr, &entry.memory) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to allocate buffer memory");
     }
 
-    vkBindBufferMemory(device_.vkDevice(), entry.buffer, entry.memory, 0);
+    vkBindBufferMemory(device_.device(), entry.buffer, entry.memory, 0);
 
     entry.desc  = desc;
     entry.alive = true;
@@ -151,11 +151,11 @@ void ResourceManager::destroyBuffer(BufferHandle handle)
 
     if (entry.buffer)
     {
-        vkDestroyBuffer(device_.vkDevice(), entry.buffer, nullptr);
+        vkDestroyBuffer(device_.device(), entry.buffer, nullptr);
     }
     if (entry.memory)
     {
-        vkFreeMemory(device_.vkDevice(), entry.memory, nullptr);
+        vkFreeMemory(device_.device(), entry.memory, nullptr);
     }
 
     entry = {};
@@ -193,13 +193,13 @@ ResourceManager::ImageHandle ResourceManager::createImage(const ImageDesc& desc)
     imageInfo.samples       = desc.samples;
     imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
 
-    if (vkCreateImage(device_.vkDevice(), &imageInfo, nullptr, &entry.image) != VK_SUCCESS)
+    if (vkCreateImage(device_.device(), &imageInfo, nullptr, &entry.image) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create image");
     }
 
     VkMemoryRequirements memReq{};
-    vkGetImageMemoryRequirements(device_.vkDevice(), entry.image, &memReq);
+    vkGetImageMemoryRequirements(device_.device(), entry.image, &memReq);
 
     const auto& memProps = device_.memoryProperties();
     uint32_t    typeIdx  = findMemoryType(memReq.memoryTypeBits,
@@ -211,12 +211,12 @@ ResourceManager::ImageHandle ResourceManager::createImage(const ImageDesc& desc)
     allocInfo.allocationSize  = memReq.size;
     allocInfo.memoryTypeIndex = typeIdx;
 
-    if (vkAllocateMemory(device_.vkDevice(), &allocInfo, nullptr, &entry.memory) != VK_SUCCESS)
+    if (vkAllocateMemory(device_.device(), &allocInfo, nullptr, &entry.memory) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to allocate image memory");
     }
 
-    vkBindImageMemory(device_.vkDevice(), entry.image, entry.memory, 0);
+    vkBindImageMemory(device_.device(), entry.image, entry.memory, 0);
 
     // 创建默认视图
     VkImageViewCreateInfo viewInfo{};
@@ -230,7 +230,7 @@ ResourceManager::ImageHandle ResourceManager::createImage(const ImageDesc& desc)
     viewInfo.subresourceRange.baseArrayLayer = 0;
     viewInfo.subresourceRange.layerCount     = desc.arrayLayers;
 
-    if (vkCreateImageView(device_.vkDevice(), &viewInfo, nullptr, &entry.defaultView) != VK_SUCCESS)
+    if (vkCreateImageView(device_.device(), &viewInfo, nullptr, &entry.defaultView) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create image view");
     }
@@ -259,15 +259,15 @@ void ResourceManager::destroyImage(ImageHandle handle)
 
     if (entry.defaultView)
     {
-        vkDestroyImageView(device_.vkDevice(), entry.defaultView, nullptr);
+        vkDestroyImageView(device_.device(), entry.defaultView, nullptr);
     }
     if (entry.image)
     {
-        vkDestroyImage(device_.vkDevice(), entry.image, nullptr);
+        vkDestroyImage(device_.device(), entry.image, nullptr);
     }
     if (entry.memory)
     {
-        vkFreeMemory(device_.vkDevice(), entry.memory, nullptr);
+        vkFreeMemory(device_.device(), entry.memory, nullptr);
     }
 
     entry = {};
@@ -294,7 +294,7 @@ ResourceManager::SamplerHandle ResourceManager::createSampler(
 
     SamplerEntry& entry = samplers_[index];
 
-    if (vkCreateSampler(device_.vkDevice(), &info, nullptr, &entry.sampler) != VK_SUCCESS)
+    if (vkCreateSampler(device_.device(), &info, nullptr, &entry.sampler) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create sampler");
     }
@@ -323,7 +323,7 @@ void ResourceManager::destroySampler(SamplerHandle handle)
 
     if (entry.sampler)
     {
-        vkDestroySampler(device_.vkDevice(), entry.sampler, nullptr);
+        vkDestroySampler(device_.device(), entry.sampler, nullptr);
     }
 
     entry = {};
@@ -430,13 +430,13 @@ void ResourceManager::uploadBuffer(BufferHandle handle, const void* data, VkDevi
     }
 
     void* mapped = nullptr;
-    if (vkMapMemory(device_.vkDevice(), entry.memory, offset, size, 0, &mapped) != VK_SUCCESS)
+    if (vkMapMemory(device_.device(), entry.memory, offset, size, 0, &mapped) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to map buffer memory");
     }
 
     std::memcpy(mapped, data, static_cast<size_t>(size));
-    vkUnmapMemory(device_.vkDevice(), entry.memory);
+    vkUnmapMemory(device_.device(), entry.memory);
 }
 
 void ResourceManager::garbageCollect()
