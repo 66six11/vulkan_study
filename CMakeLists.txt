@@ -53,6 +53,7 @@ add_executable(vulkan
         include/ResourceManager.h
         include/DescriptorSetmanager.h
         include/DescriptorSetmanager.h
+        src/ResourceManager.cpp
 
 )
 

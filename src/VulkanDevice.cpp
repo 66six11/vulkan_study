@@ -3,203 +3,143 @@
 #include <stdexcept>
 #include <vector>
 
-namespace {
-
-std::vector<const char*> toVkExtensionNames(const std::vector<DeviceExtension>& exts)
+namespace
 {
-    std::vector<const char*> names;
-    names.reserve(exts.size());
-
-    for (DeviceExtension e : exts)
+    //必须支持的功能
+    bool hasAnyRequiredFeature(const VkPhysicalDeviceFeatures& required)
     {
-        switch (e)
-        {
-            case DeviceExtension::Swapchain:
-                names.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-                break;
-        }
+        return required.samplerAnisotropy == VK_TRUE ||
+               required.sampleRateShading == VK_TRUE ||
+               required.fillModeNonSolid == VK_TRUE ||
+               required.wideLines == VK_TRUE ||
+               required.geometryShader == VK_TRUE ||
+               required.tessellationShader == VK_TRUE;
     }
-    return names;
-}
 
-bool checkDeviceExtensionSupport(VkPhysicalDevice device, const std::vector<const char*>& required)
-{
-    uint32_t extensionCount = 0;
-    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
-
-    std::vector<VkExtensionProperties> available(extensionCount);
-    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, available.data());
-
-    for (const char* req : required)
+    bool checkDeviceExtensionSupport(
+        VkPhysicalDevice                device,
+        const std::vector<const char*>& required)
     {
-        bool found = false;
-        for (const auto& ext : available)
+        uint32_t extensionCount = 0;
+        vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+
+        std::vector<VkExtensionProperties> available(extensionCount);
+        vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, available.data());
+
+        for (const char* req : required)
         {
-            if (std::strcmp(req, ext.extensionName) == 0)
+            bool found = false;
+            for (const auto& ext : available)
             {
-                found = true;
-                break;
+                if (std::strcmp(req, ext.extensionName) == 0)
+                {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found)
+            {
+                return false;
             }
         }
-        if (!found)
+        return true;
+    }
+
+    // 检查“实际支持的 features”是否覆盖“requiredFeatures 为 VK_TRUE 的字段”
+    bool checkFeatureSupport(
+        const VkPhysicalDeviceFeatures& supported,
+        const VkPhysicalDeviceFeatures& required)
+    {
+        // 简单逐字段检查你关心的子集即可；不需要每个字段都列完
+        auto require = [&](VkBool32 sup, VkBool32 req) -> bool
+        {
+            return req == VK_FALSE || (req == VK_TRUE && sup == VK_TRUE);
+        };
+
+        if (!require(supported.samplerAnisotropy, required.samplerAnisotropy)) return false;
+        if (!require(supported.sampleRateShading, required.sampleRateShading)) return false;
+        if (!require(supported.fillModeNonSolid, required.fillModeNonSolid)) return false;
+        if (!require(supported.wideLines, required.wideLines)) return false;
+        if (!require(supported.geometryShader, required.geometryShader)) return false;
+        if (!require(supported.tessellationShader, required.tessellationShader))return false;
+
+        // 后续如果有更多需要，可以继续在这里加字段检查
+
+        return true;
+    }
+
+    bool isDeviceSuitable(
+        VkPhysicalDevice          device,
+        VkSurfaceKHR              surface,
+        const VulkanDeviceConfig& config)
+    {
+        // 1. 扩展
+        if (!checkDeviceExtensionSupport(device, config.requiredExtensions))
         {
             return false;
         }
+
+        // 2. 队列：至少有 graphics + present
+        uint32_t queueFamilyCount = 0;
+        vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+        std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+        vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+
+        bool hasGraphics = false;
+        bool hasPresent  = false;
+
+        for (uint32_t i = 0; i < queueFamilyCount; ++i)
+        {
+            const auto& props = queueFamilies[i];
+
+            if (props.queueCount > 0 && (props.queueFlags & VK_QUEUE_GRAPHICS_BIT))
+            {
+                hasGraphics = true;
+            }
+
+            VkBool32 presentSupport = VK_FALSE;
+            vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
+            if (presentSupport)
+            {
+                hasPresent = true;
+            }
+        }
+
+        if (!hasGraphics || !hasPresent)
+        {
+            return false;
+        }
+
+        // 3. surface 格式 / present mode
+        uint32_t formatCount = 0;
+        vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
+        if (formatCount == 0)
+        {
+            return false;
+        }
+
+        uint32_t presentModeCount = 0;
+        vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
+        if (presentModeCount == 0)
+        {
+            return false;
+        }
+
+        // 4. 特性
+        if (hasAnyRequiredFeature(config.requiredFeatures))
+        {
+            VkPhysicalDeviceFeatures supported{};
+            vkGetPhysicalDeviceFeatures(device, &supported);
+
+            if (!checkFeatureSupport(supported, config.requiredFeatures))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
-    return true;
 }
-
-void applyRequiredFeatures(const std::vector<DeviceFeature>& required,
-                           VkPhysicalDeviceFeatures&         enabled,
-                           const VkPhysicalDeviceFeatures&   supported)
-{
-    enabled = {};
-
-    auto require = [&](VkBool32 supportedFlag, VkBool32& enabledFlag) {
-        if (!supportedFlag)
-        {
-            throw std::runtime_error("Required device feature not supported");
-        }
-        enabledFlag = VK_TRUE;
-    };
-
-    for (DeviceFeature f : required)
-    {
-        switch (f)
-        {
-            case DeviceFeature::SamplerAnisotropy:
-                require(supported.samplerAnisotropy, enabled.samplerAnisotropy);
-                break;
-            case DeviceFeature::SampleRateShading:
-                require(supported.sampleRateShading, enabled.sampleRateShading);
-                break;
-            case DeviceFeature::FillModeNonSolid:
-                require(supported.fillModeNonSolid, enabled.fillModeNonSolid);
-                break;
-            case DeviceFeature::WideLines:
-                require(supported.wideLines, enabled.wideLines);
-                break;
-            case DeviceFeature::GeometryShader:
-                require(supported.geometryShader, enabled.geometryShader);
-                break;
-            case DeviceFeature::TessellationShader:
-                require(supported.tessellationShader, enabled.tessellationShader);
-                break;
-        }
-    }
-}
-
-struct QueueFamilySupport
-{
-    bool hasGraphics = false;
-    bool hasPresent  = false;
-    bool hasCompute  = false;
-    bool hasTransfer = false;
-};
-
-QueueFamilySupport queryQueueSupport(VkPhysicalDevice device, VkSurfaceKHR surface)
-{
-    QueueFamilySupport result{};
-
-    uint32_t count = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &count, nullptr);
-    std::vector<VkQueueFamilyProperties> props(count);
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &count, props.data());
-
-    for (uint32_t i = 0; i < count; ++i)
-    {
-        const auto& q = props[i];
-
-        if (q.queueCount > 0 && (q.queueFlags & VK_QUEUE_GRAPHICS_BIT))
-        {
-            result.hasGraphics = true;
-        }
-        if (q.queueCount > 0 && (q.queueFlags & VK_QUEUE_COMPUTE_BIT))
-        {
-            result.hasCompute = true;
-        }
-        if (q.queueCount > 0 && (q.queueFlags & VK_QUEUE_TRANSFER_BIT))
-        {
-            result.hasTransfer = true;
-        }
-
-        VkBool32 presentSupport = VK_FALSE;
-        vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
-        if (presentSupport)
-        {
-            result.hasPresent = true;
-        }
-    }
-
-    return result;
-}
-
-bool checkQueueRequirements(const QueueFamilySupport&           support,
-                            const std::vector<QueueCapability>& required)
-{
-    for (QueueCapability q : required)
-    {
-        switch (q)
-        {
-            case QueueCapability::Graphics:
-                if (!support.hasGraphics) return false;
-                break;
-            case QueueCapability::Present:
-                if (!support.hasPresent) return false;
-                break;
-            case QueueCapability::Compute:
-                if (!support.hasCompute) return false;
-                break;
-            case QueueCapability::Transfer:
-                if (!support.hasTransfer) return false;
-                break;
-        }
-    }
-    return true;
-}
-
-bool isDeviceSuitable(VkPhysicalDevice          device,
-                      VkSurfaceKHR              surface,
-                      const VulkanDeviceConfig& config,
-                      VkPhysicalDeviceFeatures& enabledFeaturesOut)
-{
-    auto requiredExtNames = toVkExtensionNames(config.requiredExtensions);
-    if (!checkDeviceExtensionSupport(device, requiredExtNames))
-    {
-        return false;
-    }
-
-    QueueFamilySupport qSupport = queryQueueSupport(device, surface);
-    if (!checkQueueRequirements(qSupport, config.requiredQueues))
-    {
-        return false;
-    }
-
-    uint32_t formatCount = 0;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
-    if (formatCount == 0)
-    {
-        return false;
-    }
-
-    uint32_t presentModeCount = 0;
-    vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
-    if (presentModeCount == 0)
-    {
-        return false;
-    }
-
-    VkPhysicalDeviceFeatures supported{};
-    vkGetPhysicalDeviceFeatures(device, &supported);
-
-    VkPhysicalDeviceFeatures enabled{};
-    applyRequiredFeatures(config.requiredFeatures, enabled, supported);
-
-    enabledFeaturesOut = enabled;
-    return true;
-}
-
-} // namespace
 
 VulkanDevice::VulkanDevice(VkInstance instance, VkSurfaceKHR surface, const VulkanDeviceConfig& config)
     : instance_(instance)
@@ -214,31 +154,32 @@ VulkanDevice::VulkanDevice(VkInstance instance, VkSurfaceKHR surface, const Vulk
     std::vector<VkPhysicalDevice> devices(deviceCount);
     vkEnumeratePhysicalDevices(instance_, &deviceCount, devices.data());
 
-    // 简化：选择第一个满足基本要求的物理设备
     physicalDevice_ = VK_NULL_HANDLE;
     for (VkPhysicalDevice dev : devices)
     {
-        // 这里可以增加更多筛选逻辑，例如检查扩展、特性等
-        physicalDevice_ = dev;
-        break;
+        if (isDeviceSuitable(dev, surface, config))
+        {
+            physicalDevice_ = dev;
+            break;
+        }
     }
 
     if (physicalDevice_ == VK_NULL_HANDLE)
     {
-        throw std::runtime_error("Failed to select a suitable physical device");
+        throw std::runtime_error("Failed to find a suitable physical device");
     }
 
-    vkGetPhysicalDeviceProperties(physicalDevice_, &properties_);
-    vkGetPhysicalDeviceMemoryProperties(physicalDevice_, &memoryProps_);
+    vkGetPhysicalDeviceProperties(physicalDevice_, &properties_);        // 获取物理设备属性
+    vkGetPhysicalDeviceMemoryProperties(physicalDevice_, &memoryProps_); // 获取物理设备内存属性
 
-    // 2. 查询队列族
+    // 2. 确定 graphics / present 队列族 index
     uint32_t queueFamilyCount = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice_, &queueFamilyCount, nullptr);
+    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice_, &queueFamilyCount, nullptr);// 获取队列族数量
     std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice_, &queueFamilyCount, queueFamilies.data());
+    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice_, &queueFamilyCount, queueFamilies.data());// 获取队列族属性
 
-    std::optional<uint32_t> graphicsFamily;
-    std::optional<uint32_t> presentFamily;
+    std::optional<uint32_t> graphicsFamily;// 查找支持图形的队列族
+    std::optional<uint32_t> presentFamily;// 查找支持图形和呈现的队列族
 
     for (uint32_t i = 0; i < queueFamilyCount; ++i)
     {
@@ -246,10 +187,7 @@ VulkanDevice::VulkanDevice(VkInstance instance, VkSurfaceKHR surface, const Vulk
 
         if (props.queueCount > 0 && (props.queueFlags & VK_QUEUE_GRAPHICS_BIT))
         {
-            if (!graphicsFamily)
-            {
-                graphicsFamily = i;
-            }
+            if (!graphicsFamily) graphicsFamily = i;
         }
 
         VkBool32 presentSupport = VK_FALSE;
@@ -264,10 +202,8 @@ VulkanDevice::VulkanDevice(VkInstance instance, VkSurfaceKHR surface, const Vulk
     {
         throw std::runtime_error("Failed to find graphics queue family");
     }
-
     if (!presentFamily)
     {
-        // 如果没有专门的 present 队列，就退回到 graphics 队列
         presentFamily = graphicsFamily;
     }
 
@@ -295,18 +231,17 @@ VulkanDevice::VulkanDevice(VkInstance instance, VkSurfaceKHR surface, const Vulk
         queueCreateInfos.push_back(presentQueueInfo);
     }
 
-    // 必要扩展：目前至少需要 swapchain 扩展
-    const std::vector<const char*> deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
-
-    VkPhysicalDeviceFeatures deviceFeatures{}; // 按需要开启特性
+    VkPhysicalDeviceFeatures enabledFeatures{};
+    // 只启用你要求为 VK_TRUE 的特性（避免开启未支持的）
+    enabledFeatures = config.requiredFeatures;
 
     VkDeviceCreateInfo deviceInfo{};
     deviceInfo.sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     deviceInfo.queueCreateInfoCount    = static_cast<uint32_t>(queueCreateInfos.size());
     deviceInfo.pQueueCreateInfos       = queueCreateInfos.data();
-    deviceInfo.enabledExtensionCount   = static_cast<uint32_t>(deviceExtensions.size());
-    deviceInfo.ppEnabledExtensionNames = deviceExtensions.data();
-    deviceInfo.pEnabledFeatures        = &deviceFeatures;
+    deviceInfo.enabledExtensionCount   = static_cast<uint32_t>(config.requiredExtensions.size());
+    deviceInfo.ppEnabledExtensionNames = config.requiredExtensions.data();
+    deviceInfo.pEnabledFeatures        = &enabledFeatures;
 
     if (vkCreateDevice(physicalDevice_, &deviceInfo, nullptr, &device_) != VK_SUCCESS)
     {
@@ -316,6 +251,7 @@ VulkanDevice::VulkanDevice(VkInstance instance, VkSurfaceKHR surface, const Vulk
     vkGetDeviceQueue(device_, graphicsQueue_.familyIndex, 0, &graphicsQueue_.handle);
     vkGetDeviceQueue(device_, presentQueue_.familyIndex, 0, &presentQueue_.handle);
 }
+
 
 VulkanDevice::~VulkanDevice()
 {

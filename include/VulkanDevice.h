@@ -5,34 +5,16 @@
 #include <vector>
 #include "constants.h"
 
-enum class DeviceExtension
-{
-    Swapchain, ///< VK_KHR_swapchain
-};
 
-enum class DeviceFeature
-{
-    SamplerAnisotropy,
-    SampleRateShading,
-    FillModeNonSolid,
-    WideLines,
-    GeometryShader,
-    TessellationShader,
-};
-
-enum class QueueCapability
-{
-    Graphics,
-    Present,
-    Compute,
-    Transfer,
-};
-
+/// 设备创建配置
 struct VulkanDeviceConfig
 {
-    std::vector<DeviceExtension> requiredExtensions;
-    std::vector<DeviceFeature>   requiredFeatures;
-    std::vector<QueueCapability> requiredQueues;
+    // 必须支持的设备扩展（直接用 const char*，不重新枚举）
+    std::vector<const char*> requiredExtensions;
+
+    // 必须支持的特性（你关心的那几个 true 即可）
+    // 例如：cfg.requiredFeatures.samplerAnisotropy = VK_TRUE;
+    VkPhysicalDeviceFeatures requiredFeatures{}; // 要求“至少支持”的特性
 };
 
 
@@ -63,7 +45,9 @@ class VulkanDevice
          * 
          * @param instance Vulkan实例句柄
          * @param surface Vulkan表面句柄，用于呈现功能
+         * @param config 设备创建配置
          */
+        /// 主构造函数：根据配置筛选物理设备并创建逻辑设备
         VulkanDevice(VkInstance instance, VkSurfaceKHR surface, const VulkanDeviceConfig& config);
 
         /**
@@ -74,8 +58,7 @@ class VulkanDevice
         ~VulkanDevice();
 
         // 禁用拷贝构造和赋值操作符，确保Vulkan设备的唯一性
-        VulkanDevice(const VulkanDevice&) = delete;
-
+        VulkanDevice(const VulkanDevice&)            = delete;
         VulkanDevice& operator=(const VulkanDevice&) = delete;
 
         /**
