@@ -11,7 +11,7 @@
 
 本项目是一个基于现代 C++ 和 Vulkan API 的学习型图形渲染框架，目标是从基础的三角形渲染逐步演进为一个工程化、模块化的渲染引擎原型。项目遵循现代 C++ 最佳实践（C++17/20），采用 RAII 资源管理模式，并逐步引入更高级的图形编程概念。
 
-### 🎯 当前状态（v0.2）
+### 🎯 当前状态（v1.2）
 
 #### 已实现的功能
 - ✅ **Vulkan 核心初始化**
@@ -91,18 +91,18 @@ vulkan_study/
 - [x] 添加线宽和深度偏移动态状态支持
 - [x] 文档化动态状态的使用方式和限制
 
-##### 1.2 资源管理改进
-- [ ] **VulkanDevice 类**
+##### 1.2 资源管理改进 ✅ **已完成**
+- [x] **VulkanDevice 类**
   - 封装物理设备、逻辑设备、队列
   - 提供设备能力查询接口
   - 管理设备特性和扩展
   
-- [ ] **ResourceManager 类**
+- [x] **ResourceManager 类**
   - 统一管理 Buffer、Image、Sampler 等资源
   - 实现资源池和重用机制
   - 提供 RAII 风格的资源句柄
 
-- [ ] **DescriptorSetManager**
+- [x] **DescriptorSetManager**
   - 管理 Descriptor Pool 和 Descriptor Set
   - 提供简化的描述符分配接口
 
@@ -456,7 +456,7 @@ bool acquireNextImage(uint32_t& imageIndex) {
 
 This is a learning-oriented graphics rendering framework based on modern C++ and the Vulkan API. The goal is to evolve from basic triangle rendering to an engineering-grade, modular rendering engine prototype. The project follows modern C++ best practices (C++17/20), employs RAII resource management, and gradually introduces advanced graphics programming concepts.
 
-### 🎯 Current Status (v0.2)
+### 🎯 Current Status (v1.2)
 
 #### Implemented Features
 - ✅ **Vulkan Core Initialization**
@@ -509,18 +509,18 @@ This is a learning-oriented graphics rendering framework based on modern C++ and
 - [x] Add line width and depth bias dynamic state support
 - [x] Document dynamic state usage and limitations
 
-##### 1.2 Resource Management Improvements
-- [ ] **VulkanDevice Class**
+##### 1.2 Resource Management Improvements ✅ **Completed**
+- [x] **VulkanDevice Class**
   - Encapsulate physical device, logical device, queues
   - Provide device capability query interface
   - Manage device features and extensions
   
-- [ ] **ResourceManager Class**
+- [x] **ResourceManager Class**
   - Unified management of Buffer, Image, Sampler resources
   - Implement resource pooling and reuse
   - Provide RAII-style resource handles
 
-- [ ] **DescriptorSetManager**
+- [x] **DescriptorSetManager**
   - Manage Descriptor Pool and Descriptor Sets
   - Provide simplified descriptor allocation interface
 
@@ -870,7 +870,13 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 更新日志 / Changelog
 
-### v0.2 (Current)
+### v1.2 (Current)
+- ✅ 实现 VulkanDevice 类（封装物理设备、逻辑设备和队列管理）
+- ✅ 实现 ResourceManager 类（统一管理 Buffer、Image、Sampler 资源）
+- ✅ 实现 DescriptorSetManager 类（简化描述符集分配和管理）
+- ✅ 完成阶段 1.2 资源管理改进
+
+### v0.2
 - ✅ 实现动态管线（Dynamic Pipeline）
 - ✅ 添加项目工程化规划文档
 - ✅ 改进代码注释和文档
@@ -883,4 +889,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**最后更新 / Last Updated**: 2025-11-21
+**最后更新 / Last Updated**: 2025-11-22
