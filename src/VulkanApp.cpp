@@ -134,7 +134,7 @@ void Application::createOrRecreateSwapchain()
 
     // 4. 像原来的 initVulkan 一样创建整条链
     QueueFamilyIndices indices = findQueueFamilies(physicalDevice, surface);
-
+    // 创建交换链及相关资源
     createSwapChain(physicalDevice,
                     device,
                     surface,
@@ -143,28 +143,28 @@ void Application::createOrRecreateSwapchain()
                     swapchainResources.images,
                     swapchainResources.imageFormat,
                     swapchainResources.extent);
-
+    // 创建图像视图
     createImageViews(device,
                      swapchainResources.images,
                      swapchainResources.imageFormat,
                      swapchainResources.imageViews);
-
+    // 创建渲染通道
     createRenderPass(device,
                      swapchainResources.imageFormat,
                      swapchainResources.renderPass);
-
+    // 创建图形管线
     createGraphicsPipeline(device,
                            swapchainResources.extent,
                            swapchainResources.renderPass,
                            swapchainResources.pipelineLayout,
                            swapchainResources.graphicsPipeline);
-
+    // 创建帧缓冲
     createFramebuffers(device,
                        swapchainResources.imageViews,
                        swapchainResources.renderPass,
                        swapchainResources.extent,
                        swapchainResources.framebuffers);
-
+    // 创建命令缓冲
     createCommandBuffers(device,
                          commandPool,
                          swapchainResources.framebuffers,
@@ -173,7 +173,7 @@ void Application::createOrRecreateSwapchain()
                          swapchainResources.graphicsPipeline,
                          swapchainResources.imageViews,
                          swapchainResources.commandBuffers);
-
+    // 记录命令缓冲
     for (size_t i = 0; i < swapchainResources.commandBuffers.size(); ++i)
     {
         recordCommandBuffer(swapchainResources.commandBuffers[i],

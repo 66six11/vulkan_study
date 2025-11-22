@@ -11,13 +11,15 @@
  * @param indices 队列族索引
  * @param commandPool [out] 创建的命令池对象
  */
-void createCommandPool(VkDevice device, QueueFamilyIndices indices, VkCommandPool &commandPool) {
+void createCommandPool(VkDevice device, QueueFamilyIndices indices, VkCommandPool& commandPool)
+{
     VkCommandPoolCreateInfo poolInfo{};
     poolInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     poolInfo.flags            = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     poolInfo.queueFamilyIndex = indices.graphicsFamily.value();
 
-    if (vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
+    if (vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS)
+    {
         throw std::runtime_error("failed to create command pool!");
     }
 }
@@ -38,21 +40,23 @@ void createCommandPool(VkDevice device, QueueFamilyIndices indices, VkCommandPoo
  */
 void createCommandBuffers(VkDevice                          device,
                           VkCommandPool                     commandPool,
-                          const std::vector<VkFramebuffer> &swapChainFramebuffers,
+                          const std::vector<VkFramebuffer>& swapChainFramebuffers,
                           VkRenderPass                      renderPass,
                           VkExtent2D                        swapChainExtent,
                           VkPipeline                        graphicsPipeline,
-                          const std::vector<VkImageView> &  swapChainImageViews,
-                          std::vector<VkCommandBuffer> &    commandBuffers) {
+                          const std::vector<VkImageView>&   swapChainImageViews,
+                          std::vector<VkCommandBuffer>&     commandBuffers)
+{
     commandBuffers.resize(swapChainFramebuffers.size());
 
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.commandPool        = commandPool;
     allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = (uint32_t) commandBuffers.size();
+    allocInfo.commandBufferCount = (uint32_t)commandBuffers.size();
 
-    if (vkAllocateCommandBuffers(device, &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
+    if (vkAllocateCommandBuffers(device, &allocInfo, commandBuffers.data()) != VK_SUCCESS)
+    {
         throw std::runtime_error("failed to allocate command buffers!");
     }
 }
@@ -66,12 +70,14 @@ void createCommandBuffers(VkDevice                          device,
  * @param imageAvailableSemaphore [out] 图像可用信号量
  * @param renderFinishedSemaphore [out] 渲染完成信号量
  */
-void createSemaphores(VkDevice device, VkSemaphore &imageAvailableSemaphore, VkSemaphore &renderFinishedSemaphore) {
+void createSemaphores(VkDevice device, VkSemaphore& imageAvailableSemaphore, VkSemaphore& renderFinishedSemaphore)
+{
     VkSemaphoreCreateInfo semaphoreInfo{};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
     if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphore) != VK_SUCCESS ||
-        vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphore) != VK_SUCCESS) {
+        vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphore) != VK_SUCCESS)
+    {
         throw std::runtime_error("failed to create semaphores!");
     }
 }
@@ -93,11 +99,13 @@ void recordCommandBuffer(VkCommandBuffer commandBuffer,
                          VkRenderPass    renderPass,
                          VkExtent2D      swapChainExtent,
                          VkPipeline      graphicsPipeline,
-                         VkFramebuffer   framebuffer) {
+                         VkFramebuffer   framebuffer)
+{
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
-    if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
+    if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS)
+    {
         throw std::runtime_error("failed to begin recording command buffer!");
     }
 
@@ -119,7 +127,7 @@ void recordCommandBuffer(VkCommandBuffer commandBuffer,
     // 设置动态状态 - Set dynamic states
     // 这些状态已在管线创建时声明为动态，因此必须在每个命令缓冲中显式设置
     // These states are declared as dynamic during pipeline creation, so they must be explicitly set in each command buffer
-    
+
     // 设置视口 - Set viewport
     VkViewport viewport{};
     viewport.x        = 0.0f;
@@ -150,7 +158,8 @@ void recordCommandBuffer(VkCommandBuffer commandBuffer,
 
     vkCmdEndRenderPass(commandBuffer);
 
-    if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+    if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS)
+    {
         throw std::runtime_error("failed to record command buffer!");
     }
 }
@@ -172,10 +181,12 @@ void drawFrame(VkDevice                            device,
                VkSwapchainKHR                      swapChain,
                VkQueue                             graphicsQueue,
                VkQueue                             presentQueue,
-               const std::vector<VkCommandBuffer> &commandBuffers,
+               const std::vector<VkCommandBuffer>& commandBuffers,
                VkSemaphore                         imageAvailableSemaphore,
-               VkSemaphore                         renderFinishedSemaphore) {
+               VkSemaphore                         renderFinishedSemaphore)
+{
     uint32_t imageIndex;
+    
     VkResult result = vkAcquireNextImageKHR(device,
                                             swapChain,
                                             UINT64_MAX,
@@ -184,16 +195,19 @@ void drawFrame(VkDevice                            device,
                                             &imageIndex);
 
     // 如果交换链已经过期（典型场景：窗口 resize），这里不再抛异常，而是交给外层重建
-    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+    if (result == VK_ERROR_OUT_OF_DATE_KHR)
+    {
         // 外层（Application::mainLoop 或 drawFrame 的调用者）应在合适时机调用 recreateSwapChain()
         return;
-    } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+    }
+    else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+    {
         throw std::runtime_error("failed to acquire swap chain image!");
     }
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
+    // 等待图像可用信号量
     VkSemaphore          waitSemaphores[] = {imageAvailableSemaphore};
     VkPipelineStageFlags waitStages[]     = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     submitInfo.waitSemaphoreCount         = 1;
@@ -207,7 +221,8 @@ void drawFrame(VkDevice                            device,
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores    = signalSemaphores;
 
-    if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS) {
+    if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS)
+    {
         throw std::runtime_error("failed to submit draw command buffer!");
     }
 
@@ -225,10 +240,13 @@ void drawFrame(VkDevice                            device,
 
     result = vkQueuePresentKHR(presentQueue, &presentInfo);
     // 如果呈现时发现交换链过期/次优，也交给外层去重建
-    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
+    {
         // 这里不抛异常，调用者在下一帧可以检查窗口 resize 状态并调用 recreateSwapChain()
         // 例如在 Application::mainLoop 中检测到 framebufferResized 或记录一个标志位
-    } else if (result != VK_SUCCESS) {
+    }
+    else if (result != VK_SUCCESS)
+    {
         throw std::runtime_error("failed to present swap chain image!");
     }
 
