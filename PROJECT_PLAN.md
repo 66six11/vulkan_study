@@ -11,7 +11,7 @@
 
 本项目是一个基于现代 C++ 和 Vulkan API 的学习型图形渲染框架，目标是从基础的三角形渲染逐步演进为一个工程化、模块化的渲染引擎原型。项目遵循现代 C++ 最佳实践（C++17/20），采用 RAII 资源管理模式，并逐步引入更高级的图形编程概念。
 
-### 🎯 当前状态（v1.2）
+### 🎯 当前状态（v0.3）
 
 #### 已实现的功能
 - ✅ **Vulkan 核心初始化**
@@ -456,7 +456,7 @@ bool acquireNextImage(uint32_t& imageIndex) {
 
 This is a learning-oriented graphics rendering framework based on modern C++ and the Vulkan API. The goal is to evolve from basic triangle rendering to an engineering-grade, modular rendering engine prototype. The project follows modern C++ best practices (C++17/20), employs RAII resource management, and gradually introduces advanced graphics programming concepts.
 
-### 🎯 Current Status (v1.2)
+### 🎯 Current Status (v0.3)
 
 #### Implemented Features
 - ✅ **Vulkan Core Initialization**
@@ -870,7 +870,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 更新日志 / Changelog
 
-### v1.2 (Current)
+### v0.3 (Current)
 - ✅ 实现 VulkanDevice 类（封装物理设备、逻辑设备和队列管理）
 - ✅ 实现 ResourceManager 类（统一管理 Buffer、Image、Sampler 资源）
 - ✅ 实现 DescriptorSetManager 类（简化描述符集分配和管理）
