@@ -2,7 +2,39 @@
 #pragma once
 #include <functional>
 #include <optional>
+#include <vector>
 #include "constants.h"
+
+enum class DeviceExtension
+{
+    Swapchain, ///< VK_KHR_swapchain
+};
+
+enum class DeviceFeature
+{
+    SamplerAnisotropy,
+    SampleRateShading,
+    FillModeNonSolid,
+    WideLines,
+    GeometryShader,
+    TessellationShader,
+};
+
+enum class QueueCapability
+{
+    Graphics,
+    Present,
+    Compute,
+    Transfer,
+};
+
+struct VulkanDeviceConfig
+{
+    std::vector<DeviceExtension> requiredExtensions;
+    std::vector<DeviceFeature>   requiredFeatures;
+    std::vector<QueueCapability> requiredQueues;
+};
+
 
 /**
  * @brief Vulkan设备管理类
@@ -10,7 +42,6 @@
  * 封装Vulkan物理设备、逻辑设备和队列的管理，提供设备能力查询接口，
  * 管理设备特性和扩展，以及提供设备级工具函数
  */
-
 class VulkanDevice
 {
     public:
@@ -33,10 +64,9 @@ class VulkanDevice
          * @param instance Vulkan实例句柄
          * @param surface Vulkan表面句柄，用于呈现功能
          */
-        VulkanDevice(VkInstance instance, VkSurfaceKHR surface);
+        VulkanDevice(VkInstance instance, VkSurfaceKHR surface, const VulkanDeviceConfig& config);
 
         /**
-
          * @brief 析构函数
          * 
          * 清理和销毁Vulkan设备相关资源
