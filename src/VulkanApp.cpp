@@ -114,7 +114,8 @@ void Application::mainLoop()
         // 注意：现在 beginFrame 返回 bool
         if (!renderer_->beginFrame(ctx))
         {
-            // 这里通常是 acquire 返回 OUT_OF_DATE，下一轮 loop 会走到上面的 resize 分支
+            // 这里通常是 acquire 返回 OUT_OF_DATE，触发 swapchain 重建
+            framebufferResized = true;
             continue;
         }
 

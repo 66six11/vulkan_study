@@ -85,7 +85,7 @@ bool VulkanRenderer::beginFrame(const FrameContext& /*ctx*/)
     // 2. acquire swapchain image → currentImageIndex_
     // 3. 如果这张 image 还被别的帧在用，等它的 fence
 
-    if (framesInFlight_.empty() || !device_)
+    if (framesInFlight_.empty() || !device_ || swapchainOutOfDate_)
         return false;
 
     FrameResources& frame = framesInFlight_[currentFrameIndex_];
