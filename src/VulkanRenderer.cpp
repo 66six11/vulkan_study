@@ -75,6 +75,9 @@ void VulkanRenderer::resize(int width, int height)
     createFramebuffers();
     createFrameResources();
 
+    // Reset frame state after resize
+    currentFrameIndex_  = 0;
+    currentImageIndex_  = 0;
     swapchainOutOfDate_ = false;
 }
 
