@@ -11,7 +11,7 @@
 
 本项目是一个基于现代 C++ 和 Vulkan API 的学习型图形渲染框架，目标是从基础的三角形渲染逐步演进为一个工程化、模块化的渲染引擎原型。项目遵循现代 C++ 最佳实践（C++17/20），采用 RAII 资源管理模式，并逐步引入更高级的图形编程概念。
 
-### 🎯 当前状态（v0.3）
+### 🎯 当前状态（v0.4）
 
 #### 已实现的功能
 - ✅ **Vulkan 核心初始化**
@@ -47,14 +47,25 @@
   - 顶点和片段着色器支持
   - CMake 自动编译着色器
 
+- ✅ **渲染器抽象层**（Phase 1.3 - v0.4 新增）
+  - Renderer 抽象接口定义
+  - VulkanRenderer 具体实现
+  - Application 与渲染后端解耦
+  - 支持未来多后端扩展（DX12/Metal）
+
 #### 代码架构
 ```
 vulkan_study/
 ├── include/              # 公共头文件
-│   ├── Application.h     # 主应用类
+│   ├── Application.h     # 主应用类（与渲染后端解耦）
+│   ├── Renderer.h        # 渲染器抽象接口
+│   ├── VulkanRenderer.h  # Vulkan 渲染器实现
+│   ├── VulkanDevice.h    # Vulkan 设备封装
+│   ├── ResourceManager.h # 资源管理器
+│   ├── DescriptorSetManager.h  # 描述符集管理
 │   ├── vulkan_init.h     # Vulkan 初始化
 │   ├── swapchain_management.h  # 交换链管理
-│   ├── rendering.h       # 渲染管线
+│   ├── Rendering.h       # 渲染管线
 │   ├── command_buffer_sync.h   # 命令与同步
 │   ├── SwapchainResources.h    # 交换链资源 RAII
 │   ├── constants.h       # 全局常量
@@ -63,9 +74,13 @@ vulkan_study/
 ├── src/                  # 实现文件
 │   ├── main.cpp
 │   ├── VulkanApp.cpp
+│   ├── VulkanRenderer.cpp     # Vulkan 渲染器实现
+│   ├── VulkanDevice.cpp       # 设备管理实现
+│   ├── ResourceManager.cpp    # 资源管理实现
+│   ├── DescriptorSetManager.cpp  # 描述符管理实现
 │   ├── vulkan_init.cpp
 │   ├── swapchain_management.cpp
-│   ├── rendering.cpp
+│   ├── Rendering.cpp
 │   ├── command_buffer_sync.cpp
 │   ├── SwapchainResources.cpp
 │   ├── constants.cpp
@@ -81,7 +96,7 @@ vulkan_study/
 
 ### 🚀 工程化改进路线图
 
-#### 第一阶段：架构重构与模块化（当前正在进行）
+#### 第一阶段：架构重构与模块化 ✅ **已完成**
 
 **目标**：将代码重构为更清晰的层次结构，分离关注点，提高可维护性。
 
@@ -106,15 +121,22 @@ vulkan_study/
   - 管理 Descriptor Pool 和 Descriptor Set
   - 提供简化的描述符分配接口
 
-##### 1.3 渲染抽象层
-- [ ] **Renderer 接口**
+##### 1.3 渲染抽象层 ✅ **已完成**
+- [x] **Renderer 接口**
   - 定义渲染器的公共接口
   - 将来支持多后端（Vulkan/DX12/Metal）
+  - 定义 API 无关的数据结构（FrameContext、CameraData、MeshHandle 等）
+  - 提供帧生命周期管理接口（beginFrame、renderFrame、waitIdle）
+  - 提供资源创建接口（createMesh、destroyMesh）
+  - 提供场景提交接口（submitCamera、submitRenderables）
   
-- [ ] **VulkanRenderer 实现**
+- [x] **VulkanRenderer 实现**
   - 从 Application 中分离渲染逻辑
   - 管理渲染循环和帧同步
   - 提供场景提交接口
+  - 集成 VulkanDevice、ResourceManager、DescriptorSetManager
+  - 实现完整的 Vulkan 渲染管线
+  - 支持交换链重建和窗口调整
 
 #### 第二阶段：核心渲染特性扩展
 
@@ -456,7 +478,7 @@ bool acquireNextImage(uint32_t& imageIndex) {
 
 This is a learning-oriented graphics rendering framework based on modern C++ and the Vulkan API. The goal is to evolve from basic triangle rendering to an engineering-grade, modular rendering engine prototype. The project follows modern C++ best practices (C++17/20), employs RAII resource management, and gradually introduces advanced graphics programming concepts.
 
-### 🎯 Current Status (v0.3)
+### 🎯 Current Status (v0.4)
 
 #### Implemented Features
 - ✅ **Vulkan Core Initialization**
@@ -492,6 +514,12 @@ This is a learning-oriented graphics rendering framework based on modern C++ and
   - Vertex and fragment shader support
   - CMake automatic shader compilation
 
+- ✅ **Renderer Abstraction Layer** (Phase 1.3 - v0.4 New)
+  - Renderer abstract interface definition
+  - VulkanRenderer concrete implementation
+  - Application decoupled from rendering backend
+  - Support for future multi-backend expansion (DX12/Metal)
+
 #### Code Architecture
 *(Same as Chinese version - see above)*
 
@@ -499,7 +527,7 @@ This is a learning-oriented graphics rendering framework based on modern C++ and
 
 ### 🚀 Engineering Improvement Roadmap
 
-#### Phase 1: Architecture Refactoring & Modularization (Current)
+#### Phase 1: Architecture Refactoring & Modularization ✅ **Completed**
 
 **Goal**: Refactor code into clearer layers, separate concerns, improve maintainability.
 
@@ -524,15 +552,22 @@ This is a learning-oriented graphics rendering framework based on modern C++ and
   - Manage Descriptor Pool and Descriptor Sets
   - Provide simplified descriptor allocation interface
 
-##### 1.3 Rendering Abstraction Layer
-- [ ] **Renderer Interface**
+##### 1.3 Rendering Abstraction Layer ✅ **Completed**
+- [x] **Renderer Interface**
   - Define public renderer interface
   - Future support for multiple backends (Vulkan/DX12/Metal)
+  - Define API-agnostic data structures (FrameContext, CameraData, MeshHandle, etc.)
+  - Provide frame lifecycle management interface (beginFrame, renderFrame, waitIdle)
+  - Provide resource creation interface (createMesh, destroyMesh)
+  - Provide scene submission interface (submitCamera, submitRenderables)
   
-- [ ] **VulkanRenderer Implementation**
+- [x] **VulkanRenderer Implementation**
   - Separate rendering logic from Application
   - Manage render loop and frame synchronization
   - Provide scene submission interface
+  - Integrate VulkanDevice, ResourceManager, DescriptorSetManager
+  - Implement complete Vulkan rendering pipeline
+  - Support swapchain recreation and window resizing
 
 #### Phase 2: Core Rendering Features Extension
 
@@ -870,7 +905,14 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 更新日志 / Changelog
 
-### v0.3 (Current)
+### v0.4 (Current) - 2025-11-23
+- ✅ 实现 Renderer 抽象接口（支持未来多后端扩展）
+- ✅ 实现 VulkanRenderer 类（完整的 Vulkan 渲染器实现）
+- ✅ Application 与渲染后端解耦
+- ✅ 完成阶段 1.3 渲染抽象层
+- ✅ 完成第一阶段：架构重构与模块化
+
+### v0.3
 - ✅ 实现 VulkanDevice 类（封装物理设备、逻辑设备和队列管理）
 - ✅ 实现 ResourceManager 类（统一管理 Buffer、Image、Sampler 资源）
 - ✅ 实现 DescriptorSetManager 类（简化描述符集分配和管理）
@@ -889,4 +931,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**最后更新 / Last Updated**: 2025-11-22
+**最后更新 / Last Updated**: 2025-11-23
