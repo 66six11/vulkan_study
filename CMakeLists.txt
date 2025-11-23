@@ -83,7 +83,8 @@ if (GLFW_INCLUDE_DIRS)
 endif ()
 
 # 设置Visual Studio调试工作目录为可执行文件目录
-# 这样运行时可以正确找到相对路径的着色器文件
+# 这样运行时可以正确找到 POST_BUILD 复制的着色器文件 (shaders/*.spv)
+# 如果设为源码目录，会找到未编译的 .vert/.frag 源文件导致加载失败
 set_target_properties(vulkan PROPERTIES
         VS_DEBUGGER_WORKING_DIRECTORY $<TARGET_FILE_DIR:vulkan>
 )
