@@ -92,7 +92,6 @@ bool VulkanRenderer::beginFrame(const FrameContext& /*ctx*/)
 
     // 1) 等待当前帧 fence，确保上一轮提交已完成
     vkWaitForFences(device_->device(), 1, &frame.inFlightFence, VK_TRUE, UINT64_MAX);
-    vkResetFences(device_->device(), 1, &frame.inFlightFence);
 
     // 2) 获取下一个 swapchain image
     uint32_t imageIndex = 0;
@@ -115,6 +114,9 @@ bool VulkanRenderer::beginFrame(const FrameContext& /*ctx*/)
     {
         throw std::runtime_error("VulkanRenderer::beginFrame - failed to acquire swap chain image");
     }
+
+    // Reset fence only after successful image acquisition
+    vkResetFences(device_->device(), 1, &frame.inFlightFence);
 
     // 3) 如果这张 image 之前被别的帧使用过，等那个帧的 fence，避免同一 image 并发 in-flight
     if (imageIndex < imagesInFlight_.size() && imagesInFlight_[imageIndex] != VK_NULL_HANDLE)
