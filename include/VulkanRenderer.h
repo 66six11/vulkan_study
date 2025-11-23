@@ -57,7 +57,7 @@ class VulkanRenderer : public Renderer
         VkPipeline       graphicsPipeline_ = VK_NULL_HANDLE;
 
         // 5. per-frame 资源层（帧同步 + 命令缓冲）
-       
+
         struct FrameResources
         {
             VkCommandBuffer commandBuffer           = VK_NULL_HANDLE;
@@ -74,7 +74,7 @@ class VulkanRenderer : public Renderer
         // 6. 场景数据缓存层
         CameraData              currentCamera_;
         std::vector<Renderable> currentFrameRenderables_;
-     
+
         // 7. 状态/标志
         bool swapchainOutOfDate_ = false; // beginFrame / renderFrame 中设置，外部驱动 resize
 

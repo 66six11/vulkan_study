@@ -19,21 +19,26 @@ struct FrameContext
     FrameTiming timing;
     // 以后可以扩展：帧级别的渲染标志位，比如是否暂停、是否开启调试可视化等
 };
+
 // 先定义最小数据结构
-struct CameraData {
+struct CameraData
+{
     // viewProj, position 等，以后细化
 };
-     
-struct MeshHandle {
+
+struct MeshHandle
+{
     uint32_t id;
 };
-     
-struct MaterialHandle {
+
+struct MaterialHandle
+{
     uint32_t id;
 };
-     
-struct Renderable {
-    MeshHandle mesh;
+
+struct Renderable
+{
+    MeshHandle     mesh;
     MaterialHandle material;
     // transform 等
 };
@@ -55,11 +60,14 @@ class Renderer
 
 
         // 资源上传接口（可选在 1.3 末尾或 2.x 开始做）
-        virtual MeshHandle createMesh(const void* vertexData, size_t vertexCount,
-                                      const void* indexData, size_t indexCount) = 0;
-     
+        virtual MeshHandle createMesh(
+            const void* vertexData,
+            size_t      vertexCount,
+            const void* indexData,
+            size_t      indexCount) = 0;
+
         virtual void destroyMesh(MeshHandle mesh) = 0;
-     
+
         // 场景提交接口（每帧调用）
         virtual void submitCamera(const CameraData& camera) = 0;
         virtual void submitRenderables(const Renderable* renderables, size_t count) = 0;

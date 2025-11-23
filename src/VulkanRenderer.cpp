@@ -84,26 +84,27 @@ bool VulkanRenderer::beginFrame(const FrameContext& /*ctx*/)
     // 1. 等待当前帧 fence 完成
     // 2. acquire swapchain image → currentImageIndex_
     // 3. 如果这张 image 还被别的帧在用，等它的 fence
-     
+
     if (framesInFlight_.empty() || !device_)
         return false;
-     
+
     FrameResources& frame = framesInFlight_[currentFrameIndex_];
-     
+
     // 1) 等待当前帧 fence，确保上一轮提交已完成
     vkWaitForFences(device_->device(), 1, &frame.inFlightFence, VK_TRUE, UINT64_MAX);
     vkResetFences(device_->device(), 1, &frame.inFlightFence);
-     
+
     // 2) 获取下一个 swapchain image
     uint32_t imageIndex = 0;
     VkResult result     = vkAcquireNextImageKHR(
-        device_->device(),
-        swapchain_.swapchain,
-        UINT64_MAX,
-        frame.imageAvailableSemaphore, // acquire 完成后 signal 这个 semaphore
-        VK_NULL_HANDLE,
-        &imageIndex);
-     
+                                                device_->device(),
+                                                swapchain_.swapchain,
+                                                UINT64_MAX,
+                                                frame.imageAvailableSemaphore,
+                                                // acquire 完成后 signal 这个 semaphore
+                                                VK_NULL_HANDLE,
+                                                &imageIndex);
+
     if (result == VK_ERROR_OUT_OF_DATE_KHR)
     {
         // 交给外层 resize
@@ -114,19 +115,19 @@ bool VulkanRenderer::beginFrame(const FrameContext& /*ctx*/)
     {
         throw std::runtime_error("VulkanRenderer::beginFrame - failed to acquire swap chain image");
     }
-     
+
     // 3) 如果这张 image 之前被别的帧使用过，等那个帧的 fence，避免同一 image 并发 in-flight
     if (imageIndex < imagesInFlight_.size() && imagesInFlight_[imageIndex] != VK_NULL_HANDLE)
     {
         vkWaitForFences(device_->device(), 1, &imagesInFlight_[imageIndex], VK_TRUE, UINT64_MAX);
     }
-     
+
     // 将这张 image 标记为由当前帧的 fence 保护
     if (imageIndex < imagesInFlight_.size())
     {
         imagesInFlight_[imageIndex] = frame.inFlightFence;
     }
-     
+
     currentImageIndex_ = imageIndex;
     return true;
 }
@@ -345,107 +346,106 @@ void VulkanRenderer::createFramebuffers()
     }
 }
 
- void VulkanRenderer::createFrameResources()
-     {
-         destroyFrameResources();
-     
-         VkDevice      device = device_->device();
-         VkCommandPool pool   = swapchain_.commandPool;
-         if (pool == VK_NULL_HANDLE)
-         {
-             QueueFamilyIndices      indices = findQueueFamilies(device_->physicalDevice(), surface_);
-             VkCommandPoolCreateInfo poolInfo{};
-             poolInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-             poolInfo.flags            = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-             poolInfo.queueFamilyIndex = indices.graphicsFamily.value();
-             if (vkCreateCommandPool(device, &poolInfo, nullptr, &pool) != VK_SUCCESS)
-             {
-                 throw std::runtime_error("Failed to create command pool for frames in flight");
-             }
-             swapchain_.commandPool = pool;
-             swapchain_.device      = device;
-         }
-     
-         framesInFlight_.resize(MAX_FRAMES_IN_FLIGHT);
-     
-         VkSemaphoreCreateInfo semInfo{};
-         semInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-     
-         VkFenceCreateInfo fenceInfo{};
-         fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-         // 初始 signaled，第一帧不会卡在 Wait 上
-         fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-     
-         for (auto& frame : framesInFlight_)
-         {
-             // 1) command buffer
-             VkCommandBufferAllocateInfo allocInfo{};
-             allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-             allocInfo.commandPool        = pool;
-             allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-             allocInfo.commandBufferCount   = 1;
-     
-             if (vkAllocateCommandBuffers(device, &allocInfo, &frame.commandBuffer) != VK_SUCCESS)
-             {
-                 throw std::runtime_error("Failed to allocate command buffer for frame");
-             }
-     
-             // 2) per-frame semaphores
-             if (vkCreateSemaphore(device, &semInfo, nullptr, &frame.imageAvailableSemaphore) != VK_SUCCESS ||
-                 vkCreateSemaphore(device, &semInfo, nullptr, &frame.renderFinishedSemaphore) != VK_SUCCESS)
-             {
-                 throw std::runtime_error("Failed to create semaphores for frame");
-             }
-     
-             // 3) in-flight fence
-             if (vkCreateFence(device, &fenceInfo, nullptr, &frame.inFlightFence) != VK_SUCCESS)
-             {
-                 throw std::runtime_error("Failed to create in-flight fence for frame");
-             }
-         }
-     
-         // 每张 image 当前对应哪个 fence，初始都没有
-         imagesInFlight_.assign(swapchain_.images.size(), VK_NULL_HANDLE);
-     }
-     
-     void VulkanRenderer::destroyFrameResources()
-     {
-         VkDevice device = device_ ? device_->device() : VK_NULL_HANDLE;
-         if (device == VK_NULL_HANDLE)
-         {
-             framesInFlight_.clear();
-             imagesInFlight_.clear();
-             return;
-         }
-     
-         for (auto& frame : framesInFlight_)
-         {
-             if (frame.inFlightFence)
-             {
-                 vkDestroyFence(device, frame.inFlightFence, nullptr);
-                 frame.inFlightFence = VK_NULL_HANDLE;
-             }
-             if (frame.imageAvailableSemaphore)
-             {
-                 vkDestroySemaphore(device, frame.imageAvailableSemaphore, nullptr);
-                 frame.imageAvailableSemaphore = VK_NULL_HANDLE;
-             }
-             if (frame.renderFinishedSemaphore)
-             {
-                 vkDestroySemaphore(device, frame.renderFinishedSemaphore, nullptr);
-                 frame.renderFinishedSemaphore = VK_NULL_HANDLE;
-             }
-             if (frame.commandBuffer)
-             {
-                 vkFreeCommandBuffers(device, swapchain_.commandPool, 1, &frame.commandBuffer);
-                 frame.commandBuffer = VK_NULL_HANDLE;
-             }
-         }
-     
-         framesInFlight_.clear();
-         imagesInFlight_.clear();
-     }
+void VulkanRenderer::createFrameResources()
+{
+    destroyFrameResources();
 
+    VkDevice      device = device_->device();
+    VkCommandPool pool   = swapchain_.commandPool;
+    if (pool == VK_NULL_HANDLE)
+    {
+        QueueFamilyIndices      indices = findQueueFamilies(device_->physicalDevice(), surface_);
+        VkCommandPoolCreateInfo poolInfo{};
+        poolInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        poolInfo.flags            = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+        poolInfo.queueFamilyIndex = indices.graphicsFamily.value();
+        if (vkCreateCommandPool(device, &poolInfo, nullptr, &pool) != VK_SUCCESS)
+        {
+            throw std::runtime_error("Failed to create command pool for frames in flight");
+        }
+        swapchain_.commandPool = pool;
+        swapchain_.device      = device;
+    }
+
+    framesInFlight_.resize(MAX_FRAMES_IN_FLIGHT);
+
+    VkSemaphoreCreateInfo semInfo{};
+    semInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+    VkFenceCreateInfo fenceInfo{};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    // 初始 signaled，第一帧不会卡在 Wait 上
+    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+    for (auto& frame : framesInFlight_)
+    {
+        // 1) command buffer
+        VkCommandBufferAllocateInfo allocInfo{};
+        allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        allocInfo.commandPool        = pool;
+        allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocInfo.commandBufferCount = 1;
+
+        if (vkAllocateCommandBuffers(device, &allocInfo, &frame.commandBuffer) != VK_SUCCESS)
+        {
+            throw std::runtime_error("Failed to allocate command buffer for frame");
+        }
+
+        // 2) per-frame semaphores
+        if (vkCreateSemaphore(device, &semInfo, nullptr, &frame.imageAvailableSemaphore) != VK_SUCCESS ||
+            vkCreateSemaphore(device, &semInfo, nullptr, &frame.renderFinishedSemaphore) != VK_SUCCESS)
+        {
+            throw std::runtime_error("Failed to create semaphores for frame");
+        }
+
+        // 3) in-flight fence
+        if (vkCreateFence(device, &fenceInfo, nullptr, &frame.inFlightFence) != VK_SUCCESS)
+        {
+            throw std::runtime_error("Failed to create in-flight fence for frame");
+        }
+    }
+
+    // 每张 image 当前对应哪个 fence，初始都没有
+    imagesInFlight_.assign(swapchain_.images.size(), VK_NULL_HANDLE);
+}
+
+void VulkanRenderer::destroyFrameResources()
+{
+    VkDevice device = device_ ? device_->device() : VK_NULL_HANDLE;
+    if (device == VK_NULL_HANDLE)
+    {
+        framesInFlight_.clear();
+        imagesInFlight_.clear();
+        return;
+    }
+
+    for (auto& frame : framesInFlight_)
+    {
+        if (frame.inFlightFence)
+        {
+            vkDestroyFence(device, frame.inFlightFence, nullptr);
+            frame.inFlightFence = VK_NULL_HANDLE;
+        }
+        if (frame.imageAvailableSemaphore)
+        {
+            vkDestroySemaphore(device, frame.imageAvailableSemaphore, nullptr);
+            frame.imageAvailableSemaphore = VK_NULL_HANDLE;
+        }
+        if (frame.renderFinishedSemaphore)
+        {
+            vkDestroySemaphore(device, frame.renderFinishedSemaphore, nullptr);
+            frame.renderFinishedSemaphore = VK_NULL_HANDLE;
+        }
+        if (frame.commandBuffer)
+        {
+            vkFreeCommandBuffers(device, swapchain_.commandPool, 1, &frame.commandBuffer);
+            frame.commandBuffer = VK_NULL_HANDLE;
+        }
+    }
+
+    framesInFlight_.clear();
+    imagesInFlight_.clear();
+}
 
 
 void VulkanRenderer::destroyFramebuffers()
