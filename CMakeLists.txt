@@ -82,12 +82,10 @@ if (GLFW_INCLUDE_DIRS)
     target_include_directories(vulkan PRIVATE ${GLFW_INCLUDE_DIRS})
 endif ()
 
-# 设置Visual Studio调试工作目录
-
+# 设置Visual Studio调试工作目录为可执行文件目录
+# 这样运行时可以正确找到相对路径的着色器文件
 set_target_properties(vulkan PROPERTIES
-
-        VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-
+        VS_DEBUGGER_WORKING_DIRECTORY $<TARGET_FILE_DIR:vulkan>
 )
 
 
@@ -151,13 +149,16 @@ else ()
 
 
     # 设置输出目录为运行时目录
-
+    # 复制编译后的着色器到可执行文件目录
     add_custom_command(TARGET vulkan POST_BUILD
-
             COMMAND ${CMAKE_COMMAND} -E copy_directory
-
             ${COMPILED_SHADER_DIR} $<TARGET_FILE_DIR:vulkan>/shaders
+    )
 
+    # 同时复制到源码根目录，以支持从源码目录运行
+    add_custom_command(TARGET vulkan POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${COMPILED_SHADER_DIR} ${CMAKE_SOURCE_DIR}/shaders
     )
 
 endif ()
