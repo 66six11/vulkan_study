@@ -47,7 +47,6 @@ void framebufferResizeCallback(GLFWwindow* window, int width, int height)
  */
 void Application::initWindow()
 {
-    glfwInit();
     if (!glfwInit())
     {
         throw std::runtime_error("failed to initialize GLFW");
