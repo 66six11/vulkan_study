@@ -55,6 +55,10 @@ add_executable(vulkan
         include/DescriptorSetmanager.h
         src/ResourceManager.cpp
         src/DescriptorSetManager.cpp
+        include/Renderer.h
+        include/VulkanRenderer.h
+        src/VulkanRenderer.cpp
+        include/TimeStamp.h
 
 )
 

@@ -21,14 +21,14 @@
 int main()
 {
     // 使用try-catch块捕获Vulkan可能抛出的异常
-    Application app;
     try
     {
+        Application app;
         app.run();
     }
     catch (const std::exception& e)
     {
-        std::cerr << e.what() << std::endl;
+        std::cerr << "Fatal error: " << e.what() << std::endl;
         return EXIT_FAILURE;
     }
 

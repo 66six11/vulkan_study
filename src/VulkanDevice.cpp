@@ -255,10 +255,16 @@ VulkanDevice::VulkanDevice(VkInstance instance, VkSurfaceKHR surface, const Vulk
 
 VulkanDevice::~VulkanDevice()
 {
-    // 这里不再调用 vkDestroyDevice，由 RenderContext/Application 统一管理。
+    // 确保设备上的所有操作完成后再销毁设备
+    if (device_ != VK_NULL_HANDLE)
+    {
+        vkDeviceWaitIdle(device_);
+        vkDestroyDevice(device_, nullptr);
+        device_ = VK_NULL_HANDLE;
+    }
+
     instance_       = VK_NULL_HANDLE;
     physicalDevice_ = VK_NULL_HANDLE;
-    device_         = VK_NULL_HANDLE;
 }
 
 std::optional<VulkanDevice::QueueInfo> VulkanDevice::computeQueue() const noexcept
