@@ -1,11 +1,10 @@
-﻿#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
+﻿
 #include "swapchain_management.h"
-#include "utils.h"
-#include <stdexcept>
-#include <vector>
 #include <algorithm>
 #include <limits>
+#include <stdexcept>
+#include <vector>
+#include "utils.h"
 
 #include "Application.h"
 

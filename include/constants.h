@@ -10,7 +10,7 @@
 
 #include <stdexcept>
 
-
+inline constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 3;
 /**
  * @brief 窗口宽度常量
  * 
@@ -60,7 +60,7 @@ struct SwapChainSupportDetails
 struct QueueFamilyIndices
 {
     std::optional<uint32_t> graphicsFamily; // 图形队列族索引，用于图形命令提交
-    std::optional<uint32_t> presentFamily; // 呈现队列族索引，用于将图像呈现到屏幕
+    std::optional<uint32_t> presentFamily;  // 呈现队列族索引，用于将图像呈现到屏幕
 
 
     /**

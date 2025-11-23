@@ -1,4 +1,4 @@
-﻿#include "rendering.h"
+﻿#include "Rendering.h"
 #include <fstream>
 #include <stdexcept>
 #include <vector>

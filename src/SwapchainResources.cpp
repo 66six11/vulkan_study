@@ -44,12 +44,18 @@ void SwapchainResources::destroy()
 
     if (swapchain)
         vkDestroySwapchainKHR(device, swapchain, nullptr);
+    
+    if (commandPool) {
+        vkDestroyCommandPool(device, commandPool, nullptr);
+        commandPool = VK_NULL_HANDLE;
+    }
+    
+    
     swapchain = VK_NULL_HANDLE;
     images.clear();
     imageFormat = VK_FORMAT_UNDEFINED;
     extent      = {0, 0};
     device      = VK_NULL_HANDLE;
-    commandPool = VK_NULL_HANDLE;
 }
 
 SwapchainResources::SwapchainResources(SwapchainResources&& other) noexcept
