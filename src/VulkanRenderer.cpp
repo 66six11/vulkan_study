@@ -115,7 +115,9 @@ bool VulkanRenderer::beginFrame(const FrameContext& /*ctx*/)
         throw std::runtime_error("VulkanRenderer::beginFrame - failed to acquire swap chain image");
     }
 
-    // Reset fence only after successful image acquisition
+    // CRITICAL: Reset fence only AFTER successful image acquisition.
+    // If we reset before checking acquisition result and then return early due to error,
+    // the next frame will wait forever on this unsignaled fence, causing a hang.
     vkResetFences(device_->device(), 1, &frame.inFlightFence);
 
     // 3) 如果这张 image 之前被别的帧使用过，等那个帧的 fence，避免同一 image 并发 in-flight
