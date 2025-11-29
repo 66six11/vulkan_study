@@ -43,6 +43,7 @@
 # Build directories
 build/
 build_*/
+_codeql_build_dir/
 
 # IDE files
 .idea/
@@ -54,3 +55,6 @@ cmake-build-*/
 
 # CMake files
 CMakeLists.simple
+
+# CodeQL
+_codeql_detected_source_root
