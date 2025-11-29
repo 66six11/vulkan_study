@@ -3,21 +3,13 @@
 #include <cstdlib>
 #include "platform/Application.h"
 
-
 /**
-
  * @brief 程序入口点
-
  * 
-
  * Vulkan应用程序的主入口函数，负责创建Application实例并运行应用程序
-
  * 
-
  * @return 程序退出状态码
-
  */
-
 int main()
 {
     // 使用try-catch块捕获Vulkan可能抛出的异常

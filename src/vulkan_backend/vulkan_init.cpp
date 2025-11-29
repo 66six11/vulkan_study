@@ -128,10 +128,13 @@ void createInstance(VkInstance& instance, GLFWwindow* window)
  * 配置Vulkan调试信息回调函数，用于捕获验证层的警告和错误信息
  * 
  * @param instance Vulkan实例
+ * @note 当前为占位实现，后续版本将添加完整的调试回调支持
  */
 void setupDebugMessenger(VkInstance instance)
 {
-    // 暂时留空，后续可以添加调试信息
+    // 占位实现：调试信使功能预留给后续版本
+    // 完整实现将包含：创建 VkDebugUtilsMessengerEXT 对象
+    (void)instance; // 抑制未使用参数警告
 }
 
 /**
