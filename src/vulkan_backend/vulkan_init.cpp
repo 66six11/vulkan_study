@@ -7,6 +7,8 @@
 #include <set>
 #include <algorithm>
 
+namespace {
+
 /**
  * @brief 获取必需的实例扩展
  * 
@@ -67,14 +69,10 @@ bool checkValidationLayerSupport()
     return true;
 }
 
-/**
- * @brief 创建Vulkan实例
- * 
- * 创建Vulkan实例，这是使用Vulkan API的第一步，用于初始化Vulkan库并设置全局状态
- * 
- * @param instance [out] 创建的Vulkan实例
- * @param window 指向GLFW窗口的指针，用于获取必要的扩展
- */
+} // anonymous namespace
+
+namespace vkinit {
+
 void createInstance(VkInstance& instance, GLFWwindow* window)
 {
     if (enableValidationLayers && !checkValidationLayerSupport())
@@ -122,14 +120,6 @@ void createInstance(VkInstance& instance, GLFWwindow* window)
     }
 }
 
-/**
- * @brief 设置调试信息回调
- * 
- * 配置Vulkan调试信息回调函数，用于捕获验证层的警告和错误信息
- * 
- * @param instance Vulkan实例
- * @note 当前为占位实现，后续版本将添加完整的调试回调支持
- */
 void setupDebugMessenger(VkInstance instance)
 {
     // 占位实现：调试信使功能预留给后续版本
@@ -137,15 +127,6 @@ void setupDebugMessenger(VkInstance instance)
     (void)instance; // 抑制未使用参数警告
 }
 
-/**
- * @brief 创建窗口表面
- * 
- * 创建连接Vulkan和本地窗口系统的表面对象
- * 
- * @param instance Vulkan实例
- * @param window 指向GLFW窗口的指针
- * @param surface [out] 创建的表面对象
- */
 void createSurface(VkInstance instance, GLFWwindow* window, VkSurfaceKHR& surface)
 {
     if (glfwCreateWindowSurface(instance, window, nullptr, &surface) != VK_SUCCESS)
@@ -154,15 +135,6 @@ void createSurface(VkInstance instance, GLFWwindow* window, VkSurfaceKHR& surfac
     }
 }
 
-/**
- * @brief 选择合适的物理设备
- * 
- * 枚举系统中的物理设备并选择一个支持所需功能的设备
- * 
- * @param instance Vulkan实例
- * @param surface 窗口表面，用于检查设备对表面的支持
- * @param physicalDevice [out] 选中的物理设备
- */
 void pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface, VkPhysicalDevice& physicalDevice)
 {
     uint32_t deviceCount = 0;
@@ -178,7 +150,7 @@ void pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface, VkPhysicalDev
 
     for (const auto& device : devices)
     {
-        if (isDeviceSuitable(device, surface))
+        if (vkutil::isDeviceSuitable(device, surface))
         {
             physicalDevice = device;
             break;
@@ -191,18 +163,6 @@ void pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface, VkPhysicalDev
     }
 }
 
-/**
- * @brief 创建逻辑设备
- * 
- * 基于物理设备创建逻辑设备，逻辑设备是与GPU交互的主要接口
- * 
- * @param physicalDevice 物理设备
- * @param surface 窗口表面，用于检查呈现队列的支持
- * @param device [out] 创建的逻辑设备
- * @param indices 队列族索引
- * @param graphicsQueue [out] 图形队列
- * @param presentQueue [out] 呈现队列
- */
 void createLogicalDevice(VkPhysicalDevice   physicalDevice,
                          VkSurfaceKHR       surface,
                          VkDevice&          device,
@@ -255,3 +215,5 @@ void createLogicalDevice(VkPhysicalDevice   physicalDevice,
     vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue);
     vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue);
 }
+
+} // namespace vkinit

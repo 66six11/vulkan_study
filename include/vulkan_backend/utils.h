@@ -1,8 +1,14 @@
 ﻿#pragma once
 
-
 #include "core/constants.h"
 #include <vector>
+
+/**
+ * @brief Vulkan 工具函数命名空间
+ * 
+ * 包含设备选择、队列族查询、交换链配置等工具函数
+ */
+namespace vkutil {
 
 /**
  * @brief 检查设备是否适合
@@ -78,3 +84,5 @@ VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& avai
  * @return 选中的图像尺寸
  */
 VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, uint32_t width, uint32_t height);
+
+} // namespace vkutil

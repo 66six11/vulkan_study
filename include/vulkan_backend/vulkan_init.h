@@ -6,6 +6,13 @@
 #include <string>
 
 /**
+ * @brief Vulkan 初始化函数命名空间
+ * 
+ * 包含 Vulkan 实例、表面、设备创建等初始化相关函数
+ */
+namespace vkinit {
+
+/**
  * @brief 创建Vulkan实例
  * 
  * 创建Vulkan实例，这是使用Vulkan API的第一步，用于初始化Vulkan库并设置全局状态
@@ -21,6 +28,7 @@ void createInstance(VkInstance& instance, GLFWwindow* window);
  * 配置Vulkan调试信息回调函数，用于捕获验证层的警告和错误信息
  * 
  * @param instance Vulkan实例
+ * @note 当前为占位实现，后续版本将添加完整的调试回调支持
  */
 void setupDebugMessenger(VkInstance instance);
 
@@ -64,3 +72,5 @@ void createLogicalDevice(VkPhysicalDevice   physicalDevice,
                          QueueFamilyIndices indices,
                          VkQueue&           graphicsQueue,
                          VkQueue&           presentQueue);
+
+} // namespace vkinit

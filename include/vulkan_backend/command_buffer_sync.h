@@ -5,6 +5,13 @@
 #include <vector>
 
 /**
+ * @brief 命令缓冲和同步相关函数命名空间
+ * 
+ * 包含命令池、命令缓冲、信号量创建以及帧绘制等函数
+ */
+namespace vkcmd {
+
+/**
  * @brief 创建命令池
  * 
  * 创建命令池对象，用于分配命令缓冲，管理命令缓冲的内存
@@ -88,3 +95,5 @@ void drawFrame(VkDevice                            device,
                const std::vector<VkCommandBuffer>& commandBuffers,
                VkSemaphore                         imageAvailableSemaphore,
                VkSemaphore                         renderFinishedSemaphore);
+
+} // namespace vkcmd

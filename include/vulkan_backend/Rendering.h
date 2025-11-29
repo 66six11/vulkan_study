@@ -1,9 +1,15 @@
 ﻿#pragma once
 
-
 #include "core/constants.h"
 #include <vector>
 #include <string>
+
+/**
+ * @brief 渲染管线相关函数命名空间
+ * 
+ * 包含渲染通道、图形管线、帧缓冲、着色器模块等创建函数
+ */
+namespace vkpipeline {
 
 /**
  * @brief 创建渲染通道
@@ -60,3 +66,5 @@ void createFramebuffers(VkDevice                        device,
  * @return 创建的着色器模块对象
  */
 VkShaderModule createShaderModule(VkDevice device, const std::vector<char>& code);
+
+} // namespace vkpipeline

@@ -3,18 +3,13 @@
 #include <stdexcept>
 #include <vector>
 
+namespace {
+
 // 动态状态配置 - 允许在命令缓冲录制时动态修改这些管线状态
-// Dynamic state configuration - allows modifying these pipeline states during command buffer recording
-// 注意：LINE_WIDTH > 1.0 需要启用 wideLines 设备特性，当前实现使用 1.0 不需要特殊特性
-// Note: LINE_WIDTH > 1.0 requires wideLines device feature, current implementation uses 1.0 (no special feature required)
 static std::vector<VkDynamicState> dynamicStates = {
-    // 视口可以动态设置
     VK_DYNAMIC_STATE_VIEWPORT,
-    // 裁剪矩形可以动态设置
     VK_DYNAMIC_STATE_SCISSOR,
-    // 线宽可以动态设置（当前使用 1.0，不需要 wideLines 特性）
     VK_DYNAMIC_STATE_LINE_WIDTH,
-    // 深度偏移可以动态设置（用于阴影映射等）
     VK_DYNAMIC_STATE_DEPTH_BIAS
 };
 
@@ -22,9 +17,6 @@ static std::vector<VkDynamicState> dynamicStates = {
  * @brief 读取文件内容
  * 
  * 从指定文件路径读取二进制内容到字符向量中
- * 
- * @param filename 文件路径
- * @return 文件内容的字符向量
  */
 std::vector<char> readFile(const std::string& filename)
 {
@@ -46,15 +38,10 @@ std::vector<char> readFile(const std::string& filename)
     return buffer;
 }
 
-/**
- * @brief 创建渲染通道
- * 
- * 创建渲染通道对象，定义渲染操作的附件和子通道，描述完整的渲染流程
- * 
- * @param device 逻辑设备
- * @param swapChainImageFormat 交换链图像格式
- * @param renderPass [out] 创建的渲染通道对象
- */
+} // anonymous namespace
+
+namespace vkpipeline {
+
 void createRenderPass(VkDevice device, VkFormat swapChainImageFormat, VkRenderPass& renderPass)
 {
     VkAttachmentDescription colorAttachment{};
@@ -99,17 +86,6 @@ void createRenderPass(VkDevice device, VkFormat swapChainImageFormat, VkRenderPa
     }
 }
 
-/**
- * @brief 创建图形管线
- * 
- * 创建图形管线对象，定义图形渲染的完整状态，包括顶点输入、装配、光栅化、片段处理等阶段
- * 
- * @param device 逻辑设备
- * @param swapChainExtent 交换链图像尺寸
- * @param renderPass 渲染通道
- * @param pipelineLayout [out] 管线布局
- * @param graphicsPipeline [out] 图形管线
- */
 void createGraphicsPipeline(VkDevice          device,
                             VkExtent2D        swapChainExtent,
                             VkRenderPass      renderPass,
@@ -146,14 +122,12 @@ void createGraphicsPipeline(VkDevice          device,
     inputAssembly.topology               = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     inputAssembly.primitiveRestartEnable = VK_FALSE;
 
-    // 使用动态视口和裁剪，因此在管线创建时只需要指定数量，不需要提供具体值
-    // Using dynamic viewport and scissor, so only count is needed during pipeline creation
     VkPipelineViewportStateCreateInfo viewportState{};
     viewportState.sType         = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     viewportState.viewportCount = 1;
-    viewportState.pViewports    = nullptr; // 动态设置
+    viewportState.pViewports    = nullptr;
     viewportState.scissorCount  = 1;
-    viewportState.pScissors     = nullptr; // 动态设置
+    viewportState.pScissors     = nullptr;
 
     VkPipelineRasterizationStateCreateInfo rasterizer{};
     rasterizer.sType                   = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
@@ -195,7 +169,7 @@ void createGraphicsPipeline(VkDevice          device,
     {
         throw std::runtime_error("failed to create pipeline layout!");
     }
-    // 设置动态状态
+
     VkPipelineDynamicStateCreateInfo dynamicState{};
     dynamicState.sType             = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
     dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
@@ -215,7 +189,7 @@ void createGraphicsPipeline(VkDevice          device,
     pipelineInfo.renderPass          = renderPass;
     pipelineInfo.subpass             = 0;
     pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;
-    pipelineInfo.pDynamicState       = &dynamicState; // 绑定动态状态
+    pipelineInfo.pDynamicState       = &dynamicState;
 
     if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS)
     {
@@ -226,17 +200,6 @@ void createGraphicsPipeline(VkDevice          device,
     vkDestroyShaderModule(device, vertShaderModule, nullptr);
 }
 
-/**
- * @brief 创建帧缓冲
- * 
- * 为每个交换链图像视图创建对应的帧缓冲对象，帧缓冲用于存储渲染附件
- * 
- * @param device 逻辑设备
- * @param swapChainImageViews 交换链图像视图集合
- * @param renderPass 渲染通道
- * @param swapChainExtent 交换链图像尺寸
- * @param swapChainFramebuffers [out] 创建的帧缓冲集合
- */
 void createFramebuffers(VkDevice                        device,
                         const std::vector<VkImageView>& swapChainImageViews,
                         VkRenderPass                    renderPass,
@@ -267,15 +230,6 @@ void createFramebuffers(VkDevice                        device,
     }
 }
 
-/**
- * @brief 创建着色器模块
- * 
- * 从SPIR-V字节码创建着色器模块对象
- * 
- * @param device 逻辑设备
- * @param code 着色器代码（SPIR-V字节码）
- * @return 创建的着色器模块对象
- */
 VkShaderModule createShaderModule(VkDevice device, const std::vector<char>& code)
 {
     VkShaderModuleCreateInfo createInfo{};
@@ -291,3 +245,5 @@ VkShaderModule createShaderModule(VkDevice device, const std::vector<char>& code
 
     return shaderModule;
 }
+
+} // namespace vkpipeline

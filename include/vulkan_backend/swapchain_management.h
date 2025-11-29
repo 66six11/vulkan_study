@@ -3,6 +3,12 @@
 #include "core/constants.h"
 #include <vector>
 
+/**
+ * @brief 交换链管理函数命名空间
+ * 
+ * 包含交换链创建、图像视图管理等相关函数
+ */
+namespace vkswapchain {
 
 /**
  * @brief 创建交换链
@@ -42,4 +48,4 @@ void createImageViews(VkDevice                    device,
                       VkFormat                    swapChainImageFormat,
                       std::vector<VkImageView>&   swapChainImageViews);
 
-
+} // namespace vkswapchain

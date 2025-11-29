@@ -2,15 +2,8 @@
 #include <stdexcept>
 #include <vector>
 
-/**
- * @brief 创建命令池
- * 
- * 创建命令池对象，用于分配命令缓冲，管理命令缓冲的内存
- * 
- * @param device 逻辑设备
- * @param indices 队列族索引
- * @param commandPool [out] 创建的命令池对象
- */
+namespace vkcmd {
+
 void createCommandPool(VkDevice device, QueueFamilyIndices indices, VkCommandPool& commandPool)
 {
     VkCommandPoolCreateInfo poolInfo{};
@@ -24,20 +17,6 @@ void createCommandPool(VkDevice device, QueueFamilyIndices indices, VkCommandPoo
     }
 }
 
-/**
- * @brief 创建命令缓冲
- * 
- * 从命令池中分配命令缓冲对象，用于记录命令序列
- * 
- * @param device 逻辑设备
- * @param commandPool 命令池
- * @param swapChainFramebuffers 交换链帧缓冲集合
- * @param renderPass 渲染通道
- * @param swapChainExtent 交换链图像尺寸
- * @param graphicsPipeline 图形管线
- * @param swapChainImageViews 交换链图像视图集合
- * @param commandBuffers [out] 创建的命令缓冲集合
- */
 void createCommandBuffers(VkDevice                          device,
                           VkCommandPool                     commandPool,
                           const std::vector<VkFramebuffer>& swapChainFramebuffers,
@@ -61,15 +40,6 @@ void createCommandBuffers(VkDevice                          device,
     }
 }
 
-/**
- * @brief 创建信号量
- * 
- * 创建用于同步操作的信号量对象
- * 
- * @param device 逻辑设备
- * @param imageAvailableSemaphore [out] 图像可用信号量
- * @param renderFinishedSemaphore [out] 渲染完成信号量
- */
 void createSemaphores(VkDevice device, VkSemaphore& imageAvailableSemaphore, VkSemaphore& renderFinishedSemaphore)
 {
     VkSemaphoreCreateInfo semaphoreInfo{};
@@ -82,18 +52,6 @@ void createSemaphores(VkDevice device, VkSemaphore& imageAvailableSemaphore, VkS
     }
 }
 
-/**
- * @brief 记录命令缓冲
- * 
- * 在命令缓冲中记录渲染命令，包括开始渲染通道、绑定管线、绘制命令和结束渲染通道
- * 
- * @param commandBuffer 要记录的命令缓冲
- * @param imageIndex 图像索引
- * @param renderPass 渲染通道
- * @param swapChainExtent 交换链图像尺寸
- * @param graphicsPipeline 图形管线
- * @param framebuffer 帧缓冲
- */
 void recordCommandBuffer(VkCommandBuffer commandBuffer,
                          uint32_t        imageIndex,
                          VkRenderPass    renderPass,
@@ -124,11 +82,7 @@ void recordCommandBuffer(VkCommandBuffer commandBuffer,
 
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
-    // 设置动态状态 - Set dynamic states
-    // 这些状态已在管线创建时声明为动态，因此必须在每个命令缓冲中显式设置
-    // These states are declared as dynamic during pipeline creation, so they must be explicitly set in each command buffer
-
-    // 设置视口 - Set viewport
+    // 设置动态状态
     VkViewport viewport{};
     viewport.x        = 0.0f;
     viewport.y        = 0.0f;
@@ -138,20 +92,12 @@ void recordCommandBuffer(VkCommandBuffer commandBuffer,
     viewport.maxDepth = 1.0f;
     vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
-    // 设置裁剪矩形 - Set scissor
     VkRect2D scissor{};
     scissor.offset = {0, 0};
     scissor.extent = swapChainExtent;
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-    // 设置线宽（当前设置为1.0，将来可以根据需要动态调整）
-    // Set line width (currently 1.0, can be dynamically adjusted in the future)
-    // 注意：设置线宽 > 1.0 需要启用 wideLines 设备特性
-    // Note: Setting line width > 1.0 requires enabling wideLines device feature
     vkCmdSetLineWidth(commandBuffer, 1.0f);
-
-    // 设置深度偏移（当前禁用，将来添加深度缓冲时可以使用）
-    // Set depth bias (currently disabled, can be used when depth buffer is added)
     vkCmdSetDepthBias(commandBuffer, 0.0f, 0.0f, 0.0f);
 
     vkCmdDraw(commandBuffer, 3, 1, 0, 0);
@@ -164,19 +110,6 @@ void recordCommandBuffer(VkCommandBuffer commandBuffer,
     }
 }
 
-/**
- * @brief 绘制一帧
- * 
- * 执行完整的帧渲染流程，包括获取图像、提交命令缓冲和呈现图像
- * 
- * @param device 逻辑设备
- * @param swapChain 交换链
- * @param graphicsQueue 图形队列
- * @param presentQueue 呈现队列
- * @param commandBuffers 命令缓冲集合
- * @param imageAvailableSemaphore 图像可用信号量
- * @param renderFinishedSemaphore 渲染完成信号量
- */
 void drawFrame(VkDevice                            device,
                VkSwapchainKHR                      swapChain,
                VkQueue                             graphicsQueue,
@@ -194,10 +127,8 @@ void drawFrame(VkDevice                            device,
                                             VK_NULL_HANDLE,
                                             &imageIndex);
 
-    // 如果交换链已经过期（典型场景：窗口 resize），这里不再抛异常，而是交给外层重建
     if (result == VK_ERROR_OUT_OF_DATE_KHR)
     {
-        // 外层（Application::mainLoop 或 drawFrame 的调用者）应在合适时机调用 recreateSwapChain()
         return;
     }
     else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
@@ -207,7 +138,7 @@ void drawFrame(VkDevice                            device,
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    // 等待图像可用信号量
+
     VkSemaphore          waitSemaphores[] = {imageAvailableSemaphore};
     VkPipelineStageFlags waitStages[]     = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     submitInfo.waitSemaphoreCount         = 1;
@@ -239,17 +170,16 @@ void drawFrame(VkDevice                            device,
     presentInfo.pImageIndices = &imageIndex;
 
     result = vkQueuePresentKHR(presentQueue, &presentInfo);
-    // 如果呈现时发现交换链过期/次优，也交给外层去重建
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
     {
-        // 这里不抛异常，调用者在下一帧可以检查窗口 resize 状态并调用 recreateSwapChain()
-        // 例如在 Application::mainLoop 中检测到 framebufferResized 或记录一个标志位
+        // 交给外层重建
     }
     else if (result != VK_SUCCESS)
     {
         throw std::runtime_error("failed to present swap chain image!");
     }
 
-    // demo 简化：等待呈现队列空闲，真实项目中一般会做更细粒度的同步
     vkQueueWaitIdle(presentQueue);
 }
+
+} // namespace vkcmd

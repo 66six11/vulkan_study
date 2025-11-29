@@ -226,8 +226,8 @@ void VulkanRenderer::createInstanceAndSurface(void* windowHandle)
     if (!glfwWindow)
         throw std::runtime_error("VulkanRenderer::createInstanceAndSurface: windowHandle is null or invalid");
 
-    createInstance(instance_, glfwWindow);
-    createSurface(instance_, glfwWindow, surface_);
+    vkinit::createInstance(instance_, glfwWindow);
+    vkinit::createSurface(instance_, glfwWindow, surface_);
 }
 
 void VulkanRenderer::createDeviceAndQueues()
@@ -254,11 +254,11 @@ void VulkanRenderer::createSwapchain()
     indices.presentFamily  = device_->presentQueue().familyIndex;
 
     VkCommandPool commandPool = VK_NULL_HANDLE;
-    createCommandPool(device_->device(), indices, commandPool);
+    vkcmd::createCommandPool(device_->device(), indices, commandPool);
 
     swapchain_ = SwapchainResources(device_->device(), commandPool);
 
-    createSwapChain(device_->physicalDevice(),
+    vkswapchain::createSwapChain(device_->physicalDevice(),
                     device_->device(),
                     surface_,
                     indices,
@@ -267,7 +267,7 @@ void VulkanRenderer::createSwapchain()
                     swapchain_.imageFormat,
                     swapchain_.extent);
 
-    createImageViews(device_->device(),
+    vkswapchain::createImageViews(device_->device(),
                      swapchain_.images,
                      swapchain_.imageFormat,
                      swapchain_.imageViews);
@@ -275,12 +275,12 @@ void VulkanRenderer::createSwapchain()
 
 void VulkanRenderer::createRenderPass()
 {
-    ::createRenderPass(device_->device(), swapchain_.imageFormat, swapchain_.renderPass);
+    vkpipeline::createRenderPass(device_->device(), swapchain_.imageFormat, swapchain_.renderPass);
 }
 
 void VulkanRenderer::createGraphicsPipeline()
 {
-    ::createGraphicsPipeline(device_->device(),
+    vkpipeline::createGraphicsPipeline(device_->device(),
                              swapchain_.extent,
                              swapchain_.renderPass,
                              swapchain_.pipelineLayout,
@@ -289,7 +289,7 @@ void VulkanRenderer::createGraphicsPipeline()
 
 void VulkanRenderer::createFramebuffers()
 {
-    ::createFramebuffers(device_->device(),
+    vkpipeline::createFramebuffers(device_->device(),
                          swapchain_.imageViews,
                          swapchain_.renderPass,
                          swapchain_.extent,
@@ -308,7 +308,7 @@ void VulkanRenderer::allocateSwapchainCommandBuffers()
         swapchain_.commandBuffers.clear();
     }
 
-    createCommandBuffers(device_->device(),
+    vkcmd::createCommandBuffers(device_->device(),
                          swapchain_.commandPool,
                          swapchain_.framebuffers,
                          swapchain_.renderPass,
