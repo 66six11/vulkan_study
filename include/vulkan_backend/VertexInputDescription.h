@@ -11,6 +11,10 @@
 
 namespace vkvertex
 {
+    /**
+     * @brief 获取顶点绑定描述
+     * @return 顶点绑定描述
+     */
     inline VkVertexInputBindingDescription getBindingDescription()
     {
         VkVertexInputBindingDescription desc{};
@@ -20,6 +24,10 @@ namespace vkvertex
         return desc;
     }
 
+    /**
+     * @brief 获取顶点属性描述数组
+     * @return 顶点属性描述数组
+     */
     inline std::array<VkVertexInputAttributeDescription, 4> getAttributeDescriptions()
     {
         std::array<VkVertexInputAttributeDescription, 4> attrs{};
