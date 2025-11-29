@@ -1,6 +1,6 @@
 ﻿#pragma once
-#include "Platform.h"
-#include "constants.h"
+#include "platform/Platform.h"
+#include "core/constants.h"
 #include <vector>
 
 struct SwapchainResources

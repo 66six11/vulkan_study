@@ -6,8 +6,8 @@
 #include <shared_mutex>
 #include <string>
 #include <vector>
-#include "constants.h"
-#include "VulkanDevice.h"
+#include "core/constants.h"
+#include "vulkan_backend/VulkanDevice.h"
 
 
 /**

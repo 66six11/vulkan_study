@@ -4,12 +4,12 @@
 // 包含Vulkan头文件 - 使用GLFW的宏定义来自动包含Vulkan.h
 
 
-#include "DescriptorSetManager.h"
-#include "Platform.h"
-#include "Renderer.h"
-#include "ResourceManager.h"
-#include "SwapchainResources.h"
-#include "VulkanDevice.h"
+#include "platform/Platform.h"
+#include "renderer/Renderer.h"
+#include "vulkan_backend/DescriptorSetManager.h"
+#include "vulkan_backend/ResourceManager.h"
+#include "vulkan_backend/SwapchainResources.h"
+#include "vulkan_backend/VulkanDevice.h"
 
 
 /**

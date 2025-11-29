@@ -1,13 +1,13 @@
-﻿#include "VulkanRenderer.h"
+﻿#include "vulkan_backend/VulkanRenderer.h"
 
 #include <algorithm>
 #include <stdexcept>
 
-#include "command_buffer_sync.h"
-#include "constants.h"
-#include "Rendering.h"
-#include "swapchain_management.h"
-#include "vulkan_init.h"
+#include "vulkan_backend/command_buffer_sync.h"
+#include "core/constants.h"
+#include "vulkan_backend/Rendering.h"
+#include "vulkan_backend/swapchain_management.h"
+#include "vulkan_backend/vulkan_init.h"
 
 #ifndef VK_CHECK
 #define VK_CHECK(x) \

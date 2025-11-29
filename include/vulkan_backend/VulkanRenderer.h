@@ -5,11 +5,11 @@
 #ifndef VULKAN_VULKANRENDERER_H
 #define VULKAN_VULKANRENDERER_H
 
-#include "DescriptorSetManager.h"
-#include "Renderer.h"
-#include "ResourceManager.h"
-#include "SwapchainResources.h" // 或你当前的 swapchain 封装头
-#include "VulkanDevice.h"
+#include "vulkan_backend/DescriptorSetManager.h"
+#include "renderer/Renderer.h"
+#include "vulkan_backend/ResourceManager.h"
+#include "vulkan_backend/SwapchainResources.h" // 或你当前的 swapchain 封装头
+#include "vulkan_backend/VulkanDevice.h"
 
 // 可选：Platform.h，里面 typedef/using 平台窗口句柄
 

@@ -3,10 +3,10 @@
 
 #include <chrono>
 #include <stdexcept>
-#include "Application.h"
-#include "constants.h"
+#include "platform/Application.h"
+#include "core/constants.h"
 
-#include "VulkanRenderer.h"
+#include "vulkan_backend/VulkanRenderer.h"
 
 /**
  * @brief 运行应用程序的主要函数

@@ -1,12 +1,12 @@
 ﻿
-#include "swapchain_management.h"
+#include "vulkan_backend/swapchain_management.h"
 #include <algorithm>
 #include <limits>
 #include <stdexcept>
 #include <vector>
-#include "utils.h"
+#include "vulkan_backend/utils.h"
 
-#include "Application.h"
+#include "platform/Application.h"
 
 
 
