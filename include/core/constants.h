@@ -3,12 +3,10 @@
 //该文件是全局的常量定义文件，包含了一些常用的常量定义，比如窗口宽度、高度、设备扩展列表、交换链支持详情结构体、队列族索引结构体等。
 
 #include <optional>
-
+#include <stdexcept>
 #include <vector>
-
 #include <vulkan/vulkan_core.h>
 
-#include <stdexcept>
 
 inline constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 3;
 /**
