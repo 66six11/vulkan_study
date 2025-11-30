@@ -9,15 +9,6 @@
 #include "vulkan_backend/swapchain_management.h"
 #include "vulkan_backend/vulkan_init.h"
 
-#ifndef VK_CHECK
-#define VK_CHECK(x) \
-do { \
-VkResult err__ = (x); \
-if (err__ != VK_SUCCESS) { \
-throw std::runtime_error("Vulkan call failed with error code " + std::to_string(static_cast<int>(err__))); \
-} \
-} while (0)
-#endif
 
 VulkanRenderer::~VulkanRenderer()
 {

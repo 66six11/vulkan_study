@@ -9,18 +9,7 @@
 #include "core/constants.h"
 #include "vulkan_backend/VulkanDevice.h"
 #include "renderer/Vertex.h"
-#include "vulkan_backend/Buffer.h"
 
-
-#pragma once
-#include <limits>
-#include <shared_mutex>
-#include <string>
-#include <vector>
-
-#include "core/constants.h"
-#include "vulkan_backend/VulkanDevice.h"
-#include "renderer/Vertex.h"
 
 /**
  * @brief 统一管理 Vulkan 缓冲区、图像、采样器和 Mesh 等 GPU 资源
@@ -95,8 +84,9 @@ class ResourceManager
 
         struct MeshDesc
         {
-            uint32_t vertexCount = 0;
-            uint32_t indexCount  = 0;
+            uint32_t    vertexCount = 0;
+            uint32_t    indexCount  = 0;
+            std::string debugName; ///< 调试名称
             // 后续可扩展 primitive type、顶点布局 ID 等
         };
 
@@ -128,6 +118,7 @@ class ResourceManager
         SamplerHandle createSampler(
             const VkSamplerCreateInfo& info,
             std::string_view           debugName = {});
+
         void destroySampler(SamplerHandle handle);
 
         VkSampler getSampler(SamplerHandle handle) const;
@@ -135,11 +126,11 @@ class ResourceManager
         // ========================= Mesh 接口 =========================
 
         MeshHandle createMesh(
-            const void* vertexData,
-            size_t      vertexCount,
-            const void* indexData,
-            size_t      indexCount,
-            std::string debugName = {});
+            const void*      vertexData,
+            size_t           vertexCount,
+            const void*      indexData,
+            size_t           indexCount,
+            std::string_view debugName = {});
 
         void            destroyMesh(MeshHandle mesh);
         const MeshDesc& getMeshDesc(MeshHandle mesh) const;

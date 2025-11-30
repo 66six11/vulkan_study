@@ -7,6 +7,15 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
+#ifndef VK_CHECK
+#define VK_CHECK(x) \
+do { \
+VkResult err__ = (x); \
+if (err__ != VK_SUCCESS) { \
+throw std::runtime_error("Vulkan call failed with error code " + std::to_string(static_cast<int>(err__))); \
+} \
+} while (0)
+#endif
 
 inline constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 3;
 /**

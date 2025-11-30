@@ -69,7 +69,6 @@ set(VULKAN_BACKEND_SOURCES
         src/vulkan_backend/Rendering.cpp
         src/vulkan_backend/command_buffer_sync.cpp
         src/vulkan_backend/utils.cpp
-        src/vulkan_backend/Vertex.cpp
 )
 
 set(VULKAN_BACKEND_HEADERS

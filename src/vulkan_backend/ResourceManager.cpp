@@ -5,6 +5,7 @@
 #include "vulkan_backend/ResourceManager.h"
 #include <cstring>
 #include <stdexcept>
+#include "vulkan_backend/VertexInputDescription.h"
 
 namespace
 {
@@ -330,6 +331,97 @@ void ResourceManager::destroySampler(SamplerHandle handle)
     freeSamplerIndices_.push_back(handle.index);
 }
 
+ResourceManager::MeshHandle ResourceManager::createMesh(
+    const void*      vertexData,
+    size_t           vertexCount,
+    const void*      indexData,
+    size_t           indexCount,
+    std::string_view debugName)
+{
+    std::unique_lock lock(meshMutex_);
+
+    uint32_t index;
+
+    if (!freeMeshIndices_.empty())
+    {
+        index = freeMeshIndices_.back();
+        freeMeshIndices_.pop_back();
+    }
+    else
+    {
+        index = static_cast<uint32_t>(meshes_.size());
+        meshes_.emplace_back();
+    }
+
+    MeshEntry& entry = meshes_[index];
+
+    MeshDesc desc = {};
+
+    //验证顶点数据
+    if (vertexData == nullptr || vertexCount == 0)
+    {
+        throw std::runtime_error("Invalid vertex data for mesh creation");
+    }
+    //填充 MeshDesc
+    desc.vertexCount = vertexCount;
+    desc.indexCount  = indexCount;
+    desc.debugName   = std::string(debugName) + "_mesh_desc";
+
+    //计算顶点大小
+    size_t vertexDataSize = vertexCount * sizeof(Vertex);
+
+    //创建顶点缓冲区
+    BufferDesc vertexBufferDesc  = {};
+    vertexBufferDesc.size        = vertexDataSize;
+    vertexBufferDesc.usage       = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    vertexBufferDesc.memoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    vertexBufferDesc.debugName   = std::string(debugName) + "_vertex_buffer";
+    entry.vertexBuffer           = createBuffer(vertexBufferDesc);
+
+    //创建索引缓冲区（如果有索引数据）
+    if (indexData != nullptr && indexCount > 0)
+    {
+        BufferDesc indexBufferDesc  = {};
+        size_t     indexDataSize    = indexCount * sizeof(uint32_t);
+        indexBufferDesc.size        = indexDataSize;
+        indexBufferDesc.usage       = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+        indexBufferDesc.memoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+        indexBufferDesc.debugName   = std::string(debugName) + "_index_buffer";
+        entry.indexBuffer           = createBuffer(indexBufferDesc);
+    }
+
+
+    entry.alive = true;
+    entry.generation++;
+
+    return MeshHandle{index, entry.generation};
+}
+
+void ResourceManager::destroyMesh(MeshHandle handle)
+{
+    std::unique_lock lock(meshMutex_);
+
+    if (handle.index >= meshes_.size())
+    {
+        return;
+    }
+
+    MeshEntry& entry = meshes_[handle.index];
+    if (!entry.alive || entry.generation != handle.generation)
+    {
+        return;
+    }
+
+    destroyBuffer(entry.vertexBuffer);
+    if (entry.indexBuffer)
+    {
+        destroyBuffer(entry.indexBuffer);
+    }
+
+    entry = {};
+    freeMeshIndices_.push_back(handle.index);
+}
+
 VkBuffer ResourceManager::getBuffer(BufferHandle handle) const
 {
     std::shared_lock lock(bufferMutex_);
@@ -402,6 +494,41 @@ VkSampler ResourceManager::getSampler(SamplerHandle handle) const
     return entry.sampler;
 }
 
+ResourceManager::BufferHandle ResourceManager::getMeshVertexBuffer(MeshHandle handle) const
+{
+    std::shared_lock lock(meshMutex_);
+
+    if (handle.index >= meshes_.size())
+    {
+        throw std::runtime_error("Invalid mesh handle");
+    }
+
+    const MeshEntry& entry = meshes_[handle.index];
+    if (!entry.alive || entry.generation != handle.generation)
+    {
+        throw std::runtime_error("Mesh handle is not alive or generation mismatch");
+    }
+
+    return entry.vertexBuffer;
+}
+ResourceManager::BufferHandle ResourceManager::getMeshIndexBuffer(MeshHandle handle) const
+{
+    std::shared_lock lock(meshMutex_);
+
+    if (handle.index >= meshes_.size())
+    {
+        throw std::runtime_error("Invalid mesh handle");
+    }
+
+    const MeshEntry& entry = meshes_[handle.index];
+    if (!entry.alive || entry.generation != handle.generation)
+    {
+        throw std::runtime_error("Mesh handle is not alive or generation mismatch");
+    }
+
+    return entry.indexBuffer;
+}
+
 const ResourceManager::BufferDesc& ResourceManager::getBufferDesc(BufferHandle handle) const
 {
     std::shared_lock lock(bufferMutex_);
@@ -412,6 +539,12 @@ const ResourceManager::ImageDesc& ResourceManager::getImageDesc(ImageHandle hand
 {
     std::shared_lock lock(imageMutex_);
     return images_[handle.index].desc;
+}
+
+const ResourceManager::MeshDesc& ResourceManager::getMeshDesc(MeshHandle handle) const
+{
+    std::shared_lock lock(meshMutex_);
+    return meshes_[handle.index].desc;
 }
 
 void ResourceManager::uploadBuffer(BufferHandle handle, const void* data, VkDeviceSize size, VkDeviceSize offset)
