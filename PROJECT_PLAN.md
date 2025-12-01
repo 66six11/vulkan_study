@@ -11,7 +11,7 @@
 
 本项目是一个基于现代 C++ 和 Vulkan API 的学习型图形渲染框架，目标是从基础的三角形渲染逐步演进为一个工程化、模块化的渲染引擎原型。项目遵循现代 C++ 最佳实践（C++17/20），采用 RAII 资源管理模式，并逐步引入更高级的图形编程概念。
 
-### 🎯 当前状态（v0.4）
+### 🎯 当前状态（v0.4.1）
 
 #### 已实现的功能
 - ✅ **Vulkan 核心初始化**
@@ -56,41 +56,55 @@
 #### 代码架构
 ```
 vulkan_study/
-├── include/              # 公共头文件
-│   ├── Application.h     # 主应用类（与渲染后端解耦）
-│   ├── Renderer.h        # 渲染器抽象接口
-│   ├── VulkanRenderer.h  # Vulkan 渲染器实现
-│   ├── VulkanDevice.h    # Vulkan 设备封装
-│   ├── ResourceManager.h # 资源管理器
-│   ├── DescriptorSetManager.h  # 描述符集管理
-│   ├── vulkan_init.h     # Vulkan 初始化
-│   ├── swapchain_management.h  # 交换链管理
-│   ├── Rendering.h       # 渲染管线
-│   ├── command_buffer_sync.h   # 命令与同步
-│   ├── SwapchainResources.h    # 交换链资源 RAII
-│   ├── constants.h       # 全局常量
-│   ├── utils.h           # 工具函数
-│   └── Platform.h        # 平台相关定义
-├── src/                  # 实现文件
-│   ├── main.cpp
-│   ├── VulkanApp.cpp
-│   ├── VulkanRenderer.cpp     # Vulkan 渲染器实现
-│   ├── VulkanDevice.cpp       # 设备管理实现
-│   ├── ResourceManager.cpp    # 资源管理实现
-│   ├── DescriptorSetManager.cpp  # 描述符管理实现
-│   ├── vulkan_init.cpp
-│   ├── swapchain_management.cpp
-│   ├── Rendering.cpp
-│   ├── command_buffer_sync.cpp
-│   ├── SwapchainResources.cpp
-│   ├── constants.cpp
-│   └── utils.cpp
-├── shaders/              # GLSL 着色器源码
-│   ├── shader.vert       # 顶点着色器
-│   └── shader.frag       # 片段着色器
-├── CMakeLists.txt        # CMake 构建配置
-└── vcpkg.json            # 依赖管理
+├── include/                        # 头文件目录
+│   ├── core/                       # 核心工具和常量
+│   │   ├── constants.h             # 全局常量定义
+│   │   └── TimeStamp.h             # 时间戳工具类
+│   ├── platform/                   # 平台相关代码
+│   │   ├── Application.h           # 应用程序主类
+│   │   └── Platform.h              # 平台抽象层（GLFW）
+│   ├── renderer/                   # 渲染器抽象接口
+│   │   ├── Renderer.h              # 渲染器基类
+│   │   └── Vertex.h                # 顶点数据结构定义
+│   └── vulkan_backend/             # Vulkan 后端实现
+│       ├── VulkanDevice.h          # Vulkan 设备封装
+│       ├── VulkanRenderer.h        # Vulkan 渲染器实现
+│       ├── ResourceManager.h       # GPU 资源管理器
+│       ├── DescriptorSetManager.h  # 描述符集管理器
+│       ├── SwapchainResources.h    # 交换链资源 RAII 封装
+│       ├── VertexInputDescription.h # 顶点输入布局描述
+│       ├── vulkan_init.h           # Vulkan 初始化函数
+│       ├── swapchain_management.h  # 交换链管理函数
+│       ├── Rendering.h             # 渲染通道和管线函数
+│       ├── command_buffer_sync.h   # 命令缓冲和同步函数
+│       └── utils.h                 # Vulkan 工具函数
+├── src/                            # 源代码目录
+│   ├── core/                       # 核心模块实现
+│   │   └── constants.cpp           # 全局常量定义
+│   ├── platform/                   # 平台模块实现
+│   │   ├── main.cpp                # 程序入口点
+│   │   └── VulkanApp.cpp           # 应用程序实现
+│   └── vulkan_backend/             # Vulkan 后端实现
+│       ├── VulkanDevice.cpp        # Vulkan 设备实现
+│       ├── VulkanRenderer.cpp      # Vulkan 渲染器实现
+│       ├── ResourceManager.cpp     # GPU 资源管理实现
+│       ├── DescriptorSetManager.cpp # 描述符集管理实现
+│       ├── SwapchainResources.cpp  # 交换链资源实现
+│       ├── vulkan_init.cpp         # Vulkan 初始化实现
+│       ├── swapchain_management.cpp # 交换链管理实现
+│       ├── Rendering.cpp           # 渲染通道和管线实现
+│       ├── command_buffer_sync.cpp # 命令缓冲和同步实现
+│       └── utils.cpp               # Vulkan 工具函数实现
+├── shaders/                        # GLSL 着色器源码
+│   ├── shader.vert                 # 顶点着色器
+│   └── shader.frag                 # 片段着色器
+├── CMake/                          # CMake 模块
+│   └── FindVulkan.cmake            # Vulkan 查找模块
+├── CMakeLists.txt                  # CMake 构建配置
+└── vcpkg.json                      # 依赖管理
 ```
+
+> 📘 **详细的模块说明和架构设计请参见 [ProjectStructure.md](ProjectStructure.md)**
 
 ---
 
@@ -141,7 +155,8 @@ vulkan_study/
 #### 第二阶段：核心渲染特性扩展
 
 ##### 2.1 顶点数据支持
-- [ ] 定义 Vertex 结构体（位置、颜色、法线、UV）
+- [x] 定义 Vertex 结构体（位置、颜色、法线、UV）
+- [x] 定义顶点输入布局描述（VertexInputDescription）
 - [ ] 实现顶点缓冲和索引缓冲创建
 - [ ] 更新管线配置以支持顶点输入
 - [ ] 加载简单的几何模型（立方体、球体）
@@ -478,7 +493,7 @@ bool acquireNextImage(uint32_t& imageIndex) {
 
 This is a learning-oriented graphics rendering framework based on modern C++ and the Vulkan API. The goal is to evolve from basic triangle rendering to an engineering-grade, modular rendering engine prototype. The project follows modern C++ best practices (C++17/20), employs RAII resource management, and gradually introduces advanced graphics programming concepts.
 
-### 🎯 Current Status (v0.4)
+### 🎯 Current Status (v0.4.1)
 
 #### Implemented Features
 - ✅ **Vulkan Core Initialization**
@@ -521,7 +536,7 @@ This is a learning-oriented graphics rendering framework based on modern C++ and
   - Support for future multi-backend expansion (DX12/Metal)
 
 #### Code Architecture
-*(Same as Chinese version - see above)*
+*(Same structure as Chinese version - see above or [ProjectStructure.md](ProjectStructure.md))*
 
 ---
 
@@ -572,7 +587,8 @@ This is a learning-oriented graphics rendering framework based on modern C++ and
 #### Phase 2: Core Rendering Features Extension
 
 ##### 2.1 Vertex Data Support
-- [ ] Define Vertex struct (position, color, normal, UV)
+- [x] Define Vertex struct (position, color, normal, UV)
+- [x] Define vertex input layout description (VertexInputDescription)
 - [ ] Implement vertex buffer and index buffer creation
 - [ ] Update pipeline configuration for vertex input
 - [ ] Load simple geometric models (cube, sphere)
@@ -905,7 +921,12 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 更新日志 / Changelog
 
-### v0.4 (Current) - 2025-11-23
+### v0.4.1 (Current) - 2025-12-01
+- ✅ 添加 Vertex 顶点结构体（包含位置、法线、UV、颜色）
+- ✅ 添加 VertexInputDescription 顶点输入布局描述
+- ✅ 完成阶段 2.1 顶点数据定义部分
+
+### v0.4 - 2025-11-23
 - ✅ 实现 Renderer 抽象接口（支持未来多后端扩展）
 - ✅ 实现 VulkanRenderer 类（完整的 Vulkan 渲染器实现）
 - ✅ Application 与渲染后端解耦
@@ -931,4 +952,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**最后更新 / Last Updated**: 2025-11-23
+**最后更新 / Last Updated**: 2025-12-01
