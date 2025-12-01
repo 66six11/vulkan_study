@@ -42,7 +42,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
+      - name: Setup Git config
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
       - name: 'Run iFlow CLI Issue Triage'
         uses: iflow-ai/iflow-cli-action@v2.1.0
         id: 'iflow_cli_issue_triage'
@@ -54,6 +57,7 @@ jobs:
           REPOSITORY: '${{ github.repository }}'
         with:
           api_key: ${{ secrets.IFLOW_API_KEY }}
+          model: "Qwen3-Coder"
           timeout: "3600"
           debug: "true"
           prompt: |
