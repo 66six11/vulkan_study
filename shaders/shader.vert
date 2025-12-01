@@ -1,27 +1,16 @@
 #version 450
+layout (location = 0) in vec3 inPosition;
+layout (location = 1) in vec3 inNormal;
+layout (location = 2) in vec2 inUV;
+layout (location = 3) in vec4 inColor;
 
-/**
- * @brief 顶点着色器：简单的三角形顶点着色器
- * 
- * 该着色器定义了一个简单的三角形，三个顶点坐标在标准化设备坐标系中
- * 标准化设备坐标系范围为[-1, 1]，原点在中心
- */
+layout (location = 0) out vec4 outColor;   // 传到片元的颜色
 
-void main() {
-    /**
-     * @brief 三角形的三个顶点
-     * 
-     * 定义三角形的三个顶点坐标，使用标准化设备坐标系：
-     * - vec2(0.0, -0.5): 底部中心点
-     * - vec2(0.5, 0.5): 右上角点
-     * - vec2(-0.5, 0.5): 左上角点
-     */
-    vec2 positions[3] = vec2[](
-        vec2(0.0, -0.5),   // 底部中心
-        vec2(0.5, 0.5),    // 右上角
-        vec2(-0.5, 0.5)    // 左上角
-    );
+void main()
+{
+    // 直接使用顶点缓冲里的位置（假定已经是 NDC 或者你后面会加 MVP 矩阵）
+    gl_Position = vec4(inPosition, 1.0);
 
-    // 将2D位置转换为4D齐次坐标，z=0.0表示在平面上，w=1.0表示位置向量
-    gl_Position = vec4(positions[gl_VertexIndex], 0.0, 1.0);
+    // 把顶点颜色传给片元着色器
+    outColor = inColor;
 }

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <stdexcept>
+#include <renderer/Vertex.h>
 
 #include "vulkan_backend/command_buffer_sync.h"
 #include "core/constants.h"
@@ -16,6 +17,11 @@ VulkanRenderer::~VulkanRenderer()
 
     destroyFrameResources();
     destroySwapchain();        // 含 framebuffers/renderPass/pipeline/commandBuffers/commandPool
+    // 先销毁依赖 VkDevice 的高层管理器（它们内部会销毁 Buffer/Image/Sampler 等）
+    descriptorSetManager_.reset();
+    resourceManager_.reset();
+     
+    
     destroyDeviceAndSurface(); // VkDevice/VkSurfaceKHR
     destroyInstance();         // VkInstance
 }
@@ -181,20 +187,87 @@ MeshHandle VulkanRenderer::createMesh(
     const void* indexData,
     size_t      indexCount)
 {
-    (void)vertexData;
-    (void)vertexCount;
-    (void)indexData;
-    (void)indexCount;
+    if (!vertexData || vertexCount == 0)
+    {
+        throw std::runtime_error("VulkanRenderer::createMesh: vertex data is null or empty");
+    }
+
+    // 1. 在 ResourceManager 中为顶点/索引缓冲分配 GPU 资源（仅创建，不上传）
+    vkresource::MeshDesc desc{};
+    desc.vertexBufferSize  = static_cast<VkDeviceSize>(vertexCount * sizeof(Vertex));
+    desc.vertexUsage       = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    desc.vertexMemoryFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    desc.vertexDebugName   = "Mesh_VertexBuffer";
+
+    if (indexData && indexCount > 0)
+    {
+        desc.indexBufferSize  = static_cast<VkDeviceSize>(indexCount * sizeof(uint32_t));
+        desc.indexUsage       = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+        desc.indexMemoryFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        desc.indexDebugName   = "Mesh_IndexBuffer";
+    }
+
+    vkresource::MeshHandle rmMesh = resourceManager_->createMesh(desc);
+
+    // 2. 上传数据
+    vkresource::BufferHandle vbHandle = resourceManager_->getMeshVertexBuffer(rmMesh);
+    resourceManager_->uploadBuffer(
+                                   vbHandle,
+                                   vertexData,
+                                   desc.vertexBufferSize,
+                                   0);
+
+    if (indexData && indexCount > 0)
+    {
+        vkresource::BufferHandle ibHandle = resourceManager_->getMeshIndexBuffer(rmMesh);
+        if (ibHandle)
+        {
+            resourceManager_->uploadBuffer(
+                                           ibHandle,
+                                           indexData,
+                                           desc.indexBufferSize,
+                                           0);
+        }
+    }
+
+    // 3. 在本地表中登记完整的 rmMesh（含 index + generation），返回 1-based 的 MeshHandle.id
+    uint32_t slot = 0;
+    if (!freeMeshSlots_.empty())
+    {
+        slot = freeMeshSlots_.back();
+        freeMeshSlots_.pop_back();
+        meshTable_[slot] = rmMesh;
+    }
+    else
+    {
+        slot = static_cast<uint32_t>(meshTable_.size());
+        meshTable_.push_back(rmMesh);
+    }
 
     MeshHandle handle{};
-    handle.id = 0; // TODO: 使用 ResourceManager 创建 GPU buffer，并返回真实 ID
+    handle.id = slot + 1; // 0 作为无效
     return handle;
 }
 
 void VulkanRenderer::destroyMesh(MeshHandle mesh)
 {
-    (void)mesh;
-    // TODO: 通过 ResourceManager 回收 mesh 相关资源
+    if (mesh.id == 0)
+        return;
+
+    uint32_t slot = mesh.id - 1;
+    if (slot >= meshTable_.size())
+        return;
+
+    vkresource::MeshHandle& rmMesh = meshTable_[slot];
+    if (!rmMesh) // index == UINT32_MAX，说明已经被释放
+        return;
+
+    resourceManager_->destroyMesh(rmMesh);
+
+    // 标记此 slot 可复用
+    rmMesh.index      = std::numeric_limits<uint32_t>::max();
+    rmMesh.generation = 0;
+    freeMeshSlots_.push_back(slot);
 }
 
 void VulkanRenderer::submitCamera(const CameraData& camera)
@@ -232,7 +305,7 @@ void VulkanRenderer::createDeviceAndQueues()
 
 void VulkanRenderer::createResourceManagers()
 {
-    resourceManager_      = std::make_unique<ResourceManager>(*device_);
+    resourceManager_      = std::make_unique<vkresource::ResourceManager>(*device_);
     descriptorSetManager_ = std::make_unique<DescriptorSetManager>(*device_);
 }
 
@@ -250,18 +323,18 @@ void VulkanRenderer::createSwapchain()
     swapchain_ = SwapchainResources(device_->device(), commandPool);
 
     vkswapchain::createSwapChain(device_->physicalDevice(),
-                    device_->device(),
-                    surface_,
-                    indices,
-                    swapchain_.swapchain,
-                    swapchain_.images,
-                    swapchain_.imageFormat,
-                    swapchain_.extent);
+                                 device_->device(),
+                                 surface_,
+                                 indices,
+                                 swapchain_.swapchain,
+                                 swapchain_.images,
+                                 swapchain_.imageFormat,
+                                 swapchain_.extent);
 
     vkswapchain::createImageViews(device_->device(),
-                     swapchain_.images,
-                     swapchain_.imageFormat,
-                     swapchain_.imageViews);
+                                  swapchain_.images,
+                                  swapchain_.imageFormat,
+                                  swapchain_.imageViews);
 }
 
 void VulkanRenderer::createRenderPass()
@@ -272,19 +345,19 @@ void VulkanRenderer::createRenderPass()
 void VulkanRenderer::createGraphicsPipeline()
 {
     vkpipeline::createGraphicsPipeline(device_->device(),
-                             swapchain_.extent,
-                             swapchain_.renderPass,
-                             swapchain_.pipelineLayout,
-                             swapchain_.graphicsPipeline);
+                                       swapchain_.extent,
+                                       swapchain_.renderPass,
+                                       swapchain_.pipelineLayout,
+                                       swapchain_.graphicsPipeline);
 }
 
 void VulkanRenderer::createFramebuffers()
 {
     vkpipeline::createFramebuffers(device_->device(),
-                         swapchain_.imageViews,
-                         swapchain_.renderPass,
-                         swapchain_.extent,
-                         swapchain_.framebuffers);
+                                   swapchain_.imageViews,
+                                   swapchain_.renderPass,
+                                   swapchain_.extent,
+                                   swapchain_.framebuffers);
 }
 
 void VulkanRenderer::allocateSwapchainCommandBuffers()
@@ -300,13 +373,13 @@ void VulkanRenderer::allocateSwapchainCommandBuffers()
     }
 
     vkcmd::createCommandBuffers(device_->device(),
-                         swapchain_.commandPool,
-                         swapchain_.framebuffers,
-                         swapchain_.renderPass,
-                         swapchain_.extent,
-                         swapchain_.graphicsPipeline,
-                         swapchain_.imageViews,
-                         swapchain_.commandBuffers);
+                                swapchain_.commandPool,
+                                swapchain_.framebuffers,
+                                swapchain_.renderPass,
+                                swapchain_.extent,
+                                swapchain_.graphicsPipeline,
+                                swapchain_.imageViews,
+                                swapchain_.commandBuffers);
 }
 
 void VulkanRenderer::createFrameResources()
@@ -442,8 +515,61 @@ void VulkanRenderer::recordCommandBuffer(FrameResources& frame, uint32_t imageIn
     vkCmdSetLineWidth(frame.commandBuffer, 1.0f);
     vkCmdSetDepthBias(frame.commandBuffer, 0.0f, 0.0f, 0.0f);
 
-    // 简化：没有 vertex buffer，直接画 3 个顶点（三角形）
-    vkCmdDraw(frame.commandBuffer, 3, 1, 0, 0);
+    // 根据当前帧的 renderables 绘制 mesh
+    for (const auto& r : currentFrameRenderables_)
+    {
+        if (r.mesh.id == 0)
+            continue;
+
+        uint32_t slot = r.mesh.id - 1;
+        if (slot >= meshTable_.size())
+            continue;
+
+        const vkresource::MeshHandle& rmMesh = meshTable_[slot];
+        if (!rmMesh) // 已被 destroy
+            continue;
+
+        vkresource::BufferHandle vbHandle = resourceManager_->getMeshVertexBuffer(rmMesh);
+        vkresource::BufferHandle ibHandle = resourceManager_->getMeshIndexBuffer(rmMesh);
+        const auto&              meshDesc = resourceManager_->getMeshDesc(rmMesh);
+
+        VkBuffer vb = resourceManager_->getBuffer(vbHandle);
+        if (vb == VK_NULL_HANDLE)
+            continue;
+
+        VkDeviceSize offsets[] = {0};
+        vkCmdBindVertexBuffers(frame.commandBuffer, 0, 1, &vb, offsets);
+
+        // 有索引缓冲则 indexed 绘制
+        if (ibHandle)
+        {
+            VkBuffer ib = resourceManager_->getBuffer(ibHandle);
+            if (ib == VK_NULL_HANDLE)
+                continue;
+
+            vkCmdBindIndexBuffer(frame.commandBuffer, ib, 0, VK_INDEX_TYPE_UINT32);
+
+            uint32_t indexCount =
+                    meshDesc.indexBufferSize > 0
+                        ? static_cast<uint32_t>(meshDesc.indexBufferSize / sizeof(uint32_t))
+                        : 0;
+            if (indexCount == 0)
+                continue;
+
+            vkCmdDrawIndexed(frame.commandBuffer, indexCount, 1, 0, 0, 0);
+        }
+        else
+        {
+            uint32_t vertexCount =
+                    meshDesc.vertexBufferSize > 0
+                        ? static_cast<uint32_t>(meshDesc.vertexBufferSize / sizeof(Vertex))
+                        : 0;
+            if (vertexCount == 0)
+                continue;
+
+            vkCmdDraw(frame.commandBuffer, vertexCount, 1, 0, 0);
+        }
+    }
 
     vkCmdEndRenderPass(frame.commandBuffer);
 

@@ -4,12 +4,9 @@
 // 包含Vulkan头文件 - 使用GLFW的宏定义来自动包含Vulkan.h
 
 
+#include <memory>      // 加这一行
 #include "platform/Platform.h"
 #include "renderer/Renderer.h"
-#include "vulkan_backend/DescriptorSetManager.h"
-#include "vulkan_backend/ResourceManager.h"
-#include "vulkan_backend/SwapchainResources.h"
-#include "vulkan_backend/VulkanDevice.h"
 
 
 /**
@@ -34,6 +31,10 @@ class Application
         void run();
 
         bool framebufferResized = false;
+
+        MeshHandle sphereMesh_{};
+        Renderable sphereRenderable_{};
+        bool       sphereInitialized_ = false;
 
     private:
         // 窗口和Vulkan实例相关成员变量

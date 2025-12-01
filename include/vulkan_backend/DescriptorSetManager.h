@@ -1,9 +1,11 @@
-﻿#pragma once
+﻿// include/vulkan_backend/DescriptorSetManager.h
+#pragma once
 
 #include <mutex>
 #include <span>
 #include <unordered_map>
 #include <vector>
+#include "core/constants.h"
 #include "vulkan_backend/VulkanDevice.h"
 
 /**
@@ -58,24 +60,27 @@ class DescriptorSetManager
         /**
          * @brief 每帧重置（可选）
          *
-         * 对标记为“本帧使用”的池执行 vkResetDescriptorPool，
+         * 对所有池执行 vkResetDescriptorPool，
          * 以便重复使用描述符。
-         * 简化版本可以直接 reset 所有池。
+         * 注意：调用者必须确保 GPU 不再使用前一帧的 descriptor sets。
          */
         void resetFrame();
 
         /**
          * @brief 更新 descriptor set 内容
          *
-         * 封装 vkUpdateDescriptorSets，便于调用端统一管理。
+         * 封装 vkUpdateDescriptorSets，方便调用端统一管理。
+         * 该函数会自动将传入的 writes/copies 的 dstSet（以及必要时 srcSet）覆盖为目标 set，
+         * 调用者无需自行设置 dstSet。
          *
          * @param set    目标 descriptor set
-         * @param writes 写入操作数组
-         * @param copies 拷贝操作数组（可选）
+         * @param writes 写入操作数组（dstSet 会被本函数填充为 set）
+         * @param copies 拷贝操作数组（srcSet/dstSet 中的 dstSet 会被覆盖为 set）
          */
-        void updateDescriptorSet(VkDescriptorSet                       set,
-                                 std::span<const VkWriteDescriptorSet> writes,
-                                 std::span<const VkCopyDescriptorSet>  copies = {}) const;
+        void updateDescriptorSet(
+            VkDescriptorSet                 set,
+            std::span<VkWriteDescriptorSet> writes,
+            std::span<VkCopyDescriptorSet>  copies = {}) const;
 
         /**
          * @brief 设置默认池大小配置
@@ -96,12 +101,21 @@ class DescriptorSetManager
             std::vector<Pool> pools;
         };
 
+        // VkDescriptorSetLayout 的哈希，用于 unordered_map
+        struct LayoutHash
+        {
+            size_t operator()(VkDescriptorSetLayout layout) const noexcept
+            {
+                return std::hash<uint64_t>{}(reinterpret_cast<uint64_t>(layout));
+            }
+        };
+
         VulkanDevice& device_;
         PoolSizes     defaultPoolSizes_{};
 
         // 按 VkDescriptorSetLayout 分组管理池
-        std::unordered_map<VkDescriptorSetLayout, LayoutPools> layoutPools_;
-        std::mutex                                             mutex_;
+        std::unordered_map<VkDescriptorSetLayout, LayoutPools, LayoutHash> layoutPools_;
+        std::mutex                                                         mutex_;
 
     private:
         /**

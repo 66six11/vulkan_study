@@ -1,5 +1,9 @@
 ﻿#include "vulkan_backend/DescriptorSetManager.h"
 
+#include <stdexcept>
+#include <vector>
+
+
 namespace
 {
     std::vector<VkDescriptorPoolSize> buildPoolSizes(
@@ -49,6 +53,7 @@ DescriptorSetManager::~DescriptorSetManager()
     std::lock_guard lock(mutex_);
     for (auto& [layout, lp] : layoutPools_)
     {
+        (void)layout;
         for (auto& pool : lp.pools)
         {
             if (pool.pool != VK_NULL_HANDLE)
@@ -75,8 +80,17 @@ std::vector<VkDescriptorSet> DescriptorSetManager::allocateSets(
     uint32_t                     remaining = count;
     uint32_t                     offset    = 0;
 
+    // 防御：避免潜在逻辑 bug 导致的死循环（理论上不会触发）
+    const uint32_t kMaxPoolAttempts = 1024;
+    uint32_t       attempts         = 0;
+
     while (remaining > 0)
     {
+        if (++attempts > kMaxPoolAttempts)
+        {
+            throw std::runtime_error("DescriptorSetManager::allocateSets: too many pool attempts, possible logic bug.");
+        }
+
         Pool& pool = getOrCreatePool(layout);
 
         uint32_t available = pool.maxSets - pool.usedSets;
@@ -96,7 +110,8 @@ std::vector<VkDescriptorSet> DescriptorSetManager::allocateSets(
         allocInfo.descriptorSetCount = toAllocate;
         allocInfo.pSetLayouts        = layouts.data();
 
-        VkResult res = vkAllocateDescriptorSets(device_.device(), &allocInfo, result.data() + offset);
+        VkResult res =
+                vkAllocateDescriptorSets(device_.device(), &allocInfo, result.data() + offset);
         if (res == VK_ERROR_OUT_OF_POOL_MEMORY || res == VK_ERROR_FRAGMENTED_POOL)
         {
             // 当前池空间不足，标记为已满并创建新池再试
@@ -121,6 +136,7 @@ void DescriptorSetManager::resetFrame()
     std::lock_guard lock(mutex_);
     for (auto& [layout, lp] : layoutPools_)
     {
+        (void)layout;
         for (auto& pool : lp.pools)
         {
             if (pool.pool != VK_NULL_HANDLE)
@@ -133,18 +149,28 @@ void DescriptorSetManager::resetFrame()
 }
 
 void DescriptorSetManager::updateDescriptorSet(
-    VkDescriptorSet                       set,
-    std::span<const VkWriteDescriptorSet> writes,
-    std::span<const VkCopyDescriptorSet>  copies) const
+    VkDescriptorSet                 set,
+    std::span<VkWriteDescriptorSet> writes,
+    std::span<VkCopyDescriptorSet>  copies) const
 {
     if (!set)
     {
         return;
     }
 
-    if (!writes.empty())
+    // 自动填充目标 set，避免调用端忘记设置 dstSet
+    for (auto& w : writes)
     {
-        // VkWriteDescriptorSet 里必须填好 dstSet，这里不强制覆盖
+        w.dstSet = set;
+    }
+
+    // 对于拷贝操作，一般只需覆盖 dstSet；srcSet 通常由调用者决定来源
+    for (auto& c : copies)
+    {
+        if (!c.dstSet)
+        {
+            c.dstSet = set;
+        }
     }
 
     vkUpdateDescriptorSets(device_.device(),
@@ -168,7 +194,8 @@ DescriptorSetManager::Pool& DescriptorSetManager::getOrCreatePool(VkDescriptorSe
     }
 
     // 没有可用池，创建一个新的
-    uint32_t         newMaxSets = 128; // 可以作为默认值或根据需求调整
+    // 可以根据需要提供配置接口或指数扩容，这里保持简单默认值
+    uint32_t         newMaxSets = lp.pools.empty() ? 128u : (lp.pools.back().maxSets * 2u);
     VkDescriptorPool newPool    = createPool(defaultPoolSizes_, newMaxSets);
 
     Pool pool{};
@@ -185,8 +212,9 @@ VkDescriptorPool DescriptorSetManager::createPool(const PoolSizes& sizes, uint32
     std::vector<VkDescriptorPoolSize> poolSizes = buildPoolSizes(sizes, maxSets);
 
     VkDescriptorPoolCreateInfo poolInfo{};
-    poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.flags         = 0; // 如需支持单独释放 descriptor set，可使用 VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT
+    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    // 如需支持单独释放 descriptor set，可使用 VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT
+    poolInfo.flags         = 0;
     poolInfo.maxSets       = maxSets;
     poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
     poolInfo.pPoolSizes    = poolSizes.data();

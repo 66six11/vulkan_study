@@ -1,15 +1,11 @@
-﻿//
-// Created by C66 on 2025/11/22.
-//
+﻿#include "vulkan_backend/ResourceManager.h"
 
-#include "vulkan_backend/ResourceManager.h"
-#include <cstring>
-#include <stdexcept>
-#include "vulkan_backend/VertexInputDescription.h"
+#include <cstring>   // std::memcpy
 
 namespace
 {
-    uint32_t findMemoryType(
+    /// 简单封装：查找满足 flags 的内存类型索引
+    uint32_t findMemoryTypeImpl(
         uint32_t                                typeFilter,
         VkMemoryPropertyFlags                   properties,
         const VkPhysicalDeviceMemoryProperties& memProps)
@@ -22,557 +18,611 @@ namespace
                 return i;
             }
         }
-        throw std::runtime_error("Failed to find suitable memory type");
+        throw std::runtime_error("Failed to find suitable memory type.");
     }
 } // namespace
 
-ResourceManager::ResourceManager(VulkanDevice& device) : device_(device)
+// ========================= 构造 / 析构 =========================
+namespace vkresource
 {
-}
-
-ResourceManager::~ResourceManager()
-{
-    // 逆序销毁所有资源，确保在 VkDevice 销毁前完成
-    for (auto& sampler : samplers_)
+    ResourceManager::ResourceManager(VulkanDevice& device) noexcept
+        : device_(device)
     {
-        if (sampler.alive)
+    }
+
+    ResourceManager::~ResourceManager() noexcept
+    {
+        // 注意：这里只做“尽力释放”，假定此时 GPU 不再使用这些资源
+        for (uint32_t i = 0; i < meshes_.size(); ++i)
         {
-            vkDestroySampler(device_.device(), sampler.sampler, nullptr);
+            MeshEntry& me = meshes_[i];
+            me.alive      = false; // Mesh 只持有 BufferHandle，本身没有 Vulkan 资源
+        }
+
+        for (uint32_t i = 0; i < samplers_.size(); ++i)
+        {
+            destroySamplerInternal(i);
+        }
+        for (uint32_t i = 0; i < images_.size(); ++i)
+        {
+            destroyImageInternal(i);
+        }
+        for (uint32_t i = 0; i < buffers_.size(); ++i)
+        {
+            destroyBufferInternal(i);
         }
     }
 
-    for (auto& image : images_)
+    // ========================= slot 分配 =========================
+
+    uint32_t ResourceManager::allocateBufferSlot()
     {
-        if (image.alive)
+        if (!freeBufferIndices_.empty())
         {
-            if (image.defaultView)
-            {
-                vkDestroyImageView(device_.device(), image.defaultView, nullptr);
-            }
-            if (image.image)
-            {
-                vkDestroyImage(device_.device(), image.image, nullptr);
-            }
-            if (image.memory)
-            {
-                vkFreeMemory(device_.device(), image.memory, nullptr);
-            }
+            uint32_t idx = freeBufferIndices_.back();
+            freeBufferIndices_.pop_back();
+            return idx;
         }
-    }
-
-    for (auto& buffer : buffers_)
-    {
-        if (buffer.alive)
-        {
-            if (buffer.buffer)
-            {
-                vkDestroyBuffer(device_.device(), buffer.buffer, nullptr);
-            }
-            if (buffer.memory)
-            {
-                vkFreeMemory(device_.device(), buffer.memory, nullptr);
-            }
-        }
-    }
-}
-
-ResourceManager::BufferHandle ResourceManager::createBuffer(const BufferDesc& desc)
-{
-    std::unique_lock lock(bufferMutex_);
-
-    uint32_t index;
-    if (!freeBufferIndices_.empty())
-    {
-        index = freeBufferIndices_.back();
-        freeBufferIndices_.pop_back();
-    }
-    else
-    {
-        index = static_cast<uint32_t>(buffers_.size());
         buffers_.emplace_back();
+        return static_cast<uint32_t>(buffers_.size() - 1);
     }
 
-    BufferEntry& entry = buffers_[index];
-
-    VkBufferCreateInfo bufferInfo{};
-    bufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size        = desc.size;
-    bufferInfo.usage       = desc.usage;
-    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-    if (vkCreateBuffer(device_.device(), &bufferInfo, nullptr, &entry.buffer) != VK_SUCCESS)
+    uint32_t ResourceManager::allocateImageSlot()
     {
-        throw std::runtime_error("Failed to create buffer");
-    }
-
-    VkMemoryRequirements memReq{};
-    vkGetBufferMemoryRequirements(device_.device(), entry.buffer, &memReq);
-
-    const auto& memProps = device_.memoryProperties();
-    uint32_t    typeIdx  = findMemoryType(memReq.memoryTypeBits, desc.memoryFlags, memProps);
-
-    VkMemoryAllocateInfo allocInfo{};
-    allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize  = memReq.size;
-    allocInfo.memoryTypeIndex = typeIdx;
-
-    if (vkAllocateMemory(device_.device(), &allocInfo, nullptr, &entry.memory) != VK_SUCCESS)
-    {
-        throw std::runtime_error("Failed to allocate buffer memory");
-    }
-
-    vkBindBufferMemory(device_.device(), entry.buffer, entry.memory, 0);
-
-    entry.desc  = desc;
-    entry.alive = true;
-    entry.generation++;
-
-    return BufferHandle{index, entry.generation};
-}
-
-void ResourceManager::destroyBuffer(BufferHandle handle)
-{
-    if (!handle)
-    {
-        return;
-    }
-
-    std::unique_lock lock(bufferMutex_);
-
-    if (handle.index >= buffers_.size())
-    {
-        return;
-    }
-
-    BufferEntry& entry = buffers_[handle.index];
-    if (!entry.alive || entry.generation != handle.generation)
-    {
-        return;
-    }
-
-    if (entry.buffer)
-    {
-        vkDestroyBuffer(device_.device(), entry.buffer, nullptr);
-    }
-    if (entry.memory)
-    {
-        vkFreeMemory(device_.device(), entry.memory, nullptr);
-    }
-
-    entry = {};
-    freeBufferIndices_.push_back(handle.index);
-}
-
-ResourceManager::ImageHandle ResourceManager::createImage(const ImageDesc& desc)
-{
-    std::unique_lock lock(imageMutex_);
-
-    uint32_t index;
-    if (!freeImageIndices_.empty())
-    {
-        index = freeImageIndices_.back();
-        freeImageIndices_.pop_back();
-    }
-    else
-    {
-        index = static_cast<uint32_t>(images_.size());
+        if (!freeImageIndices_.empty())
+        {
+            uint32_t idx = freeImageIndices_.back();
+            freeImageIndices_.pop_back();
+            return idx;
+        }
         images_.emplace_back();
+        return static_cast<uint32_t>(images_.size() - 1);
     }
 
-    ImageEntry& entry = images_[index];
-
-    VkImageCreateInfo imageInfo{};
-    imageInfo.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    imageInfo.imageType     = VK_IMAGE_TYPE_2D;
-    imageInfo.extent        = desc.extent;
-    imageInfo.mipLevels     = desc.mipLevels;
-    imageInfo.arrayLayers   = desc.arrayLayers;
-    imageInfo.format        = desc.format;
-    imageInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;
-    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    imageInfo.usage         = desc.usage;
-    imageInfo.samples       = desc.samples;
-    imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
-
-    if (vkCreateImage(device_.device(), &imageInfo, nullptr, &entry.image) != VK_SUCCESS)
+    uint32_t ResourceManager::allocateSamplerSlot()
     {
-        throw std::runtime_error("Failed to create image");
-    }
-
-    VkMemoryRequirements memReq{};
-    vkGetImageMemoryRequirements(device_.device(), entry.image, &memReq);
-
-    const auto& memProps = device_.memoryProperties();
-    uint32_t    typeIdx  = findMemoryType(memReq.memoryTypeBits,
-                                          VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                                          memProps);
-
-    VkMemoryAllocateInfo allocInfo{};
-    allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize  = memReq.size;
-    allocInfo.memoryTypeIndex = typeIdx;
-
-    if (vkAllocateMemory(device_.device(), &allocInfo, nullptr, &entry.memory) != VK_SUCCESS)
-    {
-        throw std::runtime_error("Failed to allocate image memory");
-    }
-
-    vkBindImageMemory(device_.device(), entry.image, entry.memory, 0);
-
-    // 创建默认视图
-    VkImageViewCreateInfo viewInfo{};
-    viewInfo.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    viewInfo.image                           = entry.image;
-    viewInfo.viewType                        = VK_IMAGE_VIEW_TYPE_2D;
-    viewInfo.format                          = desc.format;
-    viewInfo.subresourceRange.aspectMask     = desc.aspect;
-    viewInfo.subresourceRange.baseMipLevel   = 0;
-    viewInfo.subresourceRange.levelCount     = desc.mipLevels;
-    viewInfo.subresourceRange.baseArrayLayer = 0;
-    viewInfo.subresourceRange.layerCount     = desc.arrayLayers;
-
-    if (vkCreateImageView(device_.device(), &viewInfo, nullptr, &entry.defaultView) != VK_SUCCESS)
-    {
-        throw std::runtime_error("Failed to create image view");
-    }
-
-    entry.desc  = desc;
-    entry.alive = true;
-    entry.generation++;
-
-    return ImageHandle{index, entry.generation};
-}
-
-void ResourceManager::destroyImage(ImageHandle handle)
-{
-    std::unique_lock lock(imageMutex_);
-
-    if (handle.index >= images_.size())
-    {
-        return;
-    }
-
-    ImageEntry& entry = images_[handle.index];
-    if (!entry.alive || entry.generation != handle.generation)
-    {
-        return;
-    }
-
-    if (entry.defaultView)
-    {
-        vkDestroyImageView(device_.device(), entry.defaultView, nullptr);
-    }
-    if (entry.image)
-    {
-        vkDestroyImage(device_.device(), entry.image, nullptr);
-    }
-    if (entry.memory)
-    {
-        vkFreeMemory(device_.device(), entry.memory, nullptr);
-    }
-
-    entry = {};
-    freeImageIndices_.push_back(handle.index);
-}
-
-ResourceManager::SamplerHandle ResourceManager::createSampler(
-    const VkSamplerCreateInfo& info,
-    std::string_view           debugName)
-{
-    std::unique_lock lock(samplerMutex_);
-
-    uint32_t index;
-    if (!freeSamplerIndices_.empty())
-    {
-        index = freeSamplerIndices_.back();
-        freeSamplerIndices_.pop_back();
-    }
-    else
-    {
-        index = static_cast<uint32_t>(samplers_.size());
+        if (!freeSamplerIndices_.empty())
+        {
+            uint32_t idx = freeSamplerIndices_.back();
+            freeSamplerIndices_.pop_back();
+            return idx;
+        }
         samplers_.emplace_back();
+        return static_cast<uint32_t>(samplers_.size() - 1);
     }
 
-    SamplerEntry& entry = samplers_[index];
-
-    if (vkCreateSampler(device_.device(), &info, nullptr, &entry.sampler) != VK_SUCCESS)
+    uint32_t ResourceManager::allocateMeshSlot()
     {
-        throw std::runtime_error("Failed to create sampler");
-    }
-
-    entry.name  = std::string(debugName);
-    entry.alive = true;
-    entry.generation++;
-
-    return SamplerHandle{index, entry.generation};
-}
-
-void ResourceManager::destroySampler(SamplerHandle handle)
-{
-    std::unique_lock lock(samplerMutex_);
-
-    if (handle.index >= samplers_.size())
-    {
-        return;
-    }
-
-    SamplerEntry& entry = samplers_[handle.index];
-    if (!entry.alive || entry.generation != handle.generation)
-    {
-        return;
-    }
-
-    if (entry.sampler)
-    {
-        vkDestroySampler(device_.device(), entry.sampler, nullptr);
-    }
-
-    entry = {};
-    freeSamplerIndices_.push_back(handle.index);
-}
-
-ResourceManager::MeshHandle ResourceManager::createMesh(
-    const void*      vertexData,
-    size_t           vertexCount,
-    const void*      indexData,
-    size_t           indexCount,
-    std::string_view debugName)
-{
-    std::unique_lock lock(meshMutex_);
-
-    uint32_t index;
-
-    if (!freeMeshIndices_.empty())
-    {
-        index = freeMeshIndices_.back();
-        freeMeshIndices_.pop_back();
-    }
-    else
-    {
-        index = static_cast<uint32_t>(meshes_.size());
+        if (!freeMeshIndices_.empty())
+        {
+            uint32_t idx = freeMeshIndices_.back();
+            freeMeshIndices_.pop_back();
+            return idx;
+        }
         meshes_.emplace_back();
+        return static_cast<uint32_t>(meshes_.size() - 1);
     }
 
-    MeshEntry& entry = meshes_[index];
+    // ========================= 内部销毁 =========================
 
-    MeshDesc desc = {};
-
-    //验证顶点数据
-    if (vertexData == nullptr || vertexCount == 0)
+    void ResourceManager::destroyBufferInternal(uint32_t index) noexcept
     {
-        throw std::runtime_error("Invalid vertex data for mesh creation");
+        if (index >= buffers_.size())
+            return;
+
+        BufferEntry& e = buffers_[index];
+        if (!e.alive)
+            return;
+
+        VkDevice dev = device_.device();
+        if (e.buffer)
+        {
+            vkDestroyBuffer(dev, e.buffer, nullptr);
+            e.buffer = VK_NULL_HANDLE;
+        }
+        if (e.memory)
+        {
+            vkFreeMemory(dev, e.memory, nullptr);
+            e.memory = VK_NULL_HANDLE;
+        }
+        e.alive = false;
+        // generation 不清零，保持单调递增属性
     }
-    //填充 MeshDesc
-    desc.vertexCount = vertexCount;
-    desc.indexCount  = indexCount;
-    desc.debugName   = std::string(debugName) + "_mesh_desc";
 
-    //计算顶点大小
-    size_t vertexDataSize = vertexCount * sizeof(Vertex);
-
-    //创建顶点缓冲区
-    BufferDesc vertexBufferDesc  = {};
-    vertexBufferDesc.size        = vertexDataSize;
-    vertexBufferDesc.usage       = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-    vertexBufferDesc.memoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-    vertexBufferDesc.debugName   = std::string(debugName) + "_vertex_buffer";
-    entry.vertexBuffer           = createBuffer(vertexBufferDesc);
-
-    //创建索引缓冲区（如果有索引数据）
-    if (indexData != nullptr && indexCount > 0)
+    void ResourceManager::destroyImageInternal(uint32_t index) noexcept
     {
-        BufferDesc indexBufferDesc  = {};
-        size_t     indexDataSize    = indexCount * sizeof(uint32_t);
-        indexBufferDesc.size        = indexDataSize;
-        indexBufferDesc.usage       = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-        indexBufferDesc.memoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-        indexBufferDesc.debugName   = std::string(debugName) + "_index_buffer";
-        entry.indexBuffer           = createBuffer(indexBufferDesc);
+        if (index >= images_.size())
+            return;
+
+        ImageEntry& e = images_[index];
+        if (!e.alive)
+            return;
+
+        VkDevice dev = device_.device();
+        if (e.image)
+        {
+            vkDestroyImage(dev, e.image, nullptr);
+            e.image = VK_NULL_HANDLE;
+        }
+        if (e.memory)
+        {
+            vkFreeMemory(dev, e.memory, nullptr);
+            e.memory = VK_NULL_HANDLE;
+        }
+        e.alive = false;
     }
 
-
-    entry.alive = true;
-    entry.generation++;
-
-    return MeshHandle{index, entry.generation};
-}
-
-void ResourceManager::destroyMesh(MeshHandle handle)
-{
-    std::unique_lock lock(meshMutex_);
-
-    if (handle.index >= meshes_.size())
+    void ResourceManager::destroySamplerInternal(uint32_t index) noexcept
     {
-        return;
+        if (index >= samplers_.size())
+            return;
+
+        SamplerEntry& e = samplers_[index];
+        if (!e.alive)
+            return;
+
+        VkDevice dev = device_.device();
+        if (e.sampler)
+        {
+            vkDestroySampler(dev, e.sampler, nullptr);
+            e.sampler = VK_NULL_HANDLE;
+        }
+        e.alive = false;
     }
 
-    MeshEntry& entry = meshes_[handle.index];
-    if (!entry.alive || entry.generation != handle.generation)
+    // ========================= 工具：内存类型 / 句柄检查 =========================
+
+    uint32_t ResourceManager::findMemoryType(uint32_t typeBits, VkMemoryPropertyFlags properties) const
     {
-        return;
+        return findMemoryTypeImpl(typeBits, properties, device_.memoryProperties());
     }
 
-    destroyBuffer(entry.vertexBuffer);
-    if (entry.indexBuffer)
+    const ResourceManager::BufferEntry* ResourceManager::tryGetBufferEntry(BufferHandle handle) const noexcept
     {
-        destroyBuffer(entry.indexBuffer);
+        if (!handle || handle.index >= buffers_.size())
+            return nullptr;
+
+        const BufferEntry& e = buffers_[handle.index];
+        if (!e.alive || e.generation != handle.generation)
+            return nullptr;
+
+        return &e;
     }
 
-    entry = {};
-    freeMeshIndices_.push_back(handle.index);
-}
-
-VkBuffer ResourceManager::getBuffer(BufferHandle handle) const
-{
-    std::shared_lock lock(bufferMutex_);
-
-    if (!handle || handle.index >= buffers_.size())
+    ResourceManager::BufferEntry* ResourceManager::tryGetBufferEntry(BufferHandle handle) noexcept
     {
-        return VK_NULL_HANDLE;
+        return const_cast<BufferEntry*>(std::as_const(*this).tryGetBufferEntry(handle));
     }
 
-    const BufferEntry& entry = buffers_[handle.index];
-    if (!entry.alive || entry.generation != handle.generation)
+    const ResourceManager::ImageEntry* ResourceManager::tryGetImageEntry(ImageHandle handle) const noexcept
     {
-        return VK_NULL_HANDLE;
+        if (!handle || handle.index >= images_.size())
+            return nullptr;
+
+        const ImageEntry& e = images_[handle.index];
+        if (!e.alive || e.generation != handle.generation)
+            return nullptr;
+
+        return &e;
     }
 
-    return entry.buffer;
-}
-
-VkImage ResourceManager::getImage(ImageHandle handle) const
-{
-    std::shared_lock lock(imageMutex_);
-
-    if (handle.index >= images_.size())
+    const ResourceManager::SamplerEntry* ResourceManager::tryGetSamplerEntry(SamplerHandle handle) const noexcept
     {
-        return VK_NULL_HANDLE;
+        if (!handle || handle.index >= samplers_.size())
+            return nullptr;
+
+        const SamplerEntry& e = samplers_[handle.index];
+        if (!e.alive || e.generation != handle.generation)
+            return nullptr;
+
+        return &e;
     }
 
-    const ImageEntry& entry = images_[handle.index];
-    if (!entry.alive || entry.generation != handle.generation)
+    const ResourceManager::MeshEntry* ResourceManager::tryGetMeshEntry(MeshHandle handle) const noexcept
     {
-        return VK_NULL_HANDLE;
+        if (!handle || handle.index >= meshes_.size())
+            return nullptr;
+
+        const MeshEntry& e = meshes_[handle.index];
+        if (!e.alive || e.generation != handle.generation)
+            return nullptr;
+
+        return &e;
     }
 
-    return entry.image;
-}
-
-VkImageView ResourceManager::getImageView(ImageHandle handle) const
-{
-    std::shared_lock lock(imageMutex_);
-
-    if (handle.index >= images_.size())
+    ResourceManager::MeshEntry* ResourceManager::tryGetMeshEntry(MeshHandle handle) noexcept
     {
-        return VK_NULL_HANDLE;
+        return const_cast<MeshEntry*>(std::as_const(*this).tryGetMeshEntry(handle));
     }
 
-    const ImageEntry& entry = images_[handle.index];
-    if (!entry.alive || entry.generation != handle.generation)
+    const ResourceManager::BufferEntry& ResourceManager::getValidBufferEntry(BufferHandle handle) const
     {
-        return VK_NULL_HANDLE;
+        const BufferEntry* e = tryGetBufferEntry(handle);
+        if (!e)
+            throw std::runtime_error("Invalid BufferHandle: out of range / not alive / generation mismatch.");
+        return *e;
     }
 
-    return entry.defaultView;
-}
-
-VkSampler ResourceManager::getSampler(SamplerHandle handle) const
-{
-    std::shared_lock lock(samplerMutex_);
-
-    if (handle.index >= samplers_.size())
+    ResourceManager::BufferEntry& ResourceManager::getValidBufferEntry(BufferHandle handle)
     {
-        return VK_NULL_HANDLE;
+        return const_cast<BufferEntry&>(std::as_const(*this).getValidBufferEntry(handle));
     }
 
-    const SamplerEntry& entry = samplers_[handle.index];
-    if (!entry.alive || entry.generation != handle.generation)
+    const ResourceManager::MeshEntry& ResourceManager::getValidMeshEntry(MeshHandle handle) const
     {
-        return VK_NULL_HANDLE;
+        const MeshEntry* e = tryGetMeshEntry(handle);
+        if (!e)
+            throw std::runtime_error("Invalid MeshHandle: out of range / not alive / generation mismatch.");
+        return *e;
     }
 
-    return entry.sampler;
-}
-
-ResourceManager::BufferHandle ResourceManager::getMeshVertexBuffer(MeshHandle handle) const
-{
-    std::shared_lock lock(meshMutex_);
-
-    if (handle.index >= meshes_.size())
+    ResourceManager::MeshEntry& ResourceManager::getValidMeshEntry(MeshHandle handle)
     {
-        throw std::runtime_error("Invalid mesh handle");
+        return const_cast<MeshEntry&>(std::as_const(*this).getValidMeshEntry(handle));
     }
 
-    const MeshEntry& entry = meshes_[handle.index];
-    if (!entry.alive || entry.generation != handle.generation)
+    // ========================= Debug 名称（可选） =========================
+
+    void ResourceManager::setDebugName(VkObjectType type, uint64_t handle, std::string_view name) const noexcept
     {
-        throw std::runtime_error("Mesh handle is not alive or generation mismatch");
+        if (name.empty())
+            return;
+
+        #ifdef VK_EXT_debug_utils
+        VkDevice dev = device_.device();
+        auto     fn  = reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(
+            vkGetDeviceProcAddr(dev, "vkSetDebugUtilsObjectNameEXT"));
+        if (!fn)
+            return;
+
+        VkDebugUtilsObjectNameInfoEXT info{};
+        info.sType        = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+        info.objectType   = type;
+        info.objectHandle = handle;
+        info.pObjectName  = name.data();
+
+        fn(dev, &info);
+        #else
+        (void)type;
+        (void)handle;
+        (void)name;
+        #endif
     }
 
-    return entry.vertexBuffer;
-}
-ResourceManager::BufferHandle ResourceManager::getMeshIndexBuffer(MeshHandle handle) const
-{
-    std::shared_lock lock(meshMutex_);
+    // ========================= Buffer 接口实现 =========================
 
-    if (handle.index >= meshes_.size())
+    BufferHandle ResourceManager::createBuffer(const BufferDesc& desc)
     {
-        throw std::runtime_error("Invalid mesh handle");
+        if (desc.size == 0 || desc.usage == 0)
+            throw std::runtime_error("BufferDesc invalid: size or usage is zero.");
+
+        uint32_t     index = allocateBufferSlot();
+        BufferEntry& e     = buffers_[index];
+
+        if (e.alive)
+            destroyBufferInternal(index);
+
+        VkDevice dev = device_.device();
+
+        VkBufferCreateInfo info{};
+        info.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        info.size        = desc.size;
+        info.usage       = desc.usage;
+        info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+        if (vkCreateBuffer(dev, &info, nullptr, &e.buffer) != VK_SUCCESS)
+            throw std::runtime_error("Failed to create VkBuffer.");
+
+        VkMemoryRequirements memReq{};
+        vkGetBufferMemoryRequirements(dev, e.buffer, &memReq);
+
+        VkMemoryAllocateInfo alloc{};
+        alloc.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        alloc.allocationSize  = memReq.size;
+        alloc.memoryTypeIndex = findMemoryType(memReq.memoryTypeBits, desc.memoryFlags);
+
+        if (vkAllocateMemory(dev, &alloc, nullptr, &e.memory) != VK_SUCCESS)
+        {
+            vkDestroyBuffer(dev, e.buffer, nullptr);
+            e.buffer = VK_NULL_HANDLE;
+            throw std::runtime_error("Failed to allocate memory for buffer.");
+        }
+
+        if (vkBindBufferMemory(dev, e.buffer, e.memory, 0) != VK_SUCCESS)
+        {
+            vkFreeMemory(dev, e.memory, nullptr);
+            vkDestroyBuffer(dev, e.buffer, nullptr);
+            e.memory = VK_NULL_HANDLE;
+            e.buffer = VK_NULL_HANDLE;
+            throw std::runtime_error("Failed to bind memory for buffer.");
+        }
+
+        e.desc  = desc;
+        e.alive = true;
+        ++e.generation; // generation 只递增不清零
+
+        if (!desc.debugName.empty())
+        {
+            setDebugName(VK_OBJECT_TYPE_BUFFER,
+                         reinterpret_cast<uint64_t>(e.buffer),
+                         desc.debugName);
+        }
+
+        return BufferHandle{index, e.generation};
     }
 
-    const MeshEntry& entry = meshes_[handle.index];
-    if (!entry.alive || entry.generation != handle.generation)
+    void ResourceManager::destroyBuffer(BufferHandle handle) noexcept
     {
-        throw std::runtime_error("Mesh handle is not alive or generation mismatch");
+        if (!handle || handle.index >= buffers_.size())
+            return;
+
+        BufferEntry& e = buffers_[handle.index];
+        if (!e.alive || e.generation != handle.generation)
+            return;
+
+        destroyBufferInternal(handle.index);
+        freeBufferIndices_.push_back(handle.index);
     }
 
-    return entry.indexBuffer;
-}
-
-const ResourceManager::BufferDesc& ResourceManager::getBufferDesc(BufferHandle handle) const
-{
-    std::shared_lock lock(bufferMutex_);
-    return buffers_[handle.index].desc;
-}
-
-const ResourceManager::ImageDesc& ResourceManager::getImageDesc(ImageHandle handle) const
-{
-    std::shared_lock lock(imageMutex_);
-    return images_[handle.index].desc;
-}
-
-const ResourceManager::MeshDesc& ResourceManager::getMeshDesc(MeshHandle handle) const
-{
-    std::shared_lock lock(meshMutex_);
-    return meshes_[handle.index].desc;
-}
-
-void ResourceManager::uploadBuffer(BufferHandle handle, const void* data, VkDeviceSize size, VkDeviceSize offset)
-{
-    std::shared_lock lock(bufferMutex_);
-
-    if (!handle || handle.index >= buffers_.size())
+    VkBuffer ResourceManager::getBuffer(BufferHandle handle) const noexcept
     {
-        return;
+        const BufferEntry* e = tryGetBufferEntry(handle);
+        return e ? e->buffer : VK_NULL_HANDLE;
     }
 
-    BufferEntry& entry = buffers_[handle.index];
-    if (!entry.alive || entry.generation != handle.generation)
+    const BufferDesc& ResourceManager::getBufferDesc(BufferHandle handle) const
     {
-        return;
+        return getValidBufferEntry(handle).desc;
     }
 
-    void* mapped = nullptr;
-    if (vkMapMemory(device_.device(), entry.memory, offset, size, 0, &mapped) != VK_SUCCESS)
+    void ResourceManager::uploadBuffer(
+        BufferHandle handle,
+        const void*  data,
+        VkDeviceSize size,
+        VkDeviceSize offset)
     {
-        throw std::runtime_error("Failed to map buffer memory");
+        if (!data || size == 0)
+            return;
+
+        BufferEntry& e = getValidBufferEntry(handle);
+
+        // 根据创建时的 memoryFlags 判断是否为 HOST_VISIBLE
+        if ((e.desc.memoryFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) == 0)
+            throw std::runtime_error("uploadBuffer requires HOST_VISIBLE memory; got device-local only buffer.");
+
+        VkDevice dev = device_.device();
+
+        void* mapped = nullptr;
+        if (vkMapMemory(dev, e.memory, offset, size, 0, &mapped) != VK_SUCCESS)
+            throw std::runtime_error("Failed to map buffer memory in uploadBuffer.");
+
+        std::memcpy(mapped, data, static_cast<size_t>(size));
+
+        vkUnmapMemory(dev, e.memory);
     }
 
-    std::memcpy(mapped, data, static_cast<size_t>(size));
-    vkUnmapMemory(device_.device(), entry.memory);
-}
+    // ========================= Image 接口实现 =========================
 
-void ResourceManager::garbageCollect()
-{
-    // 当前实现为空，占位以支持未来的延迟销毁/分帧回收策略
+    ImageHandle ResourceManager::createImage(const ImageDesc& desc)
+    {
+        if (desc.extent.width == 0 || desc.extent.height == 0 || desc.format == VK_FORMAT_UNDEFINED)
+            throw std::runtime_error("ImageDesc invalid: extent or format.");
+
+        uint32_t    index = allocateImageSlot();
+        ImageEntry& e     = images_[index];
+
+        if (e.alive)
+            destroyImageInternal(index);
+
+        VkDevice dev = device_.device();
+
+        VkImageCreateInfo info{};
+        info.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        info.imageType     = VK_IMAGE_TYPE_2D;
+        info.extent        = desc.extent;
+        info.mipLevels     = desc.mipLevels;
+        info.arrayLayers   = desc.arrayLayers;
+        info.format        = desc.format;
+        info.tiling        = VK_IMAGE_TILING_OPTIMAL;
+        info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        info.usage         = desc.usage;
+        info.samples       = desc.samples;
+        info.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
+
+        if (vkCreateImage(dev, &info, nullptr, &e.image) != VK_SUCCESS)
+            throw std::runtime_error("Failed to create VkImage.");
+
+        VkMemoryRequirements memReq{};
+        vkGetImageMemoryRequirements(dev, e.image, &memReq);
+
+        VkMemoryAllocateInfo alloc{};
+        alloc.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        alloc.allocationSize  = memReq.size;
+        alloc.memoryTypeIndex = findMemoryType(memReq.memoryTypeBits,
+                                               VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+        if (vkAllocateMemory(dev, &alloc, nullptr, &e.memory) != VK_SUCCESS)
+        {
+            vkDestroyImage(dev, e.image, nullptr);
+            e.image = VK_NULL_HANDLE;
+            throw std::runtime_error("Failed to allocate memory for image.");
+        }
+
+        if (vkBindImageMemory(dev, e.image, e.memory, 0) != VK_SUCCESS)
+        {
+            vkFreeMemory(dev, e.memory, nullptr);
+            vkDestroyImage(dev, e.image, nullptr);
+            e.memory = VK_NULL_HANDLE;
+            e.image  = VK_NULL_HANDLE;
+            throw std::runtime_error("Failed to bind memory for image.");
+        }
+
+        e.desc  = desc;
+        e.alive = true;
+        ++e.generation;
+
+        if (!desc.debugName.empty())
+        {
+            setDebugName(VK_OBJECT_TYPE_IMAGE,
+                         reinterpret_cast<uint64_t>(e.image),
+                         desc.debugName);
+        }
+
+        return ImageHandle{index, e.generation};
+    }
+
+    void ResourceManager::destroyImage(ImageHandle handle) noexcept
+    {
+        if (!handle || handle.index >= images_.size())
+            return;
+
+        ImageEntry& e = images_[handle.index];
+        if (!e.alive || e.generation != handle.generation)
+            return;
+
+        destroyImageInternal(handle.index);
+        freeImageIndices_.push_back(handle.index);
+    }
+
+    VkImage ResourceManager::getImage(ImageHandle handle) const noexcept
+    {
+        const ImageEntry* e = tryGetImageEntry(handle);
+        return e ? e->image : VK_NULL_HANDLE;
+    }
+
+    const ImageDesc& ResourceManager::getImageDesc(ImageHandle handle) const
+    {
+        const ImageEntry* e = tryGetImageEntry(handle);
+        if (!e)
+            throw std::runtime_error("Invalid ImageHandle: out of range / not alive / generation mismatch.");
+        return e->desc;
+    }
+
+    // ========================= Sampler 接口实现 =========================
+
+    SamplerHandle ResourceManager::createSampler(
+        const VkSamplerCreateInfo& info,
+        std::string_view           debugName)
+    {
+        uint32_t      index = allocateSamplerSlot();
+        SamplerEntry& e     = samplers_[index];
+
+        if (e.alive)
+            destroySamplerInternal(index);
+
+        VkDevice dev = device_.device();
+
+        if (vkCreateSampler(dev, &info, nullptr, &e.sampler) != VK_SUCCESS)
+            throw std::runtime_error("Failed to create VkSampler.");
+
+        e.name  = std::string(debugName);
+        e.alive = true;
+        ++e.generation;
+
+        if (!e.name.empty())
+        {
+            setDebugName(VK_OBJECT_TYPE_SAMPLER,
+                         reinterpret_cast<uint64_t>(e.sampler),
+                         e.name);
+        }
+
+        return SamplerHandle{index, e.generation};
+    }
+
+    void ResourceManager::destroySampler(SamplerHandle handle) noexcept
+    {
+        if (!handle || handle.index >= samplers_.size())
+            return;
+
+        SamplerEntry& e = samplers_[handle.index];
+        if (!e.alive || e.generation != handle.generation)
+            return;
+
+        destroySamplerInternal(handle.index);
+        freeSamplerIndices_.push_back(handle.index);
+    }
+
+    VkSampler ResourceManager::getSampler(SamplerHandle handle) const noexcept
+    {
+        const SamplerEntry* e = tryGetSamplerEntry(handle);
+        return e ? e->sampler : VK_NULL_HANDLE;
+    }
+
+    // ========================= Mesh 接口实现 =========================
+
+    MeshHandle ResourceManager::createMesh(const MeshDesc& desc)
+    {
+        if (desc.vertexBufferSize == 0 && desc.indexBufferSize == 0)
+            throw std::runtime_error("MeshDesc invalid: both vertex and index buffer sizes are zero.");
+
+        uint32_t   index = allocateMeshSlot();
+        MeshEntry& me    = meshes_[index];
+
+        if (me.alive)
+            me = MeshEntry{}; // Mesh 自身不拥有 Vulkan 资源，仅重置句柄与 desc
+
+        // 顶点缓冲
+        if (desc.vertexBufferSize > 0)
+        {
+            BufferDesc vbDesc{};
+            vbDesc.size        = desc.vertexBufferSize;
+            vbDesc.usage       = desc.vertexUsage;
+            vbDesc.memoryFlags = desc.vertexMemoryFlags;
+            vbDesc.debugName   = desc.vertexDebugName;
+            me.vertexBuffer    = createBuffer(vbDesc);
+        }
+
+        // 索引缓冲（可选）
+        if (desc.indexBufferSize > 0)
+        {
+            BufferDesc ibDesc{};
+            ibDesc.size        = desc.indexBufferSize;
+            ibDesc.usage       = desc.indexUsage;
+            ibDesc.memoryFlags = desc.indexMemoryFlags;
+            ibDesc.debugName   = desc.indexDebugName;
+            me.indexBuffer     = createBuffer(ibDesc);
+        }
+
+        me.desc  = desc;
+        me.alive = true;
+        ++me.generation;
+
+        return MeshHandle{index, me.generation};
+    }
+
+    void ResourceManager::destroyMesh(MeshHandle handle) noexcept
+    {
+        if (!handle || handle.index >= meshes_.size())
+            return;
+
+        MeshEntry& me = meshes_[handle.index];
+        if (!me.alive || me.generation != handle.generation)
+            return;
+
+        // Mesh 不直接持有 Vulkan 资源，只是转发销毁其 Buffer
+        if (me.vertexBuffer)
+            destroyBuffer(me.vertexBuffer);
+        if (me.indexBuffer)
+            destroyBuffer(me.indexBuffer);
+
+        me = MeshEntry{};
+        freeMeshIndices_.push_back(handle.index);
+    }
+
+    BufferHandle ResourceManager::getMeshVertexBuffer(MeshHandle handle) const
+    {
+        const MeshEntry& me = getValidMeshEntry(handle);
+        return me.vertexBuffer;
+    }
+
+    BufferHandle ResourceManager::getMeshIndexBuffer(MeshHandle handle) const
+    {
+        const MeshEntry& me = getValidMeshEntry(handle);
+        return me.indexBuffer; // 可能是无效句柄（没有索引缓冲）
+    }
+
+    const MeshDesc& ResourceManager::getMeshDesc(MeshHandle handle) const
+    {
+        return getValidMeshEntry(handle).desc;
+    }
 }

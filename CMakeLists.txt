@@ -116,7 +116,6 @@ source_group("Vulkan Backend\\Header Files" FILES ${VULKAN_BACKEND_HEADERS})
 target_link_libraries(vulkan PRIVATE
         Vulkan::Vulkan
         glfw
-        glm
 )
 
 # ============================================================================
