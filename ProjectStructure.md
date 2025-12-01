@@ -36,10 +36,10 @@ vulkan_study/
 │       ├── VulkanDevice.cpp        # Vulkan 设备实现
 │       ├── VulkanRenderer.cpp      # Vulkan 渲染器实现
 │       ├── ResourceManager.cpp     # GPU 资源管理实现
-│       ├── DescriptorSetManager.cpp # 描述符集管理实现
+│       ├── DescriptorSetManager.cpp  # 描述符集管理实现
 │       ├── SwapchainResources.cpp  # 交换链资源实现
 │       ├── vulkan_init.cpp         # Vulkan 初始化实现
-│       ├── swapchain_management.cpp # 交换链管理实现
+│       ├── swapchain_management.cpp  # 交换链管理实现
 │       ├── Rendering.cpp           # 渲染通道和管线实现
 │       ├── command_buffer_sync.cpp # 命令缓冲和同步实现
 │       └── utils.cpp               # Vulkan 工具函数实现

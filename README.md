@@ -22,7 +22,7 @@
 - **Vulkan SDK** 1.3+（[LunarG](https://vulkan.lunarg.com/)）
 - **CMake** 3.20+
 - **C++20 兼容编译器**（MSVC 2019+、GCC 10+、Clang 11+）
-- **vcpkg**（用于管理 GLFW 和 GLM 依赖）
+- **vcpkg**（用于管理 GLFW3 和 GLM 依赖）
 
 #### 构建
 
@@ -91,7 +91,7 @@ A learning-oriented graphics rendering framework based on modern C++ and Vulkan 
 - **Vulkan SDK** 1.3+ ([LunarG](https://vulkan.lunarg.com/))
 - **CMake** 3.20+
 - **C++20 Compatible Compiler** (MSVC 2019+, GCC 10+, Clang 11+)
-- **vcpkg** (for managing GLFW and GLM dependencies)
+- **vcpkg** (for managing GLFW3 and GLM dependencies)
 
 #### Build
 
