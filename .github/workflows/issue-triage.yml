@@ -42,6 +42,15 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      - name: Debug - Check if secrets are set
+        run: |
+          if [ -z "${{ secrets.IFLOW_API_KEY }}" ]; then
+            echo "❌ IFLOW_API_KEY is not set!"
+          else
+            echo "✅ IFLOW_API_KEY is set (length: ${#IFLOW_API_KEY})"
+          fi
+        env:
+            IFLOW_API_KEY: ${{ secrets. IFLOW_API_KEY }}
       - name: Setup Git config
         run: |
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
