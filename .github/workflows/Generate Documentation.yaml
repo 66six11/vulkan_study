@@ -1,0 +1,40 @@
+name: Generate Documentation
+on:
+  push:
+    branches: [main]
+    paths: ['**.go', '**.js', '**.py', '**.java', '**.ts']
+
+jobs:
+  generate-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Initialize project analysis
+        uses: iflow-ai/iflow-cli-action@v2.1.0
+        with:
+          prompt: "/init"
+          api_key: ${{ secrets.IFLOW_API_KEY }}
+          model: "glm-4.6"
+          timeout: "300"
+      
+      - name: Generate documentation
+        uses: iflow-ai/iflow-cli-action@v2.1.0
+        with:
+          prompt: "Generate comprehensive technical documentation including API docs, architecture overview, and usage examples based on the codebase analysis."
+          api_key: ${{ secrets.IFLOW_API_KEY }}
+          model: "glm-4.6"
+          timeout: "600"
+        id: docs
+      
+      - name: Create documentation file
+        run: |
+          mkdir -p docs
+          echo "${{ steps.docs.outputs.result }}" > docs/TECHNICAL_DOCS.md
+      
+      - name: Commit documentation
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "docs: auto-generate technical documentation"
+          file_pattern: docs/TECHNICAL_DOCS.md
