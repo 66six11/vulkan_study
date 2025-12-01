@@ -1,8 +1,34 @@
 name: Generate Documentation for Vulkan Project
+
 on:
+  # 自动触发：当特定文件更改时
   push:
     branches: [main]
     paths: ['**.h','**.cpp', 'CMakeLists.txt', '**.cmake', '**.md']
+  
+  # 手动触发：从GitHub界面手动运行
+  workflow_dispatch:
+    inputs:
+      documentation_scope:
+        description: '选择文档生成的范围'
+        required: true
+        default: 'full'
+        type: choice
+        options:
+        - 'full'
+        - 'api-only'
+        - 'architecture-only'
+        - 'quick-overview'
+      regenerate_all:
+        description: '重新生成所有文档（即使文件未更改）'
+        required: false
+        default: false
+        type: boolean
+      include_examples:
+        description: '包含代码示例'
+        required: false
+        default: true
+        type: boolean
 
 jobs:
   generate-docs:
@@ -11,17 +37,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 获取完整历史记录，有助于分析项目结构
+          fetch-depth: 0
       
       - name: Setup project context
         run: |
           # 安装Vulkan相关的开发工具（如果需要）
           sudo apt-get update
-          sudo apt-get install -y vulkan-validationlayers vulkan-tools
+          sudo apt-get install -y vulkan-validationlayers vulkan-tools tree
           # 显示项目结构
           find . -name "*.cpp" -o -name "*.h" -o -name "CMakeLists.txt" | head -20
           echo "=== Project Structure ==="
           tree -I 'build|.git' -L 3 || ls -la
+          
+          # 输出手动触发参数（如果存在）
+          echo "Workflow triggered manually: ${{ github.event_name == 'workflow_dispatch' }}"
+          echo "Documentation scope: ${{ github.event.inputs.documentation_scope }}"
+          echo "Regenerate all: ${{ github.event.inputs.regenerate_all }}"
+          echo "Include examples: ${{ github.event.inputs.include_examples }}"
       
       - name: Initialize Vulkan project analysis
         uses: iflow-ai/iflow-cli-action@v2.1.0
@@ -38,11 +70,11 @@ jobs:
             Focus on understanding the Vulkan-specific architecture and components.
             Provide a high-level overview of the codebase structure.
           api_key: ${{ secrets.IFLOW_API_KEY }}
-          model: "qwen3-coder-plus"  # 更适合代码分析
+          model: "qwen3-coder-plus"
+          base_url: "https://apis.iflow.cn/v1"
           timeout: "300"
           working_directory: "."
           precmd: |
-            # 设置基本的开发环境
             git config --global user.email "github-actions[bot]@users.noreply.github.com"
             git config --global user.name "github-actions[bot]"
       
@@ -52,9 +84,17 @@ jobs:
           prompt: |
             ## Role: Senior Graphics Engineer
             
-            Generate comprehensive technical documentation for this Vulkan C++ project.
+            Generate technical documentation for this Vulkan C++ project.
             
-            ## Documentation Structure Requirements:
+            ## Documentation Scope: ${{ github.event.inputs.documentation_scope || 'full' }}
+            ${{ github.event.inputs.documentation_scope == 'api-only' && 'Focus primarily on API reference and code-level documentation.' || '' }}
+            ${{ github.event.inputs.documentation_scope == 'architecture-only' && 'Focus on high-level architecture and design patterns.' || '' }}
+            ${{ github.event.inputs.documentation_scope == 'quick-overview' && 'Provide a concise overview focusing on key components.' || '' }}
+            ${{ github.event.inputs.documentation_scope == 'full' && 'Generate comprehensive documentation covering all aspects.' || '' }}
+            
+            ${{ github.event.inputs.include_examples == 'false' && 'Skip code examples and usage guides.' || 'Include detailed code examples and usage guides.' }}
+            
+            ## Documentation Structure:
             
             ### 1. Project Overview
             - High-level architecture description
@@ -68,6 +108,7 @@ jobs:
             - **Shader System**: GLSL shaders compilation and usage
             - **Synchronization**: Fences, semaphores, barriers
             
+            ${{ github.event.inputs.documentation_scope != 'quick-overview' && '
             ### 3. Component Documentation
             - For each major class/component:
               * Purpose and responsibilities
@@ -79,11 +120,14 @@ jobs:
             - Key public interfaces
             - Important data structures
             - Configuration options
+            ' || '' }}
             
+            ${{ github.event.inputs.include_examples == 'true' && github.event.inputs.documentation_scope != 'quick-overview' && '
             ### 5. Usage Examples
             - Basic setup and initialization
             - Rendering a simple scene
             - Adding new features
+            ' || '' }}
             
             ### 6. Best Practices & Guidelines
             - Vulkan validation layer usage
@@ -97,10 +141,11 @@ jobs:
             - Reference specific files and line numbers when relevant
             - Focus on Vulkan-specific patterns and idioms
             
-            Generate detailed, actionable documentation that would help new developers understand and work with this Vulkan codebase.
+            Generate documentation appropriate for the selected scope.
           api_key: ${{ secrets.IFLOW_API_KEY }}
           model: "qwen3-coder-plus"
-          timeout: "900"  # 增加超时时间，因为Vulkan项目可能很复杂
+          base_url: "https://apis.iflow.cn/v1"
+          timeout: ${{ github.event.inputs.documentation_scope == 'quick-overview' && '600' || '900' }}
           working_directory: "."
         id: docs
       
@@ -110,40 +155,57 @@ jobs:
           mkdir -p docs/guides
           mkdir -p docs/architecture
           mkdir -p docs/examples
+          
+          # 根据触发类型创建不同的文件名
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            SCOPE="${{ github.event.inputs.documentation_scope }}"
+            TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+            DOC_FILE="docs/VULKAN_DOCS_${SCOPE}_${TIMESTAMP}.md"
+          else
+            DOC_FILE="docs/VULKAN_DOCS_AUTO.md"
+          fi
+          echo "DOC_FILE=${DOC_FILE}" >> $GITHUB_ENV
       
       - name: Create main documentation file
         run: |
-          # 创建主文档文件
-          echo "# Vulkan Project Technical Documentation\n\n*Generated on $(date)*\n\n" > docs/OVERVIEW.md
-          echo "${{ steps.docs.outputs.result }}" >> docs/OVERVIEW.md
+          echo "# Vulkan Project Technical Documentation" > $DOC_FILE
+          echo "" >> $DOC_FILE
+          echo "*Generated on $(date)*" >> $DOC_FILE
+          echo "*Scope: ${{ github.event.inputs.documentation_scope || 'auto-generated' }}*" >> $DOC_FILE
+          echo "*Trigger: ${{ github.event_name }}*" >> $DOC_FILE
+          echo "" >> $DOC_FILE
+          echo "${{ steps.docs.outputs.result }}" >> $DOC_FILE
           
-          # 如果文档很长，可以分割成多个文件
-          # 这里可以添加逻辑来分割大文档
-          echo "Documentation generated successfully"
-          echo "Total characters: $(wc -c < docs/OVERVIEW.md)"
+          echo "Documentation generated successfully: $DOC_FILE"
+          echo "Total characters: $(wc -c < $DOC_FILE)"
       
       - name: Validate documentation
         run: |
           # 检查文档是否包含关键Vulkan相关内容
-          if grep -q -i "vulkan\|VkInstance\|VkDevice\|pipeline\|shader" docs/OVERVIEW.md; then
+          if grep -q -i "vulkan\|VkInstance\|VkDevice\|pipeline\|shader" $DOC_FILE; then
             echo "✓ Documentation contains Vulkan-specific content"
           else
             echo "⚠ Warning: Documentation may lack Vulkan-specific details"
           fi
           
           # 检查文档长度
-          if [ $(wc -c < docs/OVERVIEW.md) -gt 1000 ]; then
+          if [ $(wc -c < $DOC_FILE) -gt 1000 ]; then
             echo "✓ Documentation has substantial content"
           else
             echo "⚠ Warning: Documentation seems very short"
-            exit 1
+            # 对于手动触发，不强制失败
+            if [ "${{ github.event_name }}" = "push" ]; then
+              exit 1
+            fi
           fi
       
       - name: Commit documentation
         if: success()
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "docs: auto-generate Vulkan technical documentation"
+          commit_message: |
+            docs: ${{ github.event.inputs.documentation_scope && format('generate {0} Vulkan documentation', github.event.inputs.documentation_scope) || 'auto-generate Vulkan technical documentation' }}
+            ${{ github.event_name == 'workflow_dispatch' && '(manual trigger)' || '' }}
           file_pattern: |
             docs/
             docs/**/*
@@ -153,7 +215,15 @@ jobs:
       - name: Create documentation summary
         run: |
           echo "## Documentation Generation Complete" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Generated comprehensive Vulkan project documentation" >> $GITHUB_STEP_SUMMARY
-          echo "- 📁 Documentation saved to: docs/OVERVIEW.md" >> $GITHUB_STEP_SUMMARY
-          echo "- 🔍 Focused on Vulkan-specific architecture and patterns" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Generated Vulkan project documentation" >> $GITHUB_STEP_SUMMARY
+          echo "- 📁 Documentation saved to: $DOC_FILE" >> $GITHUB_STEP_SUMMARY
+          echo "- 🔍 Scope: ${{ github.event.inputs.documentation_scope || 'full' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 🎯 Trigger: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
           echo "- 🕐 Generated on: $(date)" >> $GITHUB_STEP_SUMMARY
+          
+          # 显示文档预览（前500字符）
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Preview:" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          head -c 500 $DOC_FILE >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
