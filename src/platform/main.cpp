@@ -1,7 +1,7 @@
 ﻿#include <iostream>
 #include <stdexcept>
 #include <cstdlib>
-#include "platform/Application.h"
+#include "platform/Engine.h"
 
 /**
  * @brief 程序入口点
@@ -15,7 +15,7 @@ int main()
     // 使用try-catch块捕获Vulkan可能抛出的异常
     try
     {
-        Application app;
+        Engine app;
         app.run();
     }
     catch (const std::exception& e)

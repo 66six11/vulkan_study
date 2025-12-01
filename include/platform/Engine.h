@@ -16,7 +16,7 @@
  * 包括窗口、实例、设备、交换链、渲染管线、命令缓冲等。它实现了Vulkan应用程序
  * 的完整初始化、渲染循环和资源清理流程。
  */
-class Application
+class Engine
 {
     public:
         /**

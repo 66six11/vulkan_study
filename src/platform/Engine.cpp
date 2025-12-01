@@ -6,7 +6,7 @@
 #include <renderer/Vertex.h>
 
 #include "core/constants.h"
-#include "platform/Application.h"
+#include "platform/Engine.h"
 
 #include "vulkan_backend/VulkanRenderer.h"
 
@@ -55,11 +55,11 @@ namespace
                 vtx.normal   = n;               // 填法线
                 vtx.uv       = glm::vec2(u, v); // UV 简单映射
                 vtx.color    = glm::vec4(       // 给一个明显的渐变颜色
-                                         0.3f + 0.7f * u,
-                                         0.3f + 0.7f * v,
-                                         1.0f,
-                                         1.0f
-                                        );
+                                      0.3f + 0.7f * u,
+                                      0.3f + 0.7f * v,
+                                      1.0f,
+                                      1.0f
+                                     );
 
                 data.vertices.push_back(vtx);
             }
@@ -89,46 +89,44 @@ namespace
 
         return data;
     }
-    
 
-     
+
     MeshData generateTriangleMesh()
     {
         MeshData data{};
-     
+
         data.vertices.resize(3);
-     
+
         // 顶点 0：底部中心
         data.vertices[0].position = glm::vec3(0.0f, -0.5f, 0.0f);
         data.vertices[0].normal   = glm::vec3(0.0f, 0.0f, 1.0f);
         data.vertices[0].uv       = glm::vec2(0.5f, 0.0f);
         data.vertices[0].color    = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f); // 红
-     
+
         // 顶点 1：右上
         data.vertices[1].position = glm::vec3(0.5f, 0.5f, 0.0f);
         data.vertices[1].normal   = glm::vec3(0.0f, 0.0f, 1.0f);
         data.vertices[1].uv       = glm::vec2(1.0f, 1.0f);
         data.vertices[1].color    = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f); // 绿
-     
+
         // 顶点 2：左上
         data.vertices[2].position = glm::vec3(-0.5f, 0.5f, 0.0f);
         data.vertices[2].normal   = glm::vec3(0.0f, 0.0f, 1.0f);
         data.vertices[2].uv       = glm::vec2(0.0f, 1.0f);
         data.vertices[2].color    = glm::vec4(0.0f, 0.0f, 1.0f, 1.0f); // 蓝
-     
+
         // 非索引绘制的话 indices 可以为空，这里给一个简单索引
         data.indices = {0, 1, 2};
-     
+
         return data;
     }
-    
 } // namespace
 /**
  * @brief 运行应用程序的主要函数
  * 
  * 按顺序执行初始化、主循环和清理操作，是应用程序的主控制流程
  */
-void Application::run()
+void Engine::run()
 {
     initWindow();
 
@@ -139,10 +137,10 @@ void Application::run()
         // 用内部函数生成球的顶点/索引，并交给 Renderer 创建 GPU mesh
         auto sphereData = generateTriangleMesh();
         sphereMesh_     = renderer_->createMesh(
-                                                sphereData.vertices.data(),
-                                                sphereData.vertices.size(),
-                                                sphereData.indices.data(),
-                                                sphereData.indices.size());
+                                            sphereData.vertices.data(),
+                                            sphereData.vertices.size(),
+                                            sphereData.indices.data(),
+                                            sphereData.indices.size());
 
         sphereRenderable_.mesh     = sphereMesh_;
         sphereRenderable_.material = {}; // 现在暂时没用材质
@@ -161,7 +159,7 @@ void Application::run()
 // GLFW framebuffer 大小变化回调：仅设置一个标志，真正的重建放到主循环里做
 void framebufferResizeCallback(GLFWwindow* window, int width, int height)
 {
-    auto app = static_cast<Application*>(glfwGetWindowUserPointer(window));
+    auto app = static_cast<Engine*>(glfwGetWindowUserPointer(window));
     if (app)
     {
         app->framebufferResized = true;
@@ -173,7 +171,7 @@ void framebufferResizeCallback(GLFWwindow* window, int width, int height)
  * 
  * 初始化GLFW库并创建应用程序窗口，设置窗口属性
  */
-void Application::initWindow()
+void Engine::initWindow()
 {
     glfwInit();
     if (!glfwInit())
@@ -201,7 +199,7 @@ void Application::initWindow()
  * 
  * 持续处理窗口事件并渲染帧，直到窗口关闭，这是应用程序的渲染循环核心
  */
-void Application::mainLoop()
+void Engine::mainLoop()
 {
     // Application 成员变量（或 main 里的静态变量）：
     using Clock                  = std::chrono::high_resolution_clock;
@@ -262,7 +260,7 @@ void Application::mainLoop()
  * 按照创建的相反顺序销毁所有Vulkan对象，释放资源，防止内存泄漏
  * 这是Vulkan应用程序生命周期管理的重要部分
  */
-void Application::cleanup()
+void Engine::cleanup()
 {
     if (window)
     {

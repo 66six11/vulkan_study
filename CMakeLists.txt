@@ -43,11 +43,11 @@ set(CORE_HEADERS
 # Platform 模块 - 平台相关代码
 set(PLATFORM_SOURCES
         src/platform/main.cpp
-        src/platform/VulkanApp.cpp
+        src/platform/Engine.cpp
 )
 
 set(PLATFORM_HEADERS
-        include/platform/Application.h
+        include/platform/Engine.h
         include/platform/Platform.h
 )
 

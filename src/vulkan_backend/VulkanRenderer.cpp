@@ -20,8 +20,8 @@ VulkanRenderer::~VulkanRenderer()
     // 先销毁依赖 VkDevice 的高层管理器（它们内部会销毁 Buffer/Image/Sampler 等）
     descriptorSetManager_.reset();
     resourceManager_.reset();
-     
-    
+
+
     destroyDeviceAndSurface(); // VkDevice/VkSurfaceKHR
     destroyInstance();         // VkInstance
 }
@@ -447,6 +447,7 @@ void VulkanRenderer::destroySwapchain()
 {
     swapchain_.destroy(); // SwapchainResources 已经负责清理所有关联对象
 }
+
 
 void VulkanRenderer::destroyDeviceAndSurface()
 {

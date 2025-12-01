@@ -44,13 +44,13 @@ class VulkanRenderer : public Renderer
         std::unique_ptr<VulkanDevice> device_;
 
         // 2. 资源管理
-        std::unique_ptr<vkresource::ResourceManager>      resourceManager_;
-        std::unique_ptr<DescriptorSetManager> descriptorSetManager_;
+        std::unique_ptr<vkresource::ResourceManager> resourceManager_;
+        std::unique_ptr<DescriptorSetManager>        descriptorSetManager_;
 
         // Mesh 映射表：Renderer::MeshHandle.id (1-based) -> vkresource::MeshHandle（含 index + generation）
         std::vector<vkresource::MeshHandle> meshTable_;
         std::vector<uint32_t>               freeMeshSlots_;
-        
+
         // 3. 交换链及其相关资源（RAII）
         SwapchainResources swapchain_;
 
