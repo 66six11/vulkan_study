@@ -12,13 +12,15 @@ vulkan_study/
 │   │   ├── Application.h           # 应用程序主类
 │   │   └── Platform.h              # 平台抽象层（GLFW）
 │   ├── renderer/                   # 渲染器抽象接口
-│   │   └── Renderer.h              # 渲染器基类
+│   │   ├── Renderer.h              # 渲染器基类
+│   │   └── Vertex.h                # 顶点数据结构定义
 │   └── vulkan_backend/             # Vulkan 后端实现
 │       ├── VulkanDevice.h          # Vulkan 设备封装
 │       ├── VulkanRenderer.h        # Vulkan 渲染器实现
 │       ├── ResourceManager.h       # GPU 资源管理器
 │       ├── DescriptorSetManager.h  # 描述符集管理器
 │       ├── SwapchainResources.h    # 交换链资源 RAII 封装
+│       ├── VertexInputDescription.h # 顶点输入布局描述
 │       ├── vulkan_init.h           # Vulkan 初始化函数 (vkinit 命名空间)
 │       ├── swapchain_management.h  # 交换链管理函数 (vkswapchain 命名空间)
 │       ├── Rendering.h             # 渲染通道和管线函数 (vkpipeline 命名空间)
@@ -30,15 +32,14 @@ vulkan_study/
 │   ├── platform/                   # 平台模块实现
 │   │   ├── main.cpp                # 程序入口点
 │   │   └── VulkanApp.cpp           # 应用程序实现
-│   ├── renderer/                   # 渲染器模块（预留）
 │   └── vulkan_backend/             # Vulkan 后端实现
 │       ├── VulkanDevice.cpp        # Vulkan 设备实现
 │       ├── VulkanRenderer.cpp      # Vulkan 渲染器实现
 │       ├── ResourceManager.cpp     # GPU 资源管理实现
-│       ├── DescriptorSetManager.cpp# 描述符集管理实现
+│       ├── DescriptorSetManager.cpp  # 描述符集管理实现
 │       ├── SwapchainResources.cpp  # 交换链资源实现
 │       ├── vulkan_init.cpp         # Vulkan 初始化实现
-│       ├── swapchain_management.cpp# 交换链管理实现
+│       ├── swapchain_management.cpp  # 交换链管理实现
 │       ├── Rendering.cpp           # 渲染通道和管线实现
 │       ├── command_buffer_sync.cpp # 命令缓冲和同步实现
 │       └── utils.cpp               # Vulkan 工具函数实现
@@ -49,6 +50,8 @@ vulkan_study/
 │   └── FindVulkan.cmake            # Vulkan 查找模块
 ├── CMakeLists.txt                  # CMake 构建配置
 ├── vcpkg.json                      # vcpkg 依赖配置
+├── PROJECT_PLAN.md                 # 项目规划文档
+├── ProjectStructure.md             # 项目结构文档（本文件）
 └── README.md                       # 项目说明
 ```
 
@@ -63,6 +66,7 @@ vulkan_study/
 | `vkswapchain` | swapchain_management.h/cpp | 交换链和图像视图管理函数 |
 | `vkpipeline` | Rendering.h/cpp | 渲染通道、图形管线、帧缓冲、着色器模块创建函数 |
 | `vkcmd` | command_buffer_sync.h/cpp | 命令池、命令缓冲、信号量、帧绘制函数 |
+| `vkvertex` | VertexInputDescription.h | 顶点输入绑定和属性描述 |
 
 ### 使用示例
 
@@ -85,6 +89,10 @@ vkcmd::createCommandBuffers(device, pool, framebuffers, ...);
 // 查询设备特性
 auto indices = vkutil::findQueueFamilies(device, surface);
 bool suitable = vkutil::isDeviceSuitable(device, surface);
+
+// 获取顶点输入描述
+auto bindingDesc = vkvertex::getBindingDescription();
+auto attrDescs = vkvertex::getAttributeDescriptions();
 ```
 
 ## 模块说明
@@ -105,6 +113,7 @@ bool suitable = vkutil::isDeviceSuitable(device, surface);
 
 渲染器抽象接口，定义与后端无关的渲染 API：
 - **Renderer.h**: 渲染器基类，定义 initialize、resize、beginFrame、renderFrame 等接口
+- **Vertex.h**: 顶点数据结构，包含位置（position）、法线（normal）、UV 坐标和颜色（color）
 
 ### Vulkan Backend 模块 (`include/vulkan_backend/`, `src/vulkan_backend/`)
 
@@ -116,6 +125,7 @@ Vulkan 后端实现，包含所有 Vulkan 相关代码：
 - **ResourceManager**: 统一管理缓冲区、图像、采样器等 GPU 资源
 - **DescriptorSetManager**: 管理描述符池和描述符集分配
 - **SwapchainResources**: RAII 封装交换链及相关资源
+- **VertexInputDescription**: 顶点输入布局描述（vkvertex 命名空间）
 
 #### 工具函数（命名空间）
 - **vkinit**: Vulkan 实例、表面、设备创建
