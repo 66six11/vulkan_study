@@ -214,6 +214,8 @@ jobs:
           fi
           echo "DOC_FILE=${DOC_FILE}" >> $GITHUB_ENV
       - name: Create main documentation file
+        env:
+          DOC_CONTENT: ${{ steps.docs. outputs.result }}
         run: |
           # 确保 DOC_FILE 变量已设置
           if [ -z "$DOC_FILE" ]; then
@@ -222,17 +224,19 @@ jobs:
           fi
           
           # 创建文档文件
-          echo "# Vulkan Project Technical Documentation" > "$DOC_FILE"
+          cat > "$DOC_FILE" << 'HEADER_EOF'
+          # Vulkan Project Technical Documentation
+          HEADER_EOF
+          
           echo "" >> "$DOC_FILE"
           echo "*Generated on $(date)*" >> "$DOC_FILE"
           echo "*Scope: ${{ github.event.inputs.documentation_scope || 'auto-generated' }}*" >> "$DOC_FILE"
-          echo "*Trigger: ${{ github.event_name }}*" >> "$DOC_FILE"
+          echo "*Trigger: ${{ github. event_name }}*" >> "$DOC_FILE"
           echo "" >> "$DOC_FILE"
           
-          # 添加文档内容
-          DOC_CONTENT="${{ steps.docs.outputs.result }}"
+          # 使用环境变量安全地添加文档内容
           if [ -n "$DOC_CONTENT" ]; then
-            echo "$DOC_CONTENT" >> "$DOC_FILE"
+            printf '%s\n' "$DOC_CONTENT" >> "$DOC_FILE"
           else
             echo "⚠️ Error: Documentation content is empty!" >> "$DOC_FILE"
           fi
