@@ -184,10 +184,10 @@ jobs:
             
             ##  Prohibited Content:
             
-            - ❌ do not include preprocessing instructions (such as' # 0 "<stdin>" ')
-            - ❌ do not include iFlow internal state messages
-            - ❌ do not include an execution plan or progress indicator
-            - ❌ do not include blank or unfinished parts
+            - do not include preprocessing instructions (such as' # 0 "<stdin>" ')
+            - do not include iFlow internal state messages
+            - do not include an execution plan or progress indicator
+            - do not include blank or unfinished parts
                       
             Generate documentation appropriate for the selected scope.
           api_key: ${{ secrets.IFLOW_API_KEY }}
