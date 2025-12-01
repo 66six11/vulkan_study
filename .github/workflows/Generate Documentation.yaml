@@ -213,20 +213,33 @@ jobs:
             DOC_FILE="docs/VULKAN_DOCS_AUTO.md"
           fi
           echo "DOC_FILE=${DOC_FILE}" >> $GITHUB_ENV
-      
       - name: Create main documentation file
         run: |
-          echo "# Vulkan Project Technical Documentation" > $DOC_FILE
-          echo "" >> $DOC_FILE
-          echo "*Generated on $(date)*" >> $DOC_FILE
-          echo "*Scope: ${{ github.event.inputs.documentation_scope || 'auto-generated' }}*" >> $DOC_FILE
-          echo "*Trigger: ${{ github.event_name }}*" >> $DOC_FILE
-          echo "" >> $DOC_FILE
-          echo "${{ steps.docs.outputs.result }}" >> $DOC_FILE
+          # 确保 DOC_FILE 变量已设置
+          if [ -z "$DOC_FILE" ]; then
+            echo "Error: DOC_FILE variable not set!" >&2
+            exit 1
+          fi
+          
+          # 创建文档文件
+          echo "# Vulkan Project Technical Documentation" > "$DOC_FILE"
+          echo "" >> "$DOC_FILE"
+          echo "*Generated on $(date)*" >> "$DOC_FILE"
+          echo "*Scope: ${{ github.event.inputs.documentation_scope || 'auto-generated' }}*" >> "$DOC_FILE"
+          echo "*Trigger: ${{ github.event_name }}*" >> "$DOC_FILE"
+          echo "" >> "$DOC_FILE"
+          
+          # 添加文档内容
+          DOC_CONTENT="${{ steps.docs.outputs.result }}"
+          if [ -n "$DOC_CONTENT" ]; then
+            echo "$DOC_CONTENT" >> "$DOC_FILE"
+          else
+            echo "⚠️ Error: Documentation content is empty!" >> "$DOC_FILE"
+          fi
           
           echo "Documentation generated successfully: $DOC_FILE"
-          echo "Total characters: $(wc -c < $DOC_FILE)"
-      
+          echo "Total characters: $(wc -c < "$DOC_FILE")"
+            
       - name: Validate documentation
         run: |
           # 检查文档是否包含关键Vulkan相关内容
