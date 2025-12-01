@@ -41,7 +41,6 @@ jobs:
       
       - name: Setup project context
         run: |
-          # 安装Vulkan相关的开发工具（如果需要）
           sudo apt-get update
           sudo apt-get install -y vulkan-validationlayers vulkan-tools tree
           # 显示项目结构
@@ -86,50 +85,50 @@ jobs:
             
             Generate technical documentation for this Vulkan C++ project.
             
-            ## Documentation Scope: ${{ github.event.inputs.documentation_scope || 'full' }}
-            ${{ github.event.inputs.documentation_scope == 'api-only' && 'Focus primarily on API reference and code-level documentation.' || '' }}
-            ${{ github.event.inputs.documentation_scope == 'architecture-only' && 'Focus on high-level architecture and design patterns.' || '' }}
-            ${{ github.event.inputs.documentation_scope == 'quick-overview' && 'Provide a concise overview focusing on key components.' || '' }}
-            ${{ github.event.inputs.documentation_scope == 'full' && 'Generate comprehensive documentation covering all aspects.' || '' }}
+            ## Documentation Scope: ${{ github.event.inputs.    documentation_scope || 'full' }}
+            ${{ github.event.inputs.    documentation_scope == 'api-only' && 'Focus primarily on API reference and code-level documentation.    ' || '' }}
+            ${{ github.event.inputs.    documentation_scope == 'architecture-only' && 'Focus on high-level architecture and design patterns.    ' || '' }}
+            ${{ github.event.inputs.    documentation_scope == 'quick-overview' && 'Provide a concise overview focusing on key components.    ' || '' }}
+            ${{ github.event.inputs.    documentation_scope == 'full' && 'Generate comprehensive documentation covering all aspects.    ' || '' }}
             
-            ${{ github.event.inputs.include_examples == 'false' && 'Skip code examples and usage guides.' || 'Include detailed code examples and usage guides.' }}
+            ${{ github.event.inputs.    include_examples == 'false' && 'Skip code examples and usage guides.    ' || 'Include detailed code examples and usage guides.    ' }}
             
             ## Documentation Structure:
             
-            ### 1. Project Overview
+            ### 1.     Project Overview
             - High-level architecture description
             - Build system explanation (CMake)
             - Dependencies and external libraries
             
-            ### 2. Vulkan-Specific Documentation
+            ### 2.     Vulkan-Specific Documentation
             - **Initialization Sequence**: VkInstance, VkDevice, swap chain setup
             - **Rendering Pipeline**: Graphics pipeline creation and management
             - **Resource Management**: Buffers, images, descriptor sets
             - **Shader System**: GLSL shaders compilation and usage
             - **Synchronization**: Fences, semaphores, barriers
             
-            ${{ github.event.inputs.documentation_scope != 'quick-overview' && '
-            ### 3. Component Documentation
+            ${{ github.event.inputs.    documentation_scope !    = 'quick-overview' && '
+            ### 3.     Component Documentation
             - For each major class/component:
-              * Purpose and responsibilities
-              * Key methods and their functions
-              * Vulkan resource lifecycle management
-              * Threading considerations (if any)
+            * Purpose and responsibilities
+            * Key methods and their functions
+            * Vulkan resource lifecycle management
+            * Threading considerations (if any)
             
-            ### 4. API Reference
+            ### 4.     API Reference
             - Key public interfaces
             - Important data structures
             - Configuration options
             ' || '' }}
             
-            ${{ github.event.inputs.include_examples == 'true' && github.event.inputs.documentation_scope != 'quick-overview' && '
-            ### 5. Usage Examples
+            ${{ github.event.inputs.    include_examples == 'true' && github.event.inputs.    documentation_scope !    = 'quick-overview' && '
+            ### 5.     Usage Examples
             - Basic setup and initialization
             - Rendering a simple scene
             - Adding new features
             ' || '' }}
             
-            ### 6. Best Practices & Guidelines
+            ### 6.     Best Practices & Guidelines
             - Vulkan validation layer usage
             - Memory management patterns
             - Performance considerations
@@ -140,7 +139,56 @@ jobs:
             - Include actual code snippets from the project
             - Reference specific files and line numbers when relevant
             - Focus on Vulkan-specific patterns and idioms
+            Strict format requirements:
             
+            Only output the final Markdown document content, without any debugging information, preprocessing instructions, or internal states
+            
+            Do not display the execution plan, progress status or any internal iFlow messages
+            
+            Do not include preprocessing instructions like '# 0 "<stdin>"
+            
+            The output must be a complete and readable Markdown document
+            
+            
+            
+            ## Document Generation Rules:
+            
+            A Vulkan C++ project based on analysis, generating structured technical documentation. Key focus:
+            
+            ### 1. Project architecture analysis
+            - Overall code organization structure
+            - Main module and component relationships
+            - System construction and dependency management
+            
+            
+            ### 2. Vulkan Core Implementation
+            - Initialize processes and device management
+            - Rendering pipeline and resource lifecycle
+            - Memory management and synchronization mechanism
+            
+            ### 3. Detailed Component Description
+            For each important class/component, provide:
+            - ** Job Description ** : The main function of this component
+            - ** Core Interface ** : Important public methods
+            - ** Usage Example ** : Typical usage code snippet
+            - ** Precautions ** : Key considerations when in use
+            
+            
+            
+            ### 4. Actual code reference
+            
+            When referencing code:
+            - Use a clear code block format
+            - Indicate the affiliated file and its approximate location
+            - Ensure that the code snippets have practical significance
+            
+            ##  Prohibited Content:
+            
+            - ❌ do not include preprocessing instructions (such as' # 0 "<stdin>" ')
+            - ❌ do not include iFlow internal state messages
+            - ❌ do not include an execution plan or progress indicator
+            - ❌ do not include blank or unfinished parts
+                      
             Generate documentation appropriate for the selected scope.
           api_key: ${{ secrets.IFLOW_API_KEY }}
           model: "qwen3-coder-plus"
