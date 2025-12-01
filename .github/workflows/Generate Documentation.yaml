@@ -107,22 +107,22 @@ jobs:
             - **Shader System**: GLSL shaders compilation and usage
             - **Synchronization**: Fences, semaphores, barriers
             
-            ${{ github.event.inputs.    documentation_scope !    = 'quick-overview' && '
-            ### 3.     Component Documentation
+            ${{ github.event.inputs.documentation_scope != 'quick-overview' && '
+            ### 3. Component Documentation
             - For each major class/component:
-            * Purpose and responsibilities
-            * Key methods and their functions
-            * Vulkan resource lifecycle management
-            * Threading considerations (if any)
+              * Purpose and responsibilities
+              * Key methods and their functions
+              * Vulkan resource lifecycle management
+              * Threading considerations (if any)
             
-            ### 4.     API Reference
+            ### 4. API Reference
             - Key public interfaces
             - Important data structures
             - Configuration options
             ' || '' }}
             
-            ${{ github.event.inputs.    include_examples == 'true' && github.event.inputs.    documentation_scope !    = 'quick-overview' && '
-            ### 5.     Usage Examples
+            ${{ github.event.inputs.include_examples == 'true' && github.event.inputs.documentation_scope != 'quick-overview' && '
+            ### 5. Usage Examples
             - Basic setup and initialization
             - Rendering a simple scene
             - Adding new features
