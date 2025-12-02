@@ -55,11 +55,11 @@ namespace
                 vtx.normal   = n;               // 填法线
                 vtx.uv       = glm::vec2(u, v); // UV 简单映射
                 vtx.color    = glm::vec4(       // 给一个明显的渐变颜色
-                                      0.3f + 0.7f * u,
-                                      0.3f + 0.7f * v,
-                                      1.0f,
-                                      1.0f
-                                     );
+                                         0.3f + 0.7f * u,
+                                         0.3f + 0.7f * v,
+                                         1.0f,
+                                         1.0f
+                                        );
 
                 data.vertices.push_back(vtx);
             }
@@ -137,10 +137,10 @@ void Engine::run()
         // 用内部函数生成球的顶点/索引，并交给 Renderer 创建 GPU mesh
         auto sphereData = generateTriangleMesh();
         sphereMesh_     = renderer_->createMesh(
-                                            sphereData.vertices.data(),
-                                            sphereData.vertices.size(),
-                                            sphereData.indices.data(),
-                                            sphereData.indices.size());
+                                                sphereData.vertices.data(),
+                                                sphereData.vertices.size(),
+                                                sphereData.indices.data(),
+                                                sphereData.indices.size());
 
         sphereRenderable_.mesh     = sphereMesh_;
         sphereRenderable_.material = {}; // 现在暂时没用材质

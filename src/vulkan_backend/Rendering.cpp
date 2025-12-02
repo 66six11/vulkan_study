@@ -114,7 +114,7 @@ namespace vkpipeline
 
         VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
 
-        // 1. 顶点输入状态
+        // 顶点输入状态
         VkVertexInputBindingDescription      bindingDesc = vkvertex::getBindingDescription();
         auto                                 attrDescs   = vkvertex::getAttributeDescriptions();
         VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
@@ -123,81 +123,83 @@ namespace vkpipeline
         vertexInputInfo.pVertexBindingDescriptions      = &bindingDesc;
         vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attrDescs.size());
         vertexInputInfo.pVertexAttributeDescriptions    = attrDescs.data();
-
+        // 输入装配状态
         VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
-        inputAssembly.sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-        inputAssembly.topology               = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-        inputAssembly.primitiveRestartEnable = VK_FALSE;
-
+        inputAssembly.sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO; // 输入装配状态
+        inputAssembly.topology               = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;                         // 三角形列表
+        inputAssembly.primitiveRestartEnable = VK_FALSE;                                                    // 不启用基元重启
+        // 视口和裁剪状态
         VkPipelineViewportStateCreateInfo viewportState{};
-        viewportState.sType         = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-        viewportState.viewportCount = 1;
-        viewportState.pViewports    = nullptr;
-        viewportState.scissorCount  = 1;
-        viewportState.pScissors     = nullptr;
-
+        viewportState.sType         = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO; // 视口和裁剪状态
+        viewportState.viewportCount = 1;                                                     // 一个视口
+        viewportState.pViewports    = nullptr;                                               // 使用动态视口
+        viewportState.scissorCount  = 1;                                                     // 一个裁剪矩形
+        viewportState.pScissors     = nullptr;                                               // 使用动态裁剪矩形
+        //  光栅化状态
         VkPipelineRasterizationStateCreateInfo rasterizer{};
-        rasterizer.sType                   = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-        rasterizer.depthClampEnable        = VK_FALSE;
-        rasterizer.rasterizerDiscardEnable = VK_FALSE;
-        rasterizer.polygonMode             = VK_POLYGON_MODE_FILL;
-        rasterizer.lineWidth               = 1.0f;
-        rasterizer.cullMode                = VK_CULL_MODE_BACK_BIT;
-        rasterizer.frontFace               = VK_FRONT_FACE_CLOCKWISE;
-        rasterizer.depthBiasEnable         = VK_FALSE;
+        rasterizer.sType                   = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO; // 光栅化状态
+        rasterizer.depthClampEnable        = VK_FALSE;                                                   // 不启用深度裁剪
+        rasterizer.rasterizerDiscardEnable = VK_FALSE;                                                   // 不丢弃几何体
+        rasterizer.polygonMode             = VK_POLYGON_MODE_FILL;                                       // 填充多边形
+        rasterizer.lineWidth               = 1.0f;                                                       // 线宽
+        rasterizer.cullMode                = VK_CULL_MODE_BACK_BIT;                                      // 背面剔除
+        rasterizer.frontFace               = VK_FRONT_FACE_CLOCKWISE;                                    // 顺时针为前面
+        rasterizer.depthBiasEnable         = VK_FALSE;                                                   // 不启用深度偏移
 
+        // 多重采样状态
         VkPipelineMultisampleStateCreateInfo multisampling{};
         multisampling.sType                = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
         multisampling.sampleShadingEnable  = VK_FALSE;
         multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
+        // 颜色混合状态
         VkPipelineColorBlendAttachmentState colorBlendAttachment{};
-        colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-                                              VK_COLOR_COMPONENT_B_BIT
-                                              | VK_COLOR_COMPONENT_A_BIT;
-        colorBlendAttachment.blendEnable = VK_FALSE;
-
+        colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
+                                              VK_COLOR_COMPONENT_G_BIT |
+                                              VK_COLOR_COMPONENT_B_BIT |
+                                              VK_COLOR_COMPONENT_A_BIT; // 写入所有颜色通道
+        colorBlendAttachment.blendEnable = VK_FALSE;                    // 不启用混合
+        // 整体颜色混合状态
         VkPipelineColorBlendStateCreateInfo colorBlending{};
-        colorBlending.sType             = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-        colorBlending.logicOpEnable     = VK_FALSE;
-        colorBlending.logicOp           = VK_LOGIC_OP_COPY;
-        colorBlending.attachmentCount   = 1;
-        colorBlending.pAttachments      = &colorBlendAttachment;
-        colorBlending.blendConstants[0] = 0.0f;
-        colorBlending.blendConstants[1] = 0.0f;
-        colorBlending.blendConstants[2] = 0.0f;
-        colorBlending.blendConstants[3] = 0.0f;
-
+        colorBlending.sType             = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO; // 颜色混合状态
+        colorBlending.logicOpEnable     = VK_FALSE;                                                 // 不启用逻辑操作
+        colorBlending.logicOp           = VK_LOGIC_OP_COPY;                                         // 逻辑操作（未启用时忽略）
+        colorBlending.attachmentCount   = 1;                                                        // 一个颜色附件
+        colorBlending.pAttachments      = &colorBlendAttachment;                                    // 颜色混合附件
+        colorBlending.blendConstants[0] = 0.0f;                                                     // 混合常量
+        colorBlending.blendConstants[1] = 0.0f;                                                     // 混合常量
+        colorBlending.blendConstants[2] = 0.0f;                                                     // 混合常量
+        colorBlending.blendConstants[3] = 0.0f;                                                     // 混合常量
+        // 管线布局
         VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-        pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutInfo.setLayoutCount         = 0;
-        pipelineLayoutInfo.pushConstantRangeCount = 0;
+        pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO; // 管线布局
+        pipelineLayoutInfo.setLayoutCount         = 0;                                             // 不使用描述符集布局
+        pipelineLayoutInfo.pushConstantRangeCount = 0;                                             // 不使用推送常量
 
         if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS)
         {
             throw std::runtime_error("failed to create pipeline layout!");
         }
-
+        // 动态状态配置
         VkPipelineDynamicStateCreateInfo dynamicState{};
-        dynamicState.sType             = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-        dynamicState.dynamicStateCount = static_cast<uint32_t>(kDynamicStates.size());
-        dynamicState.pDynamicStates    = kDynamicStates.data();
-
+        dynamicState.sType             = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO; // 动态状态配置
+        dynamicState.dynamicStateCount = static_cast<uint32_t>(kDynamicStates.size());         // 动态状态数量
+        dynamicState.pDynamicStates    = kDynamicStates.data();                                // 动态状态数组
+        // 最终管线创建信息
         VkGraphicsPipelineCreateInfo pipelineInfo{};
-        pipelineInfo.sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-        pipelineInfo.stageCount          = 2;
-        pipelineInfo.pStages             = shaderStages;
-        pipelineInfo.pVertexInputState   = &vertexInputInfo;
-        pipelineInfo.pInputAssemblyState = &inputAssembly;
-        pipelineInfo.pViewportState      = &viewportState;
-        pipelineInfo.pRasterizationState = &rasterizer;
-        pipelineInfo.pMultisampleState   = &multisampling;
-        pipelineInfo.pColorBlendState    = &colorBlending;
-        pipelineInfo.layout              = pipelineLayout;
-        pipelineInfo.renderPass          = renderPass;
-        pipelineInfo.subpass             = 0;
-        pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;
-        pipelineInfo.pDynamicState       = &dynamicState;
+        pipelineInfo.sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO; // 图形管线创建信息
+        pipelineInfo.stageCount          = 2;                                               // 着色器阶段数量
+        pipelineInfo.pStages             = shaderStages;                                    // 着色器阶段数组
+        pipelineInfo.pVertexInputState   = &vertexInputInfo;                                // 顶点输入状态
+        pipelineInfo.pInputAssemblyState = &inputAssembly;                                  // 输入装配状态
+        pipelineInfo.pViewportState      = &viewportState;                                  // 视口状态
+        pipelineInfo.pRasterizationState = &rasterizer;                                     // 光栅化状态
+        pipelineInfo.pMultisampleState   = &multisampling;                                  // 多重采样状态
+        pipelineInfo.pColorBlendState    = &colorBlending;                                  // 颜色混合状态
+        pipelineInfo.layout              = pipelineLayout;                                  // 管线布局
+        pipelineInfo.renderPass          = renderPass;                                      // 渲染通道
+        pipelineInfo.subpass             = 0;                                               // 子通道索引
+        pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;                                  // 不使用派生管线
+        pipelineInfo.pDynamicState       = &dynamicState;                                   // 动态状态信息
 
 
         if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) !=
