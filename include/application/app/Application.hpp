@@ -11,6 +11,12 @@ namespace vulkan_engine::platform
     class InputManager;
 }
 
+namespace vulkan_engine::vulkan
+{
+    class DeviceManager;
+    class SwapChain;
+}
+
 namespace vulkan_engine::application
 {
     // Forward declarations
@@ -118,6 +124,8 @@ namespace vulkan_engine::application
             std::shared_ptr<platform::Window>       window() const { return window_; }
             std::shared_ptr<Renderer>               renderer() const { return renderer_; }
             std::shared_ptr<platform::InputManager> input_manager() const { return input_manager_; }
+            std::shared_ptr<vulkan::DeviceManager>  device_manager() const { return device_manager_; }
+            std::shared_ptr<vulkan::SwapChain>      swap_chain() const { return swap_chain_; }
 
             const ApplicationConfig& config() const { return config_; }
             bool                     running() const { return running_; }
@@ -130,6 +138,8 @@ namespace vulkan_engine::application
             std::shared_ptr<platform::Window>       window_;
             std::shared_ptr<Renderer>               renderer_;
             std::shared_ptr<platform::InputManager> input_manager_;
+            std::shared_ptr<vulkan::DeviceManager>  device_manager_;
+            std::shared_ptr<vulkan::SwapChain>      swap_chain_;
             bool                                    running_ = false;
 
             // Timing
