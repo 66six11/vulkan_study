@@ -1,9 +1,19 @@
 // Triangle Shader - Slang
 // Compiles to SPIR-V for Vulkan
 
+// Uniform buffer with MVP matrix
+struct UniformBufferObject
+{
+    float4x4 mvp;
+};
+
+[[vk::binding(0, 0)]]
+ConstantBuffer<UniformBufferObject> ubo;
+
+// Vertex input/output
 struct VertexInput
 {
-    float2 position : POSITION;
+    float3 position : POSITION;
     float3 color : COLOR;
 };
 
@@ -18,7 +28,7 @@ struct VertexOutput
 VertexOutput vertexMain(VertexInput input)
 {
     VertexOutput output;
-    output.position = float4(input.position, 0.0, 1.0);
+    output.position = mul(ubo.mvp, float4(input.position, 1.0));
     output.color = input.color;
     return output;
 }

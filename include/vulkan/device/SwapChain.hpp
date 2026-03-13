@@ -96,6 +96,9 @@ namespace vulkan_engine::vulkan
             // Create default render pass for this swap chain
             bool create_default_render_pass();
 
+            // Create render pass with depth attachment
+            bool create_render_pass_with_depth(VkFormat depth_format);
+
             // Get present queue family index
             uint32_t present_queue_family() const { return present_queue_family_; }
 

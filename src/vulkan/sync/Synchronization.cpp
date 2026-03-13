@@ -302,18 +302,25 @@ namespace vulkan_engine::vulkan
     }
 
     // FrameSyncManager implementation
-    FrameSyncManager::FrameSyncManager(std::shared_ptr<DeviceManager> device, uint32_t frame_count)
+    FrameSyncManager::FrameSyncManager(std::shared_ptr<DeviceManager> device, uint32_t frame_count, uint32_t image_count)
         : device_(std::move(device))
         , frame_count_(frame_count)
+        , image_count_(image_count > 0 ? image_count : frame_count)
     {
+        // Fences and acquire semaphores - per frame
         fences_.reserve(frame_count);
         image_available_semaphores_.reserve(frame_count);
-        render_finished_semaphores_.reserve(frame_count);
 
         for (uint32_t i = 0; i < frame_count; ++i)
         {
             fences_.push_back(std::make_unique < Fence > (device_, true)); // Start signaled
             image_available_semaphores_.push_back(std::make_unique < Semaphore > (device_));
+        }
+
+        // Render finished semaphores - per image to avoid reuse conflicts
+        render_finished_semaphores_.reserve(image_count_);
+        for (uint32_t i = 0; i < image_count_; ++i)
+        {
             render_finished_semaphores_.push_back(std::make_unique < Semaphore > (device_));
         }
     }

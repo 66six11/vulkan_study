@@ -168,21 +168,29 @@ namespace vulkan_engine::vulkan
         VkRenderPass                    render_pass,
         const std::vector<VkImageView>& image_views,
         uint32_t                        width,
-        uint32_t                        height)
+        uint32_t                        height,
+        VkImageView                     depth_view)
     {
         clear();
 
         framebuffers_.reserve(image_views.size());
         for (auto image_view : image_views)
         {
+            std::vector<VkImageView> attachments;
+            attachments.push_back(image_view);
+            if (depth_view != VK_NULL_HANDLE)
+            {
+                attachments.push_back(depth_view);
+            }
+
             framebuffers_.push_back(
                                     std::make_unique < Framebuffer > (
-                                        device_,
-                                        render_pass,
-                                        std::vector<VkImageView>{image_view},
-                                        width,
-                                        height,
-                                        1));
+                                                                      device_,
+                                                                      render_pass,
+                                                                      attachments,
+                                                                      width,
+                                                                      height,
+                                                                      1));
         }
     }
 

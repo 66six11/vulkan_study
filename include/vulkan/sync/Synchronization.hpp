@@ -120,10 +120,11 @@ namespace vulkan_engine::vulkan
     };
 
     // Frame synchronization manager for double/triple buffering
+    // Uses per-image semaphores to avoid semaphore reuse conflicts
     class FrameSyncManager
     {
         public:
-            FrameSyncManager(std::shared_ptr<DeviceManager> device, uint32_t frame_count);
+            FrameSyncManager(std::shared_ptr<DeviceManager> device, uint32_t frame_count, uint32_t image_count = 0);
             ~FrameSyncManager() = default;
 
             // Non-copyable
@@ -135,12 +136,15 @@ namespace vulkan_engine::vulkan
             void     next_frame() { current_frame_ = (current_frame_ + 1) % frame_count_; }
 
             // Per-frame sync objects
-            Fence&     get_fence(uint32_t frame) { return *fences_[frame]; }
-            Fence&     get_current_fence() { return *fences_[current_frame_]; }
+            Fence& get_fence(uint32_t frame) { return *fences_[frame]; }
+            Fence& get_current_fence() { return *fences_[current_frame_]; }
+
+            // Image available semaphore - per frame (for acquire)
             Semaphore& get_image_available_semaphore(uint32_t frame) { return *image_available_semaphores_[frame]; }
             Semaphore& get_current_image_available_semaphore() { return *image_available_semaphores_[current_frame_]; }
-            Semaphore& get_render_finished_semaphore(uint32_t frame) { return *render_finished_semaphores_[frame]; }
-            Semaphore& get_current_render_finished_semaphore() { return *render_finished_semaphores_[current_frame_]; }
+
+            // Render finished semaphore - per image (for present) to avoid reuse conflicts
+            Semaphore& get_render_finished_semaphore(uint32_t image_index) { return *render_finished_semaphores_[image_index]; }
 
             // Convenience methods
             void wait_for_current_frame_fence(uint64_t timeout = UINT64_MAX)
@@ -156,10 +160,12 @@ namespace vulkan_engine::vulkan
             }
 
             uint32_t frame_count() const { return frame_count_; }
+            uint32_t image_count() const { return image_count_; }
 
         private:
             std::shared_ptr<DeviceManager>          device_;
             uint32_t                                frame_count_;
+            uint32_t                                image_count_;
             uint32_t                                current_frame_ = 0;
             std::vector<std::unique_ptr<Fence>>     fences_;
             std::vector<std::unique_ptr<Semaphore>> image_available_semaphores_;

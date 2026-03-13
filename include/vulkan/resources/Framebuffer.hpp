@@ -1,9 +1,9 @@
 #pragma once
 
-#include "vulkan/device/Device.hpp"
-#include <vulkan/vulkan.h>
-#include <vector>
 #include <memory>
+#include <vector>
+#include <vulkan/vulkan.h>
+#include "vulkan/device/Device.hpp"
 
 namespace vulkan_engine::vulkan
 {
@@ -111,7 +111,8 @@ namespace vulkan_engine::vulkan
                 VkRenderPass                    render_pass,
                 const std::vector<VkImageView>& image_views,
                 uint32_t                        width,
-                uint32_t                        height);
+                uint32_t                        height,
+                VkImageView                     depth_view = VK_NULL_HANDLE);
 
             // Get framebuffer for specific image index
             Framebuffer* get_framebuffer(uint32_t index);
