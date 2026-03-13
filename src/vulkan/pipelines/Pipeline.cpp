@@ -1,4 +1,6 @@
 ﻿#include "vulkan/pipelines/Pipeline.hpp"
+#include "vulkan/pipelines/ShaderModule.hpp"
+#include "vulkan/utils/VulkanError.hpp"
 #include <fstream>
 #include <stdexcept>
 
@@ -18,43 +20,90 @@ namespace vulkan_engine::vulkan
         layout_info.pushConstantRangeCount = static_cast<uint32_t>(push_constants.size());
         layout_info.pPushConstantRanges    = push_constants.data();
 
-        if (vkCreatePipelineLayout(device_->device(), &layout_info, nullptr, &layout_) != VK_SUCCESS)
+        VkResult result = vkCreatePipelineLayout(device_->device(), &layout_info, nullptr, &layout_);
+        if (result != VK_SUCCESS)
         {
-            throw std::runtime_error("Failed to create pipeline layout");
+            throw VulkanError(result, "Failed to create pipeline layout", __FILE__, __LINE__);
         }
     }
 
     PipelineLayout::~PipelineLayout()
     {
-        if (layout_ != VK_NULL_HANDLE)
+        if (layout_ != VK_NULL_HANDLE && device_)
         {
             vkDestroyPipelineLayout(device_->device(), layout_, nullptr);
         }
+    }
+
+    PipelineLayout::PipelineLayout(PipelineLayout&& other) noexcept
+        : device_(std::move(other.device_))
+        , layout_(other.layout_)
+    {
+        other.layout_ = VK_NULL_HANDLE;
+    }
+
+    PipelineLayout& PipelineLayout::operator=(PipelineLayout&& other) noexcept
+    {
+        if (this != &other)
+        {
+            if (layout_ != VK_NULL_HANDLE && device_)
+            {
+                vkDestroyPipelineLayout(device_->device(), layout_, nullptr);
+            }
+
+            device_       = std::move(other.device_);
+            layout_       = other.layout_;
+            other.layout_ = VK_NULL_HANDLE;
+        }
+        return *this;
     }
 
     // GraphicsPipeline implementation
     GraphicsPipeline::GraphicsPipeline(std::shared_ptr<DeviceManager> device, const GraphicsPipelineConfig& config)
         : device_(std::move(device))
     {
-        // Load shaders
-        auto vert_shader = load_shader_module(config.vertex_shader_path);
-        auto frag_shader = load_shader_module(config.fragment_shader_path);
-
+        // Load shaders using ShaderModule (RAII)
+        std::vector<ShaderModule>                    shader_modules;
         std::vector<VkPipelineShaderStageCreateInfo> shader_stages;
 
-        VkPipelineShaderStageCreateInfo vert_stage{};
-        vert_stage.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        vert_stage.stage  = VK_SHADER_STAGE_VERTEX_BIT;
-        vert_stage.module = vert_shader;
-        vert_stage.pName  = "main";
-        shader_stages.push_back(vert_stage);
+        // Vertex shader
+        if (!config.vertex_shader_path.empty())
+        {
+            shader_modules.emplace_back(device_, config.vertex_shader_path);
 
-        VkPipelineShaderStageCreateInfo frag_stage{};
-        frag_stage.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        frag_stage.stage  = VK_SHADER_STAGE_FRAGMENT_BIT;
-        frag_stage.module = frag_shader;
-        frag_stage.pName  = "main";
-        shader_stages.push_back(frag_stage);
+            VkPipelineShaderStageCreateInfo vert_stage{};
+            vert_stage.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+            vert_stage.stage  = VK_SHADER_STAGE_VERTEX_BIT;
+            vert_stage.module = shader_modules.back().handle();
+            vert_stage.pName  = "main";
+            shader_stages.push_back(vert_stage);
+        }
+
+        // Fragment shader
+        if (!config.fragment_shader_path.empty())
+        {
+            shader_modules.emplace_back(device_, config.fragment_shader_path);
+
+            VkPipelineShaderStageCreateInfo frag_stage{};
+            frag_stage.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+            frag_stage.stage  = VK_SHADER_STAGE_FRAGMENT_BIT;
+            frag_stage.module = shader_modules.back().handle();
+            frag_stage.pName  = "main";
+            shader_stages.push_back(frag_stage);
+        }
+
+        // Geometry shader (optional)
+        if (!config.geometry_shader_path.empty())
+        {
+            shader_modules.emplace_back(device_, config.geometry_shader_path);
+
+            VkPipelineShaderStageCreateInfo geom_stage{};
+            geom_stage.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+            geom_stage.stage  = VK_SHADER_STAGE_GEOMETRY_BIT;
+            geom_stage.module = shader_modules.back().handle();
+            geom_stage.pName  = "main";
+            shader_stages.push_back(geom_stage);
+        }
 
         // Vertex input
         VkPipelineVertexInputStateCreateInfo vertex_input{};
@@ -161,54 +210,52 @@ namespace vulkan_engine::vulkan
         pipeline_info.subpass             = config.subpass;
         pipeline_info.basePipelineHandle  = VK_NULL_HANDLE;
 
-        if (vkCreateGraphicsPipelines(device_->device(), VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &pipeline_) !=
-            VK_SUCCESS)
+        VkResult result = vkCreateGraphicsPipelines(device_->device(), VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &pipeline_);
+        if (result != VK_SUCCESS)
         {
-            throw std::runtime_error("Failed to create graphics pipeline");
+            throw VulkanError(result, "Failed to create graphics pipeline", __FILE__, __LINE__);
         }
 
-        // Cleanup shader modules
-        vkDestroyShaderModule(device_->device(), vert_shader, nullptr);
-        vkDestroyShaderModule(device_->device(), frag_shader, nullptr);
+        // Shader modules are automatically cleaned up by ShaderModule RAII
+        // when shader_modules vector goes out of scope
     }
 
     GraphicsPipeline::~GraphicsPipeline()
     {
-        if (pipeline_ != VK_NULL_HANDLE)
+        if (pipeline_ != VK_NULL_HANDLE && device_)
         {
             vkDestroyPipeline(device_->device(), pipeline_, nullptr);
         }
     }
 
-    VkShaderModule GraphicsPipeline::load_shader_module(const std::string& path)
+    GraphicsPipeline::GraphicsPipeline(GraphicsPipeline&& other) noexcept
+        : device_(std::move(other.device_))
+        , pipeline_(other.pipeline_)
+        , layout_(other.layout_)
+        , owned_layout_(std::move(other.owned_layout_))
     {
-        // Read SPIR-V bytecode
-        std::ifstream file(path, std::ios::binary | std::ios::ate);
-        if (!file.is_open())
+        other.pipeline_ = VK_NULL_HANDLE;
+        other.layout_   = VK_NULL_HANDLE;
+    }
+
+    GraphicsPipeline& GraphicsPipeline::operator=(GraphicsPipeline&& other) noexcept
+    {
+        if (this != &other)
         {
-            // Return a dummy module for now (placeholder)
-            return VK_NULL_HANDLE;
+            if (pipeline_ != VK_NULL_HANDLE && device_)
+            {
+                vkDestroyPipeline(device_->device(), pipeline_, nullptr);
+            }
+
+            device_       = std::move(other.device_);
+            pipeline_     = other.pipeline_;
+            layout_       = other.layout_;
+            owned_layout_ = std::move(other.owned_layout_);
+
+            other.pipeline_ = VK_NULL_HANDLE;
+            other.layout_   = VK_NULL_HANDLE;
         }
-
-        auto                  file_size = static_cast<size_t>(file.tellg());
-        std::vector<uint32_t> buffer(file_size / sizeof(uint32_t));
-
-        file.seekg(0);
-        file.read(reinterpret_cast<char*>(buffer.data()), file_size);
-        file.close();
-
-        VkShaderModuleCreateInfo create_info{};
-        create_info.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        create_info.codeSize = file_size;
-        create_info.pCode    = buffer.data();
-
-        VkShaderModule module;
-        if (vkCreateShaderModule(device_->device(), &create_info, nullptr, &module) != VK_SUCCESS)
-        {
-            throw std::runtime_error("Failed to create shader module");
-        }
-
-        return module;
+        return *this;
     }
 
     void GraphicsPipeline::bind(VkCommandBuffer cmd)
@@ -245,9 +292,10 @@ namespace vulkan_engine::vulkan
         VkPipelineCacheCreateInfo cache_info{};
         cache_info.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
 
-        if (vkCreatePipelineCache(device_->device(), &cache_info, nullptr, &cache_) != VK_SUCCESS)
+        VkResult result = vkCreatePipelineCache(device_->device(), &cache_info, nullptr, &cache_);
+        if (result != VK_SUCCESS)
         {
-            throw std::runtime_error("Failed to create pipeline cache");
+            throw VulkanError(result, "Failed to create pipeline cache", __FILE__, __LINE__);
         }
     }
 
@@ -273,5 +321,54 @@ namespace vulkan_engine::vulkan
     void PipelineCache::merge(const std::vector<VkPipelineCache>& caches)
     {
         vkMergePipelineCaches(device_->device(), cache_, static_cast<uint32_t>(caches.size()), caches.data());
+    }
+
+    void PipelineCache::save_to_file(const std::string& path)
+    {
+        auto data = get_data();
+
+        std::ofstream file(path, std::ios::binary);
+        if (!file.is_open())
+        {
+            throw std::runtime_error("Failed to open pipeline cache file for writing: " + path);
+        }
+
+        file.write(reinterpret_cast<const char*>(data.data()), data.size());
+        file.close();
+    }
+
+    void PipelineCache::load_from_file(const std::string& path)
+    {
+        std::ifstream file(path, std::ios::binary | std::ios::ate);
+        if (!file.is_open())
+        {
+            // File doesn't exist, that's okay - cache will be empty
+            return;
+        }
+
+        auto                 file_size = static_cast<size_t>(file.tellg());
+        std::vector<uint8_t> data(file_size);
+
+        file.seekg(0);
+        file.read(reinterpret_cast<char*>(data.data()), file_size);
+        file.close();
+
+        // Destroy old cache
+        if (cache_ != VK_NULL_HANDLE)
+        {
+            vkDestroyPipelineCache(device_->device(), cache_, nullptr);
+        }
+
+        // Create new cache with initial data
+        VkPipelineCacheCreateInfo cache_info{};
+        cache_info.sType           = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+        cache_info.initialDataSize = data.size();
+        cache_info.pInitialData    = data.data();
+
+        VkResult result = vkCreatePipelineCache(device_->device(), &cache_info, nullptr, &cache_);
+        if (result != VK_SUCCESS)
+        {
+            throw VulkanError(result, "Failed to create pipeline cache from file", __FILE__, __LINE__);
+        }
     }
 } // namespace vulkan_engine::vulkan
