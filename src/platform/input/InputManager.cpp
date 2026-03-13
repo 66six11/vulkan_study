@@ -44,7 +44,7 @@ namespace vulkan_engine::platform
 
         // Set up key callback
         glfwSetKeyCallback(glfw_window,
-                           [](GLFWwindow* window, int key, int scancode, int action, int mods)
+                           [](GLFWwindow* window, int key, int /*scancode*/, int action, int /*mods*/)
                            {
                                auto* self = static_cast<InputManager*>(glfwGetWindowUserPointer(window));
                                if (self && self->impl_->key_callback)
@@ -61,7 +61,7 @@ namespace vulkan_engine::platform
 
         // Set up mouse button callback
         glfwSetMouseButtonCallback(glfw_window,
-                                   [](GLFWwindow* window, int button, int action, int mods)
+                                   [](GLFWwindow* window, int button, int action, int /*mods*/)
                                    {
                                        auto* self = static_cast<InputManager*>(glfwGetWindowUserPointer(window));
                                        if (self && self->impl_->mouse_button_callback)

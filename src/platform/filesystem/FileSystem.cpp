@@ -154,10 +154,14 @@ namespace vulkan_engine::filesystem
     std::filesystem::path FileSystem::get_user_directory()
     {
         #ifdef _WIN32
-        const char* user_profile = std::getenv("USERPROFILE");
+        char* user_profile = nullptr;
+        size_t len = 0;
+        _dupenv_s(&user_profile, &len, "USERPROFILE");
         if (user_profile)
         {
-            return std::filesystem::path(user_profile);
+            std::filesystem::path path(user_profile);
+            free(user_profile);
+            return path;
         }
         return get_working_directory();
         #else

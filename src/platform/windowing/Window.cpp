@@ -169,7 +169,7 @@ namespace vulkan_engine::platform
         return glfwGetWindowMonitor(impl_->handle) != nullptr;
     }
 
-    void Window::set_vsync(bool enabled)
+    void Window::set_vsync(bool /*enabled*/)
     {
         // VSync is handled by the swap chain, not GLFW directly
         // This is a placeholder for when swap chain is implemented

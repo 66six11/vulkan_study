@@ -94,21 +94,23 @@ namespace vulkan_engine::rendering
         return impl_->is_loaded;
     }
 
-    void Scene::update(float delta_time)
+    void Scene::update(float /*delta_time*/)
     {
         // Update all entities
         for (auto& entity : impl_->entities)
         {
             // Update entity components
+            (void)entity;
         }
     }
 
-    void Scene::render(RenderContext& context)
+    void Scene::render(RenderContext& /*context*/)
     {
         // Render all visible entities
         for (auto& entity : impl_->entities)
         {
             // Render entity
+            (void)entity;
         }
     }
 
@@ -164,6 +166,7 @@ namespace vulkan_engine::rendering
         {
             // Check intersection with entity bounds
             // This is a placeholder - actual implementation would check mesh intersection
+            (void)entity;
         }
 
         return result;

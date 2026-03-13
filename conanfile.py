@@ -1,4 +1,4 @@
-﻿from conan import ConanFile
+from conan import ConanFile
 from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout
 from conan.tools.build import check_min_cppstd
 
@@ -62,6 +62,7 @@ class VulkanEngineConan(ConanFile):
         check_min_cppstd(self, "20")
     
     def generate(self):
+        # Generate CMake toolchain
         tc = CMakeToolchain(self)
         # Configure CMake options
         tc.variables["VULKAN_ENGINE_USE_RENDER_GRAPH"] = self.options.with_render_graph
@@ -70,6 +71,11 @@ class VulkanEngineConan(ConanFile):
         tc.variables["VULKAN_ENGINE_BUILD_TESTS"] = False
         tc.variables["VULKAN_ENGINE_BUILD_EXAMPLES"] = True
         tc.generate()
+        
+        # Generate CMake find modules for dependencies
+        from conan.tools.cmake import CMakeDeps
+        deps = CMakeDeps(self)
+        deps.generate()
     
     def build(self):
         cmake = CMake(self)

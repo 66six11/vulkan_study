@@ -99,22 +99,22 @@ namespace vulkan_engine::application
         // if (renderer_) { renderer_->on_resize(event.width, event.height); }
     }
 
-    void ApplicationBase::on_key(const KeyEvent& event)
+    void ApplicationBase::on_key(const KeyEvent& /*event*/)
     {
         // Forward to input manager if available
     }
 
-    void ApplicationBase::on_mouse_button(const MouseButtonEvent& event)
+    void ApplicationBase::on_mouse_button(const MouseButtonEvent& /*event*/)
     {
         // Forward to input manager if available
     }
 
-    void ApplicationBase::on_mouse_move(const MouseMoveEvent& event)
+    void ApplicationBase::on_mouse_move(const MouseMoveEvent& /*event*/)
     {
         // Forward to input manager if available
     }
 
-    void ApplicationBase::on_scroll(const ScrollEvent& event)
+    void ApplicationBase::on_scroll(const ScrollEvent& /*event*/)
     {
         // Forward to input manager if available
     }

@@ -48,7 +48,7 @@ class TriangleApplication : public application::ApplicationBase
         }
 };
 
-int main(int argc, char* argv[])
+int main(int /*argc*/, char* /*argv*/[])
 {
     try
     {

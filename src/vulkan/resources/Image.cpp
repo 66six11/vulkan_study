@@ -115,12 +115,12 @@ namespace vulkan_engine::vulkan
         // Placeholder: Mipmap generation would be done via command buffer
     }
 
-    void Image::upload_data(const void* data, VkDeviceSize size)
+    void Image::upload_data(const void* /*data*/, VkDeviceSize /*size*/)
     {
         // Placeholder: Image upload would use staging buffer and command buffer
     }
 
-    void Image::download_data(void* data, VkDeviceSize size)
+    void Image::download_data(void* /*data*/, VkDeviceSize /*size*/)
     {
         // Placeholder: Image download would use staging buffer and command buffer
     }

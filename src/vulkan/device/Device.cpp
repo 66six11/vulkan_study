@@ -53,8 +53,8 @@ namespace vulkan_engine::vulkan
         if (create_info_.enable_validation && create_info_.enable_debug_utils)
         {
             auto vkDestroyDebugUtilsMessengerEXT = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
-             instance_,
-             "vkDestroyDebugUtilsMessengerEXT");
+                 instance_,
+                 "vkDestroyDebugUtilsMessengerEXT");
             if (vkDestroyDebugUtilsMessengerEXT && debug_messenger_ != VK_NULL_HANDLE)
             {
                 vkDestroyDebugUtilsMessengerEXT(instance_, debug_messenger_, nullptr);
@@ -74,7 +74,7 @@ namespace vulkan_engine::vulkan
         }
     }
 
-    bool DeviceManager::supports_feature(const DeviceFeatures& required) const
+    bool DeviceManager::supports_feature(const DeviceFeatures& /*required*/) const
     {
         // Check if all required features are supported
         return true; // Placeholder
@@ -160,7 +160,7 @@ namespace vulkan_engine::vulkan
 
         for (auto device : devices)
         {
-            int64_t score = score_device(device);
+            uint64_t score = static_cast<uint64_t>(score_device(device));
             if (score > best_score)
             {
                 best_score  = score;
@@ -323,8 +323,8 @@ namespace vulkan_engine::vulkan
         create_info.pfnUserCallback = debug_callback;
 
         auto vkCreateDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
-         instance_,
-         "vkCreateDebugUtilsMessengerEXT");
+             instance_,
+             "vkCreateDebugUtilsMessengerEXT");
 
         if (!vkCreateDebugUtilsMessengerEXT)
         {
@@ -335,10 +335,10 @@ namespace vulkan_engine::vulkan
     }
 
     VKAPI_ATTR VkBool32 VKAPI_CALL DeviceManager::debug_callback(
-        VkDebugUtilsMessageSeverityFlagBitsEXT      message_severity,
-        VkDebugUtilsMessageTypeFlagsEXT             message_type,
+        VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
+        VkDebugUtilsMessageTypeFlagsEXT /*message_type*/,
         const VkDebugUtilsMessengerCallbackDataEXT* callback_data,
-        void*                                       user_data)
+        void* /*user_data*/)
     {
         if (message_severity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
         {

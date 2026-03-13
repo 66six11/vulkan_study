@@ -29,19 +29,19 @@ namespace vulkan_engine::rendering
         return handle;
     }
 
-    void RenderGraphBuilder::read(BufferHandle buffer)
+    void RenderGraphBuilder::read(BufferHandle /*buffer*/)
     {
     }
 
-    void RenderGraphBuilder::write(BufferHandle buffer)
+    void RenderGraphBuilder::write(BufferHandle /*buffer*/)
     {
     }
 
-    void RenderGraphBuilder::read(ImageHandle image)
+    void RenderGraphBuilder::read(ImageHandle /*image*/)
     {
     }
 
-    void RenderGraphBuilder::write(ImageHandle image)
+    void RenderGraphBuilder::write(ImageHandle /*image*/)
     {
     }
 
@@ -72,6 +72,7 @@ namespace vulkan_engine::rendering
         {
             // Placeholder - would need actual command buffer
             // node->execute(command_buffer);
+            (void)node;
         }
     }
 } // namespace vulkan_engine::rendering

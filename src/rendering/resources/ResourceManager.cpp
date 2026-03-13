@@ -25,7 +25,7 @@ namespace vulkan_engine::rendering
 
     ResourceManager::~ResourceManager() = default;
 
-    ResourceID ResourceManager::load_mesh(const std::filesystem::path& path, const MeshLoadOptions& options)
+    ResourceID ResourceManager::load_mesh(const std::filesystem::path& path, const MeshLoadOptions& /*options*/)
     {
         auto id = impl_->next_id++;
         // Placeholder: Actual mesh loading implementation would go here
@@ -36,7 +36,7 @@ namespace vulkan_engine::rendering
         return id;
     }
 
-    ResourceID ResourceManager::load_texture(const std::filesystem::path& path, const TextureLoadOptions& options)
+    ResourceID ResourceManager::load_texture(const std::filesystem::path& path, const TextureLoadOptions& /*options*/)
     {
         auto id = impl_->next_id++;
         // Placeholder: Actual texture loading implementation would go here
@@ -133,12 +133,12 @@ namespace vulkan_engine::rendering
         return impl_->shaders.find(id) != impl_->shaders.end();
     }
 
-    void ResourceManager::register_mesh_loader(const std::string& extension, MeshLoader loader)
+    void ResourceManager::register_mesh_loader(const std::string& /*extension*/, MeshLoader /*loader*/)
     {
         // Placeholder: Mesh loader registry
     }
 
-    void ResourceManager::register_texture_loader(const std::string& extension, TextureLoader loader)
+    void ResourceManager::register_texture_loader(const std::string& /*extension*/, TextureLoader /*loader*/)
     {
         // Placeholder: Texture loader registry
     }
@@ -148,7 +148,7 @@ namespace vulkan_engine::rendering
         // Placeholder: Check for modified shaders and reload them
     }
 
-    void ResourceManager::enable_hot_reloading(bool enable)
+    void ResourceManager::enable_hot_reloading(bool /*enable*/)
     {
         // Placeholder: Enable/disable hot reloading
     }

@@ -71,7 +71,7 @@ namespace vulkan_engine::vulkan
     }
 
     // TimelineSemaphore implementation
-    TimelineSemaphore::TimelineSemaphore(std::shared_ptr<DeviceManager> device, uint64_t initial_value)
+    TimelineSemaphore::TimelineSemaphore(std::shared_ptr<DeviceManager> device, uint64_t /*initial_value*/)
         : Semaphore(std::move(device))
     {
         // Note: This would need proper timeline semaphore creation
@@ -85,13 +85,13 @@ namespace vulkan_engine::vulkan
         }
     }
 
-    void TimelineSemaphore::signal(uint64_t value)
+    void TimelineSemaphore::signal(uint64_t /*value*/)
     {
         // Placeholder: Timeline semaphore signaling requires Vulkan 1.2+
         // vkSignalSemaphore(device_->device(), &signal_info);
     }
 
-    void TimelineSemaphore::wait(uint64_t value, uint64_t timeout)
+    void TimelineSemaphore::wait(uint64_t /*value*/, uint64_t /*timeout*/)
     {
         // Placeholder: Timeline semaphore wait requires Vulkan 1.2+
         // vkWaitSemaphores(device_->device(), &wait_info, timeout);
@@ -150,22 +150,22 @@ namespace vulkan_engine::vulkan
 
     std::shared_ptr<Fence> SynchronizationManager::create_fence(bool signaled)
     {
-        return std::make_shared<Fence>(device_, signaled);
+        return std::make_shared < Fence > (device_, signaled);
     }
 
     std::shared_ptr<Semaphore> SynchronizationManager::create_semaphore()
     {
-        return std::make_shared<Semaphore>(device_);
+        return std::make_shared < Semaphore > (device_);
     }
 
     std::shared_ptr<TimelineSemaphore> SynchronizationManager::create_timeline_semaphore(uint64_t initial_value)
     {
-        return std::make_shared<TimelineSemaphore>(device_, initial_value);
+        return std::make_shared < TimelineSemaphore > (device_, initial_value);
     }
 
     std::shared_ptr<Event> SynchronizationManager::create_event()
     {
-        return std::make_shared<Event>(device_);
+        return std::make_shared < Event > (device_);
     }
 
     void SynchronizationManager::wait_for_fences(

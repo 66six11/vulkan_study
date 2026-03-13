@@ -45,7 +45,7 @@ build/
 build_*/
 _codeql_build_dir/
 
-# IDE files
+# IDE files - 部分保留运行配置
 .idea/
 .vscode/
 
