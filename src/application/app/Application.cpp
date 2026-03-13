@@ -1,0 +1,176 @@
+﻿#include "application/app/Application.hpp"
+#include "platform/windowing/Window.hpp"
+#include "platform/input/InputManager.hpp"
+#include <iostream>
+
+namespace vulkan_engine::application
+{
+    ApplicationBase::ApplicationBase(const ApplicationConfig& config)
+        : config_(config)
+        , running_(false)
+    {
+    }
+
+    ApplicationBase::~ApplicationBase() = default;
+
+    bool ApplicationBase::initialize()
+    {
+        // Initialize platform
+        initialize_platform();
+
+        // Initialize input
+        initialize_input();
+
+        // Initialize rendering
+        initialize_rendering();
+
+        // Call derived class initialization
+        if (!on_initialize())
+        {
+            std::cerr << "Application-specific initialization failed\n";
+            return false;
+        }
+
+        running_ = true;
+        return true;
+    }
+
+    void ApplicationBase::shutdown()
+    {
+        // Call derived class shutdown
+        on_shutdown();
+
+        // Cleanup
+        input_manager_.reset();
+        renderer_.reset();
+        window_.reset();
+    }
+
+    void ApplicationBase::run()
+    {
+        last_frame_time_ = std::chrono::steady_clock::now();
+
+        while (running_)
+        {
+            // Calculate delta time
+            auto  current_time = std::chrono::steady_clock::now();
+            float delta_time   = std::chrono::duration<float>(current_time - last_frame_time_).count();
+            last_frame_time_   = current_time;
+
+            // Process events
+            process_events();
+
+            // Update input
+            if (input_manager_)
+            {
+                input_manager_->update();
+
+                // Check for exit key
+                if (input_manager_->is_key_just_pressed(platform::Key::Escape))
+                {
+                    request_exit();
+                }
+            }
+
+            // Update application
+            on_update(delta_time);
+
+            // Render
+            on_render();
+
+            // Poll window events
+            if (window_)
+            {
+                window_->poll_events();
+                if (window_->should_close())
+                {
+                    request_exit();
+                }
+            }
+        }
+    }
+
+    void ApplicationBase::on_window_resize(const WindowResizeEvent& event)
+    {
+        config_.width  = event.width;
+        config_.height = event.height;
+
+        // Notify renderer of resize
+        // if (renderer_) { renderer_->on_resize(event.width, event.height); }
+    }
+
+    void ApplicationBase::on_key(const KeyEvent& event)
+    {
+        // Forward to input manager if available
+    }
+
+    void ApplicationBase::on_mouse_button(const MouseButtonEvent& event)
+    {
+        // Forward to input manager if available
+    }
+
+    void ApplicationBase::on_mouse_move(const MouseMoveEvent& event)
+    {
+        // Forward to input manager if available
+    }
+
+    void ApplicationBase::on_scroll(const ScrollEvent& event)
+    {
+        // Forward to input manager if available
+    }
+
+    void ApplicationBase::initialize_platform()
+    {
+        // Create window
+        platform::WindowConfig window_config;
+        window_config.title      = config_.title;
+        window_config.width      = config_.width;
+        window_config.height     = config_.height;
+        window_config.vsync      = config_.vsync;
+        window_config.fullscreen = config_.fullscreen;
+        window_config.resizable  = config_.resizable;
+
+        window_ = std::make_shared<platform::Window>(window_config);
+
+        // Setup window callbacks
+        window_->on_close([this]()
+        {
+            request_exit();
+        });
+
+        window_->on_resize([this](uint32_t width, uint32_t height)
+        {
+            WindowResizeEvent event{width, height};
+            on_window_resize(event);
+        });
+    }
+
+    void ApplicationBase::initialize_rendering()
+    {
+        // Initialize Vulkan device manager
+        // vulkan::DeviceManager::CreateInfo device_info;
+        // device_info.application_name    = config_.title;
+        // device_info.enable_validation   = config_.enable_validation;
+        // device_info.enable_debug_utils  = config_.enable_validation;
+
+        // device_manager_ = std::make_shared<vulkan::DeviceManager>(device_info);
+        // if (!device_manager_->initialize())
+        // {
+        //     throw std::runtime_error("Failed to initialize Vulkan device");
+        // }
+
+        // Create renderer (placeholder)
+        // renderer_ = std::make_shared<Renderer>(device_manager_, window_);
+    }
+
+    void ApplicationBase::initialize_input()
+    {
+        input_manager_ = std::make_shared<platform::InputManager>(window_);
+        input_manager_->initialize();
+    }
+
+    void ApplicationBase::process_events()
+    {
+        // Process window and input events
+    }
+} // namespace vulkan_engine::application

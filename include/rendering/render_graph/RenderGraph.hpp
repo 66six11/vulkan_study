@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <memory>
 #include <vector>
@@ -22,6 +22,12 @@ namespace vulkan_engine::rendering
 
             constexpr ResourceHandle(uint32_t id, uint32_t generation) noexcept
                 : id_{id}, generation_{generation}
+            {
+            }
+
+            // Allow conversion from other resource handle types (for internal storage)
+            template <typename U> constexpr ResourceHandle(ResourceHandle<U> other) noexcept
+                : id_{other.id()}, generation_{other.generation()}
             {
             }
 
@@ -120,6 +126,9 @@ namespace vulkan_engine::rendering
             virtual std::vector<ImageHandle>  get_image_outputs() const = 0;
     };
 
+    // Forward declaration
+    class RenderGraph;
+
     // Render graph builder
     class RenderGraphBuilder
     {
@@ -138,9 +147,14 @@ namespace vulkan_engine::rendering
             void read(ImageHandle image);
             void write(ImageHandle image);
 
+            // Allow RenderGraph to access nodes
+            const std::vector<std::unique_ptr<RenderGraphNode>>& nodes() const { return nodes_; }
+
         private:
             std::vector<std::unique_ptr<RenderGraphNode>>         nodes_;
             std::unordered_map<std::string, ResourceHandle<void>> resources_;
+
+            friend class RenderGraph;
     };
 
     // Main render graph class

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <vulkan/vulkan.h>
 #include <memory>
@@ -10,65 +10,92 @@
 namespace vulkan_engine::vulkan
 {
     // Type-safe Vulkan handle wrappers
-    template <typename Tag> class VulkanHandle
+    template <typename Tag, typename HandleType> class VulkanHandleBase
     {
         public:
-            constexpr VulkanHandle() noexcept : handle_{VK_NULL_HANDLE}
+            using Handle = HandleType;
+
+            constexpr VulkanHandleBase() noexcept : handle_{VK_NULL_HANDLE}
             {
             }
 
-            constexpr explicit VulkanHandle(VkHandle handle) noexcept : handle_{handle}
+            constexpr explicit VulkanHandleBase(HandleType handle) noexcept : handle_{handle}
             {
             }
 
             constexpr bool valid() const noexcept { return handle_ != VK_NULL_HANDLE; }
-            constexpr      operator VkHandle() const noexcept { return handle_; }
+            constexpr      operator HandleType() const noexcept { return handle_; }
 
-            constexpr bool operator==(const VulkanHandle& other) const noexcept
+            constexpr bool operator==(const VulkanHandleBase& other) const noexcept
             {
                 return handle_ == other.handle_;
             }
 
-            constexpr bool operator!=(const VulkanHandle& other) const noexcept
+            constexpr bool operator!=(const VulkanHandleBase& other) const noexcept
             {
                 return handle_ != other.handle_;
             }
 
+            // Accessor for raw Vulkan handle
+            constexpr HandleType handle() const noexcept { return handle_; }
+
+            // Setter for initialization (used by DeviceManager)
+            void set_handle(HandleType handle) noexcept { handle_ = handle; }
+
+            // Assignment from nullptr
+            VulkanHandleBase& operator=(std::nullptr_t) noexcept
+            {
+                handle_ = VK_NULL_HANDLE;
+                return *this;
+            }
+
         protected:
-            VkHandle handle_;
+            HandleType handle_;
     };
 
     // Specific Vulkan handle types
+
     struct InstanceTag
+
     {
     };
 
     struct DeviceTag
+
     {
     };
 
     struct PhysicalDeviceTag
+
     {
     };
 
     struct QueueTag
+
     {
     };
 
     struct CommandPoolTag
+
     {
     };
 
     struct CommandBufferTag
+
     {
     };
 
-    using Instance       = VulkanHandle<InstanceTag>;
-    using Device         = VulkanHandle<DeviceTag>;
-    using PhysicalDevice = VulkanHandle<PhysicalDeviceTag>;
-    using Queue          = VulkanHandle<QueueTag>;
-    using CommandPool    = VulkanHandle<CommandPoolTag>;
-    using CommandBuffer  = VulkanHandle<CommandBufferTag>;
+    using Instance = VulkanHandleBase<InstanceTag, VkInstance>;
+
+    using Device = VulkanHandleBase<DeviceTag, VkDevice>;
+
+    using PhysicalDevice = VulkanHandleBase<PhysicalDeviceTag, VkPhysicalDevice>;
+
+    using Queue = VulkanHandleBase<QueueTag, VkQueue>;
+
+    using CommandPool = VulkanHandleBase<CommandPoolTag, VkCommandPool>;
+
+    using CommandBuffer = VulkanHandleBase<CommandBufferTag, VkCommandBuffer>;
 
     // Device capabilities
     struct DeviceFeatures

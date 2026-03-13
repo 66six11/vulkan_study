@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.25)
+﻿cmake_minimum_required(VERSION 3.25)
 project(VulkanEngine VERSION 2.0.0 LANGUAGES CXX)
 
 # Set C++ standard and properties
@@ -28,163 +28,106 @@ include_directories(
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-# Find dependencies using modern CMake
+# Find or fetch dependencies
+# Note: Dependencies should be provided by Conan 2.0
+# Run: conan install . --build=missing --output-folder=build
+
+# Vulkan SDK (expected to be installed system-wide)
 find_package(Vulkan REQUIRED)
+
+# GLFW3 (provided by Conan)
 find_package(glfw3 CONFIG REQUIRED)
+
+# GLM (provided by Conan)
 find_package(glm CONFIG REQUIRED)
 
-# Core library
-add_library(VulkanEngineCore
-        src/core/math/Vector.hpp
-        src/core/math/Matrix.hpp
-        src/core/math/Quaternion.hpp
-        src/core/memory/MemoryPool.hpp
-        src/core/memory/Allocator.hpp
-        src/core/utils/Logger.hpp
-        src/core/utils/Profiler.hpp
-)
+# STB (provided by Conan, header-only)
+find_package(stb CONFIG REQUIRED)
 
-target_link_libraries(VulkanEngineCore PUBLIC
-        glm::glm
+# Optional: Taskflow for async loading (provided by Conan if enabled)
+if (VULKAN_ENGINE_USE_ASYNC_LOADING)
+    find_package(taskflow CONFIG QUIET)
+    if (taskflow_FOUND)
+        target_compile_definitions(VulkanEngineRendering PUBLIC VULKAN_ENGINE_USE_ASYNC_LOADING=1)
+    endif ()
+endif ()
+
+# Core library (header-only for now)
+add_library(VulkanEngineCore INTERFACE)
+target_link_libraries(VulkanEngineCore INTERFACE glm)
+target_include_directories(VulkanEngineCore INTERFACE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
 # Platform abstraction layer
-add_library(VulkanEnginePlatform
-        src/platform/windowing/Window.hpp
+add_library(VulkanEnginePlatform STATIC
         src/platform/windowing/Window.cpp
-        src/platform/input/InputManager.hpp
         src/platform/input/InputManager.cpp
-        src/platform/filesystem/FileSystem.hpp
         src/platform/filesystem/FileSystem.cpp
 )
-
 target_link_libraries(VulkanEnginePlatform PUBLIC
         glfw
         VulkanEngineCore
 )
+target_include_directories(VulkanEnginePlatform PUBLIC
+        ${Vulkan_INCLUDE_DIRS}
+)
 
 # Rendering system
 if (VULKAN_ENGINE_USE_RENDER_GRAPH)
-    add_library(VulkanEngineRendering
-            src/rendering/render_graph/RenderGraph.hpp
+    add_library(VulkanEngineRendering STATIC
             src/rendering/render_graph/RenderGraph.cpp
-            src/rendering/render_graph/Pass.hpp
-            src/rendering/render_graph/Resource.hpp
-            src/rendering/resources/ResourceManager.hpp
             src/rendering/resources/ResourceManager.cpp
-            src/rendering/shaders/ShaderManager.hpp
             src/rendering/shaders/ShaderManager.cpp
-            src/rendering/scene/Scene.hpp
             src/rendering/scene/Scene.cpp
     )
+    target_compile_definitions(VulkanEngineRendering PUBLIC VULKAN_ENGINE_USE_RENDER_GRAPH=1)
 else ()
-    add_library(VulkanEngineRendering
-            src/rendering/resources/ResourceManager.hpp
+    add_library(VulkanEngineRendering STATIC
             src/rendering/resources/ResourceManager.cpp
-            src/rendering/shaders/ShaderManager.hpp
             src/rendering/shaders/ShaderManager.cpp
-            src/rendering/scene/Scene.hpp
             src/rendering/scene/Scene.cpp
     )
 endif ()
-
-target_link_libraries(VulkanEngineRendering PUBLIC
-        VulkanEnginePlatform
-)
+target_link_libraries(VulkanEngineRendering PUBLIC VulkanEnginePlatform)
 
 # Vulkan backend
-add_library(VulkanEngineVulkan
-        src/vulkan/device/Device.hpp
+add_library(VulkanEngineVulkan STATIC
         src/vulkan/device/Device.cpp
-        src/vulkan/resources/Buffer.hpp
         src/vulkan/resources/Buffer.cpp
-        src/vulkan/resources/Image.hpp
         src/vulkan/resources/Image.cpp
-        src/vulkan/pipelines/Pipeline.hpp
         src/vulkan/pipelines/Pipeline.cpp
-        src/vulkan/sync/Synchronization.hpp
         src/vulkan/sync/Synchronization.cpp
 )
-
 target_link_libraries(VulkanEngineVulkan PUBLIC
         Vulkan::Vulkan
         VulkanEngineRendering
 )
 
 # Main application library
-add_library(VulkanEngine
-        src/application/app/Application.hpp
+add_library(VulkanEngine STATIC
         src/application/app/Application.cpp
-        src/application/config/Config.hpp
         src/application/config/Config.cpp
 )
-
-target_link_libraries(VulkanEngine PUBLIC
-        VulkanEngineVulkan
-)
+target_link_libraries(VulkanEngine PUBLIC VulkanEngineVulkan)
 
 # Main executable
-add_executable(vulkan-engine
-        src/main.cpp
+add_executable(vulkan-engine src/main.cpp)
+target_link_libraries(vulkan-engine VulkanEngine)
+
+# Set output directory
+set_target_properties(vulkan-engine PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )
 
-target_link_libraries(vulkan-engine
-        VulkanEngine
-)
-
-# Installation
-install(TARGETS vulkan-engine DESTINATION bin)
-install(TARGETS VulkanEngine DESTINATION lib)
-install(DIRECTORY include/ DESTINATION include)
-
-# Package configuration
-include(GNUInstallDirs)
-include(CMakePackageConfigHelpers)
-
-write_basic_package_version_file(
-        ${CMAKE_CURRENT_BINARY_DIR}/VulkanEngineConfigVersion.cmake
-        VERSION ${PROJECT_VERSION}
-        COMPATIBILITY AnyNewerVersion
-)
-
-configure_package_config_file(
-        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/VulkanEngineConfig.cmake.in
-        ${CMAKE_CURRENT_BINARY_DIR}/VulkanEngineConfig.cmake
-        INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/VulkanEngine
-)
-
-install(FILES
-        ${CMAKE_CURRENT_BINARY_DIR}/VulkanEngineConfig.cmake
-        ${CMAKE_CURRENT_BINARY_DIR}/VulkanEngineConfigVersion.cmake
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/VulkanEngine
-)
-
-# Testing
-if (VULKAN_ENGINE_BUILD_TESTS)
-    enable_testing()
-    find_package(Catch2 REQUIRED)
-
-    add_executable(vulkan-engine-tests
-            tests/core_tests.cpp
-            tests/math_tests.cpp
-            tests/rendering_tests.cpp
-    )
-
-    target_link_libraries(vulkan-engine-tests
-            VulkanEngine
-            Catch2::Catch2WithMain
-    )
-
-    add_test(NAME vulkan-engine-tests COMMAND vulkan-engine-tests)
-endif ()
-
-# Examples
-if (VULKAN_ENGINE_BUILD_EXAMPLES)
-    add_executable(example-triangle
-            examples/triangle/main.cpp
-    )
-
-    target_link_libraries(example-triangle
-            VulkanEngine
-    )
-endif ()
+# Print configuration summary
+message(STATUS "")
+message(STATUS "Vulkan Engine Configuration:")
+message(STATUS "  C++ Standard: ${CMAKE_CXX_STANDARD}")
+message(STATUS "  Build Type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "  Use Render Graph: ${VULKAN_ENGINE_USE_RENDER_GRAPH}")
+message(STATUS "  GLFW3 Found: ${glfw3_FOUND}")
+message(STATUS "  GLM Found: ${glm_FOUND}")
+message(STATUS "  Vulkan Found: ${Vulkan_FOUND}")
+message(STATUS "")

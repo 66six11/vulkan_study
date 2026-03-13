@@ -1,4 +1,4 @@
-from conan import ConanFile
+﻿from conan import ConanFile
 from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout
 from conan.tools.build import check_min_cppstd
 
@@ -18,6 +18,7 @@ class VulkanEngineConan(ConanFile):
         "with_render_graph": [True, False],
         "with_async_loading": [True, False],
         "with_hot_reload": [True, False],
+        "with_tests": [True, False],
     }
     default_options = {
         "shared": False,
@@ -25,6 +26,7 @@ class VulkanEngineConan(ConanFile):
         "with_render_graph": True,
         "with_async_loading": True,
         "with_hot_reload": True,
+        "with_tests": False,
     }
     
     exports_sources = "CMakeLists.txt", "src/*", "include/*", "shaders/*"
@@ -42,19 +44,19 @@ class VulkanEngineConan(ConanFile):
     
     def requirements(self):
         # Core graphics libraries
-        self.requires("vulkan-headers/1.3.268")
-        self.requires("vulkan-loader/1.3.268")
+        # Note: Vulkan SDK is expected to be installed system-wide
         self.requires("glfw/3.3.8")
         self.requires("glm/0.9.9.8")
         self.requires("stb/cci.20230920")
-        
+
         # Optional dependencies
         if self.options.with_async_loading:
             self.requires("taskflow/3.6.0")
-        
+
         # Development tools
-        self.requires("catch2/3.4.0", visible=False)
-        self.requires("benchmark/1.8.2", visible=False)
+        if self.options.with_tests:
+            self.requires("catch2/3.4.0")
+            self.requires("benchmark/1.8.2")
     
     def validate(self):
         check_min_cppstd(self, "20")

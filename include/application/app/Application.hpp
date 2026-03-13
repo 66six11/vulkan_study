@@ -1,16 +1,20 @@
-#pragma once
+﻿#pragma once
 
 #include <memory>
 #include <string>
 #include <concepts>
 #include <chrono>
 
+namespace vulkan_engine::platform
+{
+    class Window;
+    class InputManager;
+}
+
 namespace vulkan_engine::application
 {
     // Forward declarations
-    class Window;
     class Renderer;
-    class InputManager;
 
     // Application configuration
     struct ApplicationConfig
@@ -111,9 +115,9 @@ namespace vulkan_engine::application
             virtual void on_scroll(const ScrollEvent& event);
 
             // Accessors
-            std::shared_ptr<Window>       window() const { return window_; }
-            std::shared_ptr<Renderer>     renderer() const { return renderer_; }
-            std::shared_ptr<InputManager> input_manager() const { return input_manager_; }
+            std::shared_ptr<platform::Window>       window() const { return window_; }
+            std::shared_ptr<Renderer>               renderer() const { return renderer_; }
+            std::shared_ptr<platform::InputManager> input_manager() const { return input_manager_; }
 
             const ApplicationConfig& config() const { return config_; }
             bool                     running() const { return running_; }
@@ -122,11 +126,11 @@ namespace vulkan_engine::application
             void request_exit() { running_ = false; }
 
         private:
-            ApplicationConfig             config_;
-            std::shared_ptr<Window>       window_;
-            std::shared_ptr<Renderer>     renderer_;
-            std::shared_ptr<InputManager> input_manager_;
-            bool                          running_ = false;
+            ApplicationConfig                       config_;
+            std::shared_ptr<platform::Window>       window_;
+            std::shared_ptr<Renderer>               renderer_;
+            std::shared_ptr<platform::InputManager> input_manager_;
+            bool                                    running_ = false;
 
             // Timing
             std::chrono::steady_clock::time_point last_frame_time_;

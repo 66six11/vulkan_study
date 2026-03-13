@@ -1,4 +1,4 @@
-# Vulkan Project Technical Documentation
+﻿# Vulkan Project Technical Documentation
 
 *Generated on Mon Dec  1 17:39:20 UTC 2025*
 *Scope: auto-generated*
