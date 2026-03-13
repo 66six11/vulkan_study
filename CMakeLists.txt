@@ -12,6 +12,13 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# 强制 MSVC 使用动态运行时库 (/MD /MDd) 以匹配 Conan 依赖
+# 这必须在 Conan toolchain 加载后设置，但要在任何目标创建之前
+if (MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+    message(STATUS "强制 MSVC 运行时库: ${CMAKE_MSVC_RUNTIME_LIBRARY}")
+endif ()
+
 # 设置 Conan 包路径 (generators 目录包含包配置)
 if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/build/build/generators")
     list(APPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/build/build/generators")
