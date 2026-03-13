@@ -131,38 +131,95 @@ namespace vulkan_engine::platform
 
         // Update keyboard state - only query mapped keys
         static constexpr std::array<int, static_cast<size_t>(Key::KeyCount)> key_map = {
-            GLFW_KEY_UNKNOWN,    // Unknown
-            GLFW_KEY_SPACE,      // Space
-            GLFW_KEY_ESCAPE,     // Escape
-            GLFW_KEY_ENTER,      // Enter
-            GLFW_KEY_TAB,        // Tab
-            GLFW_KEY_BACKSPACE,  // Backspace
-            GLFW_KEY_DELETE,     // Delete
-            GLFW_KEY_RIGHT,      // ArrowRight
-            GLFW_KEY_LEFT,       // ArrowLeft
-            GLFW_KEY_DOWN,       // ArrowDown
-            GLFW_KEY_UP,         // ArrowUp
-            GLFW_KEY_PAGE_UP,    // PageUp
-            GLFW_KEY_PAGE_DOWN,  // PageDown
-            GLFW_KEY_HOME,       // Home
-            GLFW_KEY_END,        // End
-            GLFW_KEY_INSERT,     // Insert
-            GLFW_KEY_LEFT_SHIFT, // Shift
-            GLFW_KEY_LEFT_CONTROL, // Ctrl
-            GLFW_KEY_LEFT_ALT,   // Alt
+            GLFW_KEY_UNKNOWN,
+            // Unknown
+            GLFW_KEY_SPACE,
+            // Space
+            GLFW_KEY_ESCAPE,
+            // Escape
+            GLFW_KEY_ENTER,
+            // Enter
+            GLFW_KEY_TAB,
+            // Tab
+            GLFW_KEY_BACKSPACE,
+            // Backspace
+            GLFW_KEY_DELETE,
+            // Delete
+            GLFW_KEY_RIGHT,
+            // ArrowRight
+            GLFW_KEY_LEFT,
+            // ArrowLeft
+            GLFW_KEY_DOWN,
+            // ArrowDown
+            GLFW_KEY_UP,
+            // ArrowUp
+            GLFW_KEY_PAGE_UP,
+            // PageUp
+            GLFW_KEY_PAGE_DOWN,
+            // PageDown
+            GLFW_KEY_HOME,
+            // Home
+            GLFW_KEY_END,
+            // End
+            GLFW_KEY_INSERT,
+            // Insert
+            GLFW_KEY_LEFT_SHIFT,
+            // Shift
+            GLFW_KEY_LEFT_CONTROL,
+            // Ctrl
+            GLFW_KEY_LEFT_ALT,
+            // Alt
             // A-Z
-            GLFW_KEY_A, GLFW_KEY_B, GLFW_KEY_C, GLFW_KEY_D, GLFW_KEY_E, GLFW_KEY_F,
-            GLFW_KEY_G, GLFW_KEY_H, GLFW_KEY_I, GLFW_KEY_J, GLFW_KEY_K, GLFW_KEY_L,
-            GLFW_KEY_M, GLFW_KEY_N, GLFW_KEY_O, GLFW_KEY_P, GLFW_KEY_Q, GLFW_KEY_R,
-            GLFW_KEY_S, GLFW_KEY_T, GLFW_KEY_U, GLFW_KEY_V, GLFW_KEY_W, GLFW_KEY_X,
-            GLFW_KEY_Y, GLFW_KEY_Z,
+            GLFW_KEY_A,
+            GLFW_KEY_B,
+            GLFW_KEY_C,
+            GLFW_KEY_D,
+            GLFW_KEY_E,
+            GLFW_KEY_F,
+            GLFW_KEY_G,
+            GLFW_KEY_H,
+            GLFW_KEY_I,
+            GLFW_KEY_J,
+            GLFW_KEY_K,
+            GLFW_KEY_L,
+            GLFW_KEY_M,
+            GLFW_KEY_N,
+            GLFW_KEY_O,
+            GLFW_KEY_P,
+            GLFW_KEY_Q,
+            GLFW_KEY_R,
+            GLFW_KEY_S,
+            GLFW_KEY_T,
+            GLFW_KEY_U,
+            GLFW_KEY_V,
+            GLFW_KEY_W,
+            GLFW_KEY_X,
+            GLFW_KEY_Y,
+            GLFW_KEY_Z,
             // Numbers
-            GLFW_KEY_0, GLFW_KEY_1, GLFW_KEY_2, GLFW_KEY_3, GLFW_KEY_4,
-            GLFW_KEY_5, GLFW_KEY_6, GLFW_KEY_7, GLFW_KEY_8, GLFW_KEY_9,
+            GLFW_KEY_0,
+            GLFW_KEY_1,
+            GLFW_KEY_2,
+            GLFW_KEY_3,
+            GLFW_KEY_4,
+            GLFW_KEY_5,
+            GLFW_KEY_6,
+            GLFW_KEY_7,
+            GLFW_KEY_8,
+            GLFW_KEY_9,
             // Function keys
-            GLFW_KEY_F1, GLFW_KEY_F2, GLFW_KEY_F3, GLFW_KEY_F4,
-            GLFW_KEY_F5, GLFW_KEY_F6, GLFW_KEY_F7, GLFW_KEY_F8,
-            GLFW_KEY_F9, GLFW_KEY_F10, GLFW_KEY_F11, GLFW_KEY_F12,
+            GLFW_KEY_F1,
+            GLFW_KEY_F2,
+            GLFW_KEY_F3,
+            GLFW_KEY_F4,
+            GLFW_KEY_F5,
+            GLFW_KEY_F6,
+            GLFW_KEY_F7,
+            GLFW_KEY_F8,
+            GLFW_KEY_F9,
+            GLFW_KEY_F10,
+            GLFW_KEY_F11,
+            GLFW_KEY_F12,
         };
 
         for (size_t i = 0; i < static_cast<size_t>(Key::KeyCount); ++i)
