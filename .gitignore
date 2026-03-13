@@ -47,7 +47,6 @@ _codeql_build_dir/
 
 # IDE files
 .idea/
-.iflow/
 .vscode/
 
 # CLion build directories

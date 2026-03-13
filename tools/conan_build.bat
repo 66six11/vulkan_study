@@ -1,9 +1,14 @@
-﻿@echo off
+@echo off
 echo ========================================
 echo Vulkan Engine - Conan 2.0 Build
 echo ========================================
 
-REM 验证Conan安装
+REM Switch to project root (script is in tools/ subdirectory)
+cd /d "%~dp0\.."
+echo Project root: %cd%
+echo.
+
+REM Verify Conan installation
 echo.
 echo [1/5] Checking Conan installation...
 conan --version >nul 2>&1
@@ -15,10 +20,9 @@ if %errorlevel% neq 0 (
     pause
     exit /b 1
 )
-
 echo Conan installed successfully!
 
-REM 检查Vulkan SDK
+REM Check Vulkan SDK
 echo.
 echo [2/5] Checking Vulkan SDK...
 if not defined VULKAN_SDK (
@@ -28,7 +32,7 @@ if not defined VULKAN_SDK (
     echo Vulkan SDK: %VULKAN_SDK%
 )
 
-REM 选择构建类型
+REM Select build type
 echo.
 echo Available build types:
 echo   1. Debug
@@ -45,10 +49,9 @@ if "%BUILD_CHOICE%"=="1" (
     echo Invalid choice, using Debug
     set BUILD_TYPE=Debug
 )
-
 echo Selected: %BUILD_TYPE%
 
-REM 清理选项
+REM Clean option
 echo.
 set /p CLEAN="Clean old build? (y/N): "
 if /i "%CLEAN%"=="y" (
@@ -58,7 +61,7 @@ if /i "%CLEAN%"=="y" (
     echo Build directory cleaned
 )
 
-REM 安装Conan依赖
+REM Install Conan dependencies
 echo.
 echo ========================================
 echo Installing Conan dependencies...
@@ -80,7 +83,7 @@ if %errorlevel% neq 0 (
 echo.
 echo Conan dependencies installed successfully!
 
-REM 配置CMake
+REM Configure CMake
 echo.
 echo ========================================
 echo Configuring CMake...
@@ -105,7 +108,7 @@ if %errorlevel% neq 0 (
 echo.
 echo CMake configured successfully!
 
-REM 构建项目
+REM Build project
 echo.
 echo ========================================
 echo Building project...
