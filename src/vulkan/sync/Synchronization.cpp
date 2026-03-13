@@ -1,4 +1,5 @@
 ﻿#include "vulkan/sync/Synchronization.hpp"
+#include "vulkan/utils/VulkanError.hpp"
 #include <stdexcept>
 
 namespace vulkan_engine::vulkan
@@ -14,18 +15,42 @@ namespace vulkan_engine::vulkan
             fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
         }
 
-        if (vkCreateFence(device_->device(), &fence_info, nullptr, &fence_) != VK_SUCCESS)
+        VkResult result = vkCreateFence(device_->device(), &fence_info, nullptr, &fence_);
+        if (result != VK_SUCCESS)
         {
-            throw std::runtime_error("Failed to create fence");
+            throw VulkanError(result, "Failed to create fence", __FILE__, __LINE__);
         }
     }
 
     Fence::~Fence()
     {
-        if (fence_ != VK_NULL_HANDLE)
+        if (fence_ != VK_NULL_HANDLE && device_)
         {
             vkDestroyFence(device_->device(), fence_, nullptr);
         }
+    }
+
+    Fence::Fence(Fence&& other) noexcept
+        : device_(std::move(other.device_))
+        , fence_(other.fence_)
+    {
+        other.fence_ = VK_NULL_HANDLE;
+    }
+
+    Fence& Fence::operator=(Fence&& other) noexcept
+    {
+        if (this != &other)
+        {
+            if (fence_ != VK_NULL_HANDLE && device_)
+            {
+                vkDestroyFence(device_->device(), fence_, nullptr);
+            }
+
+            device_      = std::move(other.device_);
+            fence_       = other.fence_;
+            other.fence_ = VK_NULL_HANDLE;
+        }
+        return *this;
     }
 
     void Fence::wait(uint64_t timeout)
@@ -56,33 +81,51 @@ namespace vulkan_engine::vulkan
         VkSemaphoreCreateInfo semaphore_info{};
         semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-        if (vkCreateSemaphore(device_->device(), &semaphore_info, nullptr, &semaphore_) != VK_SUCCESS)
+        VkResult result = vkCreateSemaphore(device_->device(), &semaphore_info, nullptr, &semaphore_);
+        if (result != VK_SUCCESS)
         {
-            throw std::runtime_error("Failed to create semaphore");
+            throw VulkanError(result, "Failed to create semaphore", __FILE__, __LINE__);
         }
     }
 
     Semaphore::~Semaphore()
     {
-        if (semaphore_ != VK_NULL_HANDLE)
+        if (semaphore_ != VK_NULL_HANDLE && device_)
         {
             vkDestroySemaphore(device_->device(), semaphore_, nullptr);
         }
+    }
+
+    Semaphore::Semaphore(Semaphore&& other) noexcept
+        : device_(std::move(other.device_))
+        , semaphore_(other.semaphore_)
+    {
+        other.semaphore_ = VK_NULL_HANDLE;
+    }
+
+    Semaphore& Semaphore::operator=(Semaphore&& other) noexcept
+    {
+        if (this != &other)
+        {
+            if (semaphore_ != VK_NULL_HANDLE && device_)
+            {
+                vkDestroySemaphore(device_->device(), semaphore_, nullptr);
+            }
+
+            device_          = std::move(other.device_);
+            semaphore_       = other.semaphore_;
+            other.semaphore_ = VK_NULL_HANDLE;
+        }
+        return *this;
     }
 
     // TimelineSemaphore implementation
     TimelineSemaphore::TimelineSemaphore(std::shared_ptr<DeviceManager> device, uint64_t /*initial_value*/)
         : Semaphore(std::move(device))
     {
-        // Note: This would need proper timeline semaphore creation
+        // Note: Proper timeline semaphore requires Vulkan 1.2+
         // For now, using regular semaphore as placeholder
-        VkSemaphoreCreateInfo semaphore_info{};
-        semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-        if (vkCreateSemaphore(device_->device(), &semaphore_info, nullptr, &semaphore_) != VK_SUCCESS)
-        {
-            throw std::runtime_error("Failed to create timeline semaphore");
-        }
+        // The base Semaphore class already creates the semaphore
     }
 
     void TimelineSemaphore::signal(uint64_t /*value*/)
@@ -111,18 +154,42 @@ namespace vulkan_engine::vulkan
         VkEventCreateInfo event_info{};
         event_info.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
 
-        if (vkCreateEvent(device_->device(), &event_info, nullptr, &event_) != VK_SUCCESS)
+        VkResult result = vkCreateEvent(device_->device(), &event_info, nullptr, &event_);
+        if (result != VK_SUCCESS)
         {
-            throw std::runtime_error("Failed to create event");
+            throw VulkanError(result, "Failed to create event", __FILE__, __LINE__);
         }
     }
 
     Event::~Event()
     {
-        if (event_ != VK_NULL_HANDLE)
+        if (event_ != VK_NULL_HANDLE && device_)
         {
             vkDestroyEvent(device_->device(), event_, nullptr);
         }
+    }
+
+    Event::Event(Event&& other) noexcept
+        : device_(std::move(other.device_))
+        , event_(other.event_)
+    {
+        other.event_ = VK_NULL_HANDLE;
+    }
+
+    Event& Event::operator=(Event&& other) noexcept
+    {
+        if (this != &other)
+        {
+            if (event_ != VK_NULL_HANDLE && device_)
+            {
+                vkDestroyEvent(device_->device(), event_, nullptr);
+            }
+
+            device_      = std::move(other.device_);
+            event_       = other.event_;
+            other.event_ = VK_NULL_HANDLE;
+        }
+        return *this;
     }
 
     void Event::set()
@@ -232,5 +299,22 @@ namespace vulkan_engine::vulkan
 
         VkFence fence_handle = fence ? fence->handle() : VK_NULL_HANDLE;
         vkQueueSubmit(queue, 1, &submit_info, fence_handle);
+    }
+
+    // FrameSyncManager implementation
+    FrameSyncManager::FrameSyncManager(std::shared_ptr<DeviceManager> device, uint32_t frame_count)
+        : device_(std::move(device))
+        , frame_count_(frame_count)
+    {
+        fences_.reserve(frame_count);
+        image_available_semaphores_.reserve(frame_count);
+        render_finished_semaphores_.reserve(frame_count);
+
+        for (uint32_t i = 0; i < frame_count; ++i)
+        {
+            fences_.push_back(std::make_unique < Fence > (device_, true)); // Start signaled
+            image_available_semaphores_.push_back(std::make_unique < Semaphore > (device_));
+            render_finished_semaphores_.push_back(std::make_unique < Semaphore > (device_));
+        }
     }
 } // namespace vulkan_engine::vulkan

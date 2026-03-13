@@ -18,6 +18,10 @@ namespace vulkan_engine::vulkan
             Fence(const Fence&)            = delete;
             Fence& operator=(const Fence&) = delete;
 
+            // Movable
+            Fence(Fence&& other) noexcept;
+            Fence& operator=(Fence&& other) noexcept;
+
             void wait(uint64_t timeout = UINT64_MAX);
             void reset();
             bool is_signaled() const;
@@ -39,6 +43,10 @@ namespace vulkan_engine::vulkan
             // Non-copyable
             Semaphore(const Semaphore&)            = delete;
             Semaphore& operator=(const Semaphore&) = delete;
+
+            // Movable
+            Semaphore(Semaphore&& other) noexcept;
+            Semaphore& operator=(Semaphore&& other) noexcept;
 
             VkSemaphore handle() const { return semaphore_; }
 
@@ -67,6 +75,10 @@ namespace vulkan_engine::vulkan
             // Non-copyable
             Event(const Event&)            = delete;
             Event& operator=(const Event&) = delete;
+
+            // Movable
+            Event(Event&& other) noexcept;
+            Event& operator=(Event&& other) noexcept;
 
             void set();
             void reset();
@@ -105,5 +117,52 @@ namespace vulkan_engine::vulkan
 
         private:
             std::shared_ptr<DeviceManager> device_;
+    };
+
+    // Frame synchronization manager for double/triple buffering
+    class FrameSyncManager
+    {
+        public:
+            FrameSyncManager(std::shared_ptr<DeviceManager> device, uint32_t frame_count);
+            ~FrameSyncManager() = default;
+
+            // Non-copyable
+            FrameSyncManager(const FrameSyncManager&)            = delete;
+            FrameSyncManager& operator=(const FrameSyncManager&) = delete;
+
+            // Get sync objects for current frame
+            uint32_t get_current_frame() const { return current_frame_; }
+            void     next_frame() { current_frame_ = (current_frame_ + 1) % frame_count_; }
+
+            // Per-frame sync objects
+            Fence&     get_fence(uint32_t frame) { return *fences_[frame]; }
+            Fence&     get_current_fence() { return *fences_[current_frame_]; }
+            Semaphore& get_image_available_semaphore(uint32_t frame) { return *image_available_semaphores_[frame]; }
+            Semaphore& get_current_image_available_semaphore() { return *image_available_semaphores_[current_frame_]; }
+            Semaphore& get_render_finished_semaphore(uint32_t frame) { return *render_finished_semaphores_[frame]; }
+            Semaphore& get_current_render_finished_semaphore() { return *render_finished_semaphores_[current_frame_]; }
+
+            // Convenience methods
+            void wait_for_current_frame_fence(uint64_t timeout = UINT64_MAX)
+            {
+                fences_[current_frame_]->wait(timeout);
+            }
+
+            void reset_current_frame_fence() { fences_[current_frame_]->reset(); }
+
+            void wait_and_reset_current_fence(uint64_t timeout = UINT64_MAX)
+            {
+                fences_[current_frame_]->wait_and_reset(timeout);
+            }
+
+            uint32_t frame_count() const { return frame_count_; }
+
+        private:
+            std::shared_ptr<DeviceManager>          device_;
+            uint32_t                                frame_count_;
+            uint32_t                                current_frame_ = 0;
+            std::vector<std::unique_ptr<Fence>>     fences_;
+            std::vector<std::unique_ptr<Semaphore>> image_available_semaphores_;
+            std::vector<std::unique_ptr<Semaphore>> render_finished_semaphores_;
     };
 } // namespace vulkan_engine::vulkan

@@ -12,6 +12,11 @@ namespace vulkan_engine::vulkan
         : device_(std::move(device))
         , size_(size)
     {
+        if (!device_)
+        {
+            throw std::runtime_error("Buffer: DeviceManager is null");
+        }
+
         // Create buffer
         VkBufferCreateInfo buffer_info{};
         buffer_info.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -33,7 +38,7 @@ namespace vulkan_engine::vulkan
 
             ~BufferGuard()
             {
-                if (*buffer != VK_NULL_HANDLE)
+                if (buffer && *buffer != VK_NULL_HANDLE)
                 {
                     vkDestroyBuffer(device, *buffer, nullptr);
                 }
@@ -197,7 +202,7 @@ namespace vulkan_engine::vulkan
 
     std::unique_ptr<Buffer> BufferBuilder::build()
     {
-        return std::make_unique<Buffer>(device_, size_, usage_, properties_);
+        return std::make_unique < Buffer > (device_, size_, usage_, properties_);
     }
 
     // BufferManager implementation
@@ -213,7 +218,7 @@ namespace vulkan_engine::vulkan
         VkBufferUsageFlags    usage,
         VkMemoryPropertyFlags properties)
     {
-        return std::make_shared<Buffer>(device_, size, usage, properties);
+        return std::make_shared < Buffer > (device_, size, usage, properties);
     }
 
     std::shared_ptr<Buffer> BufferManager::create_vertex_buffer(VkDeviceSize size)

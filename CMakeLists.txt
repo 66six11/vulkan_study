@@ -65,3 +65,23 @@ endif ()
 if (VULKAN_ENGINE_BUILD_EXAMPLES)
     message(STATUS "Examples enabled (not yet implemented)")
 endif ()
+
+# 复制着色器文件到输出目录
+file(GLOB SHADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.spv")
+if (SHADER_FILES)
+    # 着色器输出目录 - 为每个配置复制 (Debug/Release)
+    set(SHADER_OUTPUT_DIR_DEBUG "${CMAKE_BINARY_DIR}/bin/Debug/shaders")
+    set(SHADER_OUTPUT_DIR_RELEASE "${CMAKE_BINARY_DIR}/bin/Release/shaders")
+
+    add_custom_target(CopyShaders ALL
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${SHADER_OUTPUT_DIR_DEBUG}"
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${SHADER_OUTPUT_DIR_RELEASE}"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SHADER_FILES} "${SHADER_OUTPUT_DIR_DEBUG}/"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SHADER_FILES} "${SHADER_OUTPUT_DIR_RELEASE}/"
+            COMMENT "Copying shader files to Debug/Release directories"
+    )
+    list(LENGTH SHADER_FILES SHADER_COUNT)
+    message(STATUS "Found ${SHADER_COUNT} shader file(s)")
+else ()
+    message(WARNING "No compiled shader files (.spv) found in shaders/ directory. Run shaders/compile_slang.bat to generate them.")
+endif ()
