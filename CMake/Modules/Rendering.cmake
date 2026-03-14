@@ -20,6 +20,18 @@ if (nlohmann_json_FOUND)
     target_link_libraries(VulkanEngineRendering PUBLIC VulkanEngine::nlohmann_json)
 endif ()
 
+# ImGui for SceneViewport ( Editor UI )
+if (imgui_FOUND)
+    target_link_libraries(VulkanEngineRendering PUBLIC imgui::imgui)
+    target_include_directories(VulkanEngineRendering PUBLIC
+            ${imgui_INCLUDE_DIRS_RELEASE}
+            ${imgui_PACKAGE_FOLDER_RELEASE}/res/bindings
+    )
+    target_compile_definitions(VulkanEngineRendering PUBLIC
+            VULKAN_ENGINE_USE_IMGUI=1
+    )
+endif ()
+
 # 根据功能选项添加定义
 if (VULKAN_ENGINE_USE_RENDER_GRAPH)
     target_compile_definitions(VulkanEngineRendering PUBLIC

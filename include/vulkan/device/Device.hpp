@@ -178,6 +178,11 @@ namespace vulkan_engine::vulkan
             Queue compute_queue() const { return compute_queue_; }
             Queue transfer_queue() const { return transfer_queue_; }
 
+            // Queue family access
+            uint32_t graphics_queue_family() const { return graphics_family_.index; }
+            uint32_t compute_queue_family() const { return compute_family_.index; }
+            uint32_t transfer_queue_family() const { return transfer_family_.index; }
+
             // Feature support
             const DeviceFeatures& features() const { return features_; }
             bool                  supports_feature(const DeviceFeatures& required) const;

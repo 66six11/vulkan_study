@@ -39,11 +39,16 @@ namespace vulkan_engine::rendering
         , descriptor_pool_(other.descriptor_pool_)
         , descriptor_set_(other.descriptor_set_)
         , textures_(std::move(other.textures_))
+        , default_sampler_(other.default_sampler_)
+        , default_white_texture_(std::move(other.default_white_texture_))
+        , default_white_texture_view_(other.default_white_texture_view_)
     {
-        other.pipeline_layout_       = VK_NULL_HANDLE;
-        other.descriptor_set_layout_ = VK_NULL_HANDLE;
-        other.descriptor_pool_       = VK_NULL_HANDLE;
-        other.descriptor_set_        = VK_NULL_HANDLE;
+        other.pipeline_layout_            = VK_NULL_HANDLE;
+        other.descriptor_set_layout_      = VK_NULL_HANDLE;
+        other.descriptor_pool_            = VK_NULL_HANDLE;
+        other.descriptor_set_             = VK_NULL_HANDLE;
+        other.default_sampler_            = VK_NULL_HANDLE;
+        other.default_white_texture_view_ = VK_NULL_HANDLE;
     }
 
     Material& Material::operator=(Material&& other) noexcept
@@ -52,20 +57,25 @@ namespace vulkan_engine::rendering
         {
             cleanup();
 
-            device_                = std::move(other.device_);
-            config_                = std::move(other.config_);
-            pipeline_              = std::move(other.pipeline_);
-            pipeline_layout_       = other.pipeline_layout_;
-            descriptor_set_layout_ = other.descriptor_set_layout_;
-            uniform_buffer_        = std::move(other.uniform_buffer_);
-            descriptor_pool_       = other.descriptor_pool_;
-            descriptor_set_        = other.descriptor_set_;
-            textures_              = std::move(other.textures_);
+            device_                     = std::move(other.device_);
+            config_                     = std::move(other.config_);
+            pipeline_                   = std::move(other.pipeline_);
+            pipeline_layout_            = other.pipeline_layout_;
+            descriptor_set_layout_      = other.descriptor_set_layout_;
+            uniform_buffer_             = std::move(other.uniform_buffer_);
+            descriptor_pool_            = other.descriptor_pool_;
+            descriptor_set_             = other.descriptor_set_;
+            textures_                   = std::move(other.textures_);
+            default_sampler_            = other.default_sampler_;
+            default_white_texture_      = std::move(other.default_white_texture_);
+            default_white_texture_view_ = other.default_white_texture_view_;
 
-            other.pipeline_layout_       = VK_NULL_HANDLE;
-            other.descriptor_set_layout_ = VK_NULL_HANDLE;
-            other.descriptor_pool_       = VK_NULL_HANDLE;
-            other.descriptor_set_        = VK_NULL_HANDLE;
+            other.pipeline_layout_            = VK_NULL_HANDLE;
+            other.descriptor_set_layout_      = VK_NULL_HANDLE;
+            other.descriptor_pool_            = VK_NULL_HANDLE;
+            other.descriptor_set_             = VK_NULL_HANDLE;
+            other.default_sampler_            = VK_NULL_HANDLE;
+            other.default_white_texture_view_ = VK_NULL_HANDLE;
         }
         return *this;
     }
@@ -565,7 +575,11 @@ namespace vulkan_engine::rendering
             VkImageView view = default_white_texture_view_;
 
             VkSampler sampler = default_sampler_;
-
+            if (sampler == VK_NULL_HANDLE)
+            {
+                logger::error("Default sampler is null for binding " + std::to_string(binding_slot));
+                continue;
+            }
 
             // Check if we have a texture for this binding slot
 
@@ -583,13 +597,9 @@ namespace vulkan_engine::rendering
 
 
             VkDescriptorImageInfo image_info{};
-
             image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-            image_info.imageView = view;
-
-            image_info.sampler = sampler;
-
+            image_info.imageView   = view;
+            image_info.sampler     = sampler;
 
             VkWriteDescriptorSet texture_write{};
 

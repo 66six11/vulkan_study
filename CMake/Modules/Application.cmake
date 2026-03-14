@@ -7,6 +7,7 @@ create_vulkan_module(Application STATIC)
 # 链接依赖
 target_link_libraries(VulkanEngineApplication PUBLIC
         VulkanEngineVulkan
+        VulkanEngineEditor
 )
 
 # 创建主可执行文件

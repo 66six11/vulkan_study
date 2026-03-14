@@ -48,6 +48,9 @@ include(cmake/Modules/Rendering.cmake)
 # 加载 Vulkan 模块
 include(cmake/Modules/Vulkan.cmake)
 
+# 加载编辑器模块（依赖 Rendering）
+include(cmake/Modules/Editor.cmake)
+
 # 加载应用程序模块
 include(cmake/Modules/Application.cmake)
 

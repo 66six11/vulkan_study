@@ -49,6 +49,7 @@ class VulkanEngineConan(ConanFile):
         self.requires("glm/0.9.9.8")
         self.requires("stb/cci.20230920")
         self.requires("nlohmann_json/3.11.2")
+        self.requires("imgui/1.91.0")
 
         # Optional dependencies
         if self.options.with_async_loading:

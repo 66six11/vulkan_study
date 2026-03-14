@@ -90,6 +90,19 @@ endif ()
 
 # nlohmann_json for JSON parsing
 file(GLOB NLOHMANNJSON_DIRS "$ENV{USERPROFILE}/.conan2/p/nloh*/p/include")
+
+# ImGui for Editor UI
+find_package(imgui CONFIG QUIET
+        PATHS
+        "${CMAKE_CURRENT_SOURCE_DIR}/build/generators"
+        "${CMAKE_CURRENT_SOURCE_DIR}/build/build/generators"
+        NO_DEFAULT_PATH
+)
+if (imgui_FOUND)
+    message(STATUS "ImGui found: ${imgui_VERSION_STRING}")
+else ()
+    message(WARNING "ImGui not found, Editor UI will be disabled")
+endif ()
 if (NLOHMANNJSON_DIRS)
     list(GET NLOHMANNJSON_DIRS 0 NLOHMANNJSON_INCLUDE_DIR)
 endif ()

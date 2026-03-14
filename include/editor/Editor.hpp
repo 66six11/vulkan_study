@@ -1,0 +1,94 @@
+#pragma once
+
+#include "editor/ImGuiManager.hpp"
+#include "rendering/render_graph/RenderGraph.hpp"
+#include "vulkan/device/Device.hpp"
+#include "vulkan/device/SwapChain.hpp"
+#include "platform/windowing/Window.hpp"
+
+#include <memory>
+
+namespace vulkan_engine::rendering
+{
+    class SceneViewport;
+}
+
+namespace vulkan_engine::editor
+{
+    // Main Editor class - Integrates viewport, UI, and scene rendering
+    class Editor
+    {
+        public:
+            Editor();
+            ~Editor();
+
+            // Non-copyable
+            Editor(const Editor&)            = delete;
+            Editor& operator=(const Editor&) = delete;
+
+            // Initialize editor with window and device
+            void initialize(
+                std::shared_ptr<platform::Window>      window,
+                std::shared_ptr<vulkan::DeviceManager> device,
+                std::shared_ptr<vulkan::SwapChain>     swap_chain);
+
+            // Shutdown and cleanup
+            void shutdown();
+
+            // Begin editor frame - call at start of application frame
+            void begin_frame();
+
+            // Render scene to viewport - call during rendering
+            // Returns command buffer for submission
+            VkCommandBuffer render_scene(
+                std::shared_ptr<rendering::RenderGraph> render_graph);
+
+            // End editor frame and render UI - call after scene rendering
+            void end_frame(uint32_t image_index);
+
+            // Render ImGui to command buffer - call during swap chain render pass
+            void render_to_command_buffer(VkCommandBuffer command_buffer);
+
+            // Get viewport for input handling
+            rendering::SceneViewport*       viewport() { return viewport_.get(); }
+            const rendering::SceneViewport* viewport() const { return viewport_.get(); }
+
+            // Check if viewport is focused/hovered (for camera controls)
+            bool is_viewport_focused() const;
+            bool is_viewport_hovered() const;
+
+            // Update stats display
+            void update_stats(const ImGuiManager::StatsData& stats);
+
+            // Get viewport render pass (for pipeline creation)
+            VkRenderPass  viewport_render_pass() const;
+            VkFramebuffer viewport_framebuffer() const;
+
+            // Check if initialized
+            bool is_initialized() const { return initialized_; }
+
+            // Recreate render pass after window resize
+            void recreate_render_pass(VkRenderPass render_pass, uint32_t image_count);
+
+        private:
+            void create_command_pool();
+            void allocate_command_buffers(uint32_t count);
+            void create_sync_objects();
+
+            std::shared_ptr<platform::Window>      window_;
+            std::shared_ptr<vulkan::DeviceManager> device_;
+            std::shared_ptr<vulkan::SwapChain>     swap_chain_;
+
+            std::unique_ptr<ImGuiManager>             imgui_manager_;
+            std::unique_ptr<rendering::SceneViewport> viewport_;
+
+            // Command buffers for viewport rendering
+            VkCommandPool                command_pool_ = VK_NULL_HANDLE;
+            std::vector<VkCommandBuffer> command_buffers_;
+
+            // ImGui uses swap chain images
+            uint32_t current_image_index_ = 0;
+
+            bool initialized_ = false;
+    };
+} // namespace vulkan_engine::editor
