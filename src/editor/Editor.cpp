@@ -90,6 +90,12 @@ namespace vulkan_engine::editor
             return;
         }
 
+        // 应用 viewport 的延迟 resize（在 ImGui 开始帧之前）
+        if (viewport_)
+        {
+            viewport_->apply_pending_resize();
+        }
+
         imgui_manager_->begin_frame();
     }
 
@@ -207,15 +213,22 @@ namespace vulkan_engine::editor
 
     void Editor::recreate_render_pass(VkRenderPass render_pass, uint32_t image_count)
     {
-        if (!initialized_ || !imgui_manager_)
+        if (!initialized_ || !imgui_manager_ || !device_)
             return;
 
         vkDeviceWaitIdle(device_->device());
 
-        // Shutdown and reinitialize ImGui with new render pass
-        imgui_manager_->shutdown();
-        imgui_manager_->initialize(device_, window_, render_pass, image_count);
+        // According to ImGui Vulkan backend documentation:
+        // When handling window resize, we need to update MinImageCount
+        // and recreate the RenderPass if it has changed
 
-        logger::info("Editor render pass recreated");
+        // Update MinImageCount for the new swap chain configuration
+        ImGui_ImplVulkan_SetMinImageCount(image_count);
+
+        // Note: If RenderPass has changed significantly, we may need to reinitialize
+        // For now, we just update the min image count and let ImGui handle the rest
+        (void)render_pass; // Render pass changes are handled by the main application
+
+        logger::info("Editor render pass recreated with MinImageCount=" + std::to_string(image_count));
     }
 } // namespace vulkan_engine::editor

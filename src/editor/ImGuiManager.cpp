@@ -177,21 +177,50 @@ namespace vulkan_engine::editor
         // Display scene texture
         if (viewport && viewport_size.x > 0 && viewport_size.y > 0)
         {
-            // Ensure viewport matches panel size
+            // 请求 viewport resize（延迟到下一帧开始时才应用）
+            // 这避免了在 ImGui 绘制过程中重建 Vulkan 资源
             VkExtent2D current_extent = viewport->extent();
-            if (current_extent.width != static_cast<uint32_t>(viewport_size.x) ||
-                current_extent.height != static_cast<uint32_t>(viewport_size.y))
+            uint32_t   new_width      = static_cast<uint32_t>(viewport_size.x);
+            uint32_t   new_height     = static_cast<uint32_t>(viewport_size.y);
+
+            if ((current_extent.width != new_width || current_extent.height != new_height)
+                && new_width > 10 && new_height > 10)
             {
-                viewport->resize(
-                                 static_cast<uint32_t>(viewport_size.x),
-                                 static_cast<uint32_t>(viewport_size.y));
+                viewport->request_resize(new_width, new_height);
             }
 
-            // Show the rendered texture
+            // Show the rendered texture with aspect ratio preservation (Cover mode)
             ImTextureID texture_id = viewport->imgui_texture_id();
             if (texture_id)
             {
-                ImGui::Image(texture_id, viewport_size);
+                // 使用 display_extent（目标显示尺寸）计算宽高比
+                // 这与投影矩阵使用的宽高比一致，确保物体形状正确
+                VkExtent2D display_extent  = viewport->display_extent();
+                float      display_aspect  = static_cast<float>(display_extent.width) / display_extent.height;
+                float      viewport_aspect = viewport_size.x / viewport_size.y;
+
+                // Cover 模式：保持比例，裁剪超出部分
+                float u0 = 0.0f, v0 = 0.0f, u1 = 1.0f, v1 = 1.0f;
+
+                if (display_aspect > viewport_aspect)
+                {
+                    // 显示区域更宽，裁剪左右
+                    float visible_width = viewport_aspect / display_aspect;
+                    float offset        = (1.0f - visible_width) * 0.5f;
+                    u0                  = offset;
+                    u1                  = 1.0f - offset;
+                }
+                else if (display_aspect < viewport_aspect)
+                {
+                    // 显示区域更高，裁剪上下
+                    float visible_height = display_aspect / viewport_aspect;
+                    float offset         = (1.0f - visible_height) * 0.5f;
+                    v0                   = offset;
+                    v1                   = 1.0f - offset;
+                }
+                // 否则比例相同，使用全纹理
+
+                ImGui::Image(texture_id, viewport_size, ImVec2(u0, v0), ImVec2(u1, v1));
             }
         }
 

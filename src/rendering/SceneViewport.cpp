@@ -89,20 +89,36 @@ namespace vulkan_engine::rendering
     }
 
     void SceneViewport::initialize(std::shared_ptr<vulkan::DeviceManager> device, const CreateInfo& info)
+
     {
-        device_       = device;
-        width_        = info.width;
-        height_       = info.height;
+        device_ = device;
+
+        width_ = info.width;
+
+        height_ = info.height;
+
+        display_width_ = info.width;
+
+        display_height_ = info.height;
+
         color_format_ = info.color_format;
+
         depth_format_ = info.depth_format;
-        samples_      = info.samples;
+
+        samples_ = info.samples;
+
 
         create_images();
-        create_render_pass();
+
+            create_render_pass();
+
         create_framebuffer();
 
+
         // Initial render pass to transition image layout from UNDEFINED to SHADER_READ_ONLY_OPTIMAL
+
         transition_image_layout();
+
 
         logger::info("SceneViewport created: " + std::to_string(width_) + "x" + std::to_string(height_));
     }
@@ -231,33 +247,152 @@ namespace vulkan_engine::rendering
         // Note: imgui_sampler_ is not destroyed here to allow reuse during resize
     }
 
-    void SceneViewport::resize(uint32_t width, uint32_t height)
-    {
-        if (width == width_ && height == height_)
-        {
-            return;
-        }
+                void SceneViewport::request_resize(uint32_t width, uint32_t height)
 
-        cleanup();
-        width_  = width;
-        height_ = height;
-        create_images();
-        create_render_pass();
-        create_framebuffer();
+                {
+                    // 立即更新显示尺寸（用于投影矩阵计算）
 
-        // Recreate ImGui descriptor set (but keep the sampler)
-        imgui_descriptor_set_ = VK_NULL_HANDLE;
+                    display_width_ = width;
 
-        // Transition new image layout from UNDEFINED to SHADER_READ_ONLY_OPTIMAL
-        transition_image_layout();
+                    display_height_ = height;
 
-        logger::info("SceneViewport resized: " + std::to_string(width_) + "x" + std::to_string(height_));
-    }
 
-    ImTextureID SceneViewport::imgui_texture_id() const
-    {
-        // Create sampler on first use
-        if (imgui_sampler_ == VK_NULL_HANDLE)
+                    if (width == width_ && height == height_)
+
+                    {
+                        // 渲染目标尺寸已匹配，无需重建
+
+                        resize_pending_ = false;
+
+                        return;
+                    }
+
+
+                    // 标记需要重建渲染资源
+
+                    pending_width_ = width;
+
+                    pending_height_ = height;
+
+                    resize_pending_ = true;
+                }
+
+
+                void SceneViewport::apply_pending_resize()
+
+                {
+                    if (!resize_pending_)
+
+                        return;
+
+
+                    resize(pending_width_, pending_height_);
+
+                    resize_pending_ = false;
+                }
+
+
+                void SceneViewport::resize(uint32_t width, uint32_t height)
+
+
+                {
+                    // 立即重建模式：渲染目标尺寸与显示尺寸严格同步
+
+
+                    if (width == width_ && height == height_)
+
+
+                    {
+                        display_width_ = width;
+
+
+                        display_height_ = height;
+
+
+                        return; // 尺寸未变化，无需重建
+                    }
+
+
+                    // 更新显示尺寸
+
+
+                    display_width_ = width;
+
+
+                    display_height_ = height;
+
+
+                    // 确保 GPU 空闲（关键：避免使用正在被销毁的资源）
+
+
+                    if (device_)
+
+
+                    {
+                        vkDeviceWaitIdle(device_->device());
+                    }
+
+
+                    // 清理旧资源
+
+
+                    cleanup();
+
+
+                    // 设置新的渲染目标尺寸（与显示尺寸完全一致）
+
+
+                    width_ = width;
+
+    
+
+                                    height_ = height;
+
+    
+
+                
+
+    
+
+                                    // 重建所有资源
+
+    
+
+                                    create_images();
+
+    
+
+                                    create_render_pass();
+
+    
+
+                                    create_framebuffer();
+
+    
+
+                
+
+    
+
+                                    // 重新创建 ImGui 描述符集
+
+
+                    imgui_descriptor_set_ = VK_NULL_HANDLE;
+
+
+                    // 转换图像布局（UNDEFINED -> SHADER_READ_ONLY_OPTIMAL）
+
+
+                    transition_image_layout();
+
+
+                    logger::info("SceneViewport resized to: " + std::to_string(width_) + "x" + std::to_string(height_));
+                }
+
+                ImTextureID SceneViewport::imgui_texture_id() const
+                {
+                    // Create sampler on first use
+                    if (imgui_sampler_ == VK_NULL_HANDLE)
         {
             VkSamplerCreateInfo sampler_info     = {};
             sampler_info.sType                   = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -312,6 +447,7 @@ namespace vulkan_engine::rendering
 
         vkCmdBeginRenderPass(command_buffer, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
 
+        // 使用完整渲染目标尺寸设置 viewport（立即重建模式下 width_ == display_width_）
         VkViewport viewport = {};
         viewport.x          = 0.0f;
         viewport.y          = 0.0f;

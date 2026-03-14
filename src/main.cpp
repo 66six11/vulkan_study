@@ -348,39 +348,89 @@ class EditorApplication : public application::ApplicationBase
         }
 
         void on_window_resize(const application::WindowResizeEvent& event) override
+
         {
-            uint32_t width  = event.width;
+            uint32_t width = event.width;
+
             uint32_t height = event.height;
 
+
             if (width == 0 || height == 0)
+
                 return;
 
-            width_  = width;
+
+            width_ = width;
+
             height_ = height;
 
-            auto device     = device_manager();
+
+            auto device = device_manager();
+
             auto swap_chain = this->swap_chain();
+
             if (!device || !swap_chain)
+
                 return;
+
+
+            // 等待 GPU 完成所有操作
 
             vkDeviceWaitIdle(device->device());
 
-            // Recreate depth buffer
-            depth_buffer_.reset();
-            depth_buffer_ = std::make_unique<vulkan::DepthBuffer>(device, width_, height_);
 
-            // Recreate render pass with new depth format
+            // 重建交换链（关键！必须与窗口尺寸匹配）
+
+            if (!swap_chain->recreate())
+
+            {
+                logger::error("Failed to recreate swap chain");
+
+                return;
+            }
+
+
+            // 重建 depth buffer（匹配新的交换链尺寸）
+
+            depth_buffer_.reset();
+
+            depth_buffer_ = std::make_unique<vulkan::DepthBuffer>(device, swap_chain->width(), swap_chain->height());
+
+
+            // 重建 render pass
+
             swap_chain->create_render_pass_with_depth(depth_buffer_->format());
 
-            // Recreate framebuffers
+
+            // 重建 framebuffers
+
             framebuffer_pool_.reset();
-            framebuffer_pool_ = std::make_unique<vulkan::FramebufferPool>(device);
+
+                    framebuffer_pool_ = std::make_unique<vulkan::FramebufferPool>(device);
+
             create_framebuffers();
 
-            // Recreate ImGui with new render pass
+
+            // 重建 FrameSyncManager（image_count 可能已改变）
+
+            frame_sync_.reset();
+
+            frame_sync_ = std::make_unique<vulkan::FrameSyncManager>(device, 2, swap_chain->image_count());
+
+
+            // 重建 ImGui
+
             editor_->recreate_render_pass(swap_chain->default_render_pass(), swap_chain->image_count());
 
-            logger::info("Window resized to " + std::to_string(width_) + "x" + std::to_string(height_));
+
+            // 清除 ImGui command buffers（强制按新的 image count 重新分配）
+
+            cmd_buffers_imgui_.clear();
+
+
+            logger::info("Window resized to " + std::to_string(swap_chain->width()) + "x" +
+
+                         std::to_string(swap_chain->height()) + ", images=" + std::to_string(swap_chain->image_count()));
         }
 
     private:
@@ -430,10 +480,10 @@ class EditorApplication : public application::ApplicationBase
 
             VkDeviceSize index_size = sizeof(cube_indices[0]) * cube_indices.size();
             index_buffer_           = std::make_unique<vulkan::Buffer>(
-                                                                       device,
-                                                                       index_size,
-                                                                       VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-                                                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+                                                             device,
+                                                             index_size,
+                                                             VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                                                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
             void* idata = index_buffer_->map();
             memcpy(idata, cube_indices.data(), static_cast<size_t>(index_size));
             index_buffer_->unmap();
@@ -586,105 +636,120 @@ class EditorApplication : public application::ApplicationBase
             render_pass_info.renderPass        = swap_chain->default_render_pass();
             render_pass_info.framebuffer       = framebuffer_pool_->get_framebuffer(image_index)->handle();
             render_pass_info.renderArea.offset = {0, 0};
-            render_pass_info.renderArea.extent = {width_, height_};
+            // Use swap chain extent to ensure correct size after resize
+            auto extent                        = swap_chain->extent();
+            render_pass_info.renderArea.extent = extent;
 
             VkClearValue clear_values[2];
             clear_values[0].color        = {0.2f, 0.2f, 0.2f, 1.0f};
             clear_values[1].depthStencil = {1.0f, 0};
 
             render_pass_info.clearValueCount = 2;
-        render_pass_info.pClearValues        = clear_values;
+            render_pass_info.pClearValues    = clear_values;
 
             vkCmdBeginRenderPass(cmd.handle(), &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
 
-        // Render ImGui
-        editor_->render_to_command_buffer(cmd.handle());
+            // Render ImGui
+            editor_->render_to_command_buffer(cmd.handle());
 
             vkCmdEndRenderPass(cmd.handle());
             cmd.end();
 
             return cmd.handle();
-    }
-
-    void update_mvp_matrix()
-    {
-        glm::mat4 model = glm::mat4(1.0f);
-        glm::mat4 view = camera_.get_view_matrix();
-        glm::mat4 proj = camera_.get_projection_matrix(
-            45.0f,
-            static_cast<float>(width_) / static_cast<float>(height_),
-            0.1f,
-            100.0f);
-
-        if (cube_pass_)
-        {
-            cube_pass_->set_mvp_matrix(proj * view * model);
         }
-    }
 
-    void update_fps()
-    {
-        frame_count_++;
-        auto current_time = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(current_time - last_time_).count();
-
-        if (duration >= 1000)
+        void update_mvp_matrix()
         {
-            current_fps_ = static_cast<float>(frame_count_) * 1000.0f / static_cast<float>(duration);
-            frame_count_ = 0;
-            last_time_ = current_time;
+            glm::mat4 model = glm::mat4(1.0f);
+            glm::mat4 view  = camera_.get_view_matrix();
+            
+            // 关键：投影矩阵的宽高比必须与最终显示区域的宽高比一致
+            // 使用视窗的显示尺寸（而非实际渲染尺寸），处理延迟 resize 的情况
+            float aspect_ratio = static_cast<float>(width_) / static_cast<float>(height_);
+            
+            if (editor_ && editor_->viewport())
+            {
+                auto* viewport = editor_->viewport();
+                // 使用 display_extent（目标显示尺寸），与 ImGui 视窗尺寸一致
+                auto display_extent = viewport->display_extent();
+                if (display_extent.height > 0)
+                {
+                    aspect_ratio = static_cast<float>(display_extent.width) /
+                                   static_cast<float>(display_extent.height);
+                }
+            }
+
+            glm::mat4 proj = camera_.get_projection_matrix(45.0f, aspect_ratio, 0.1f, 100.0f);
+
+            if (cube_pass_)
+            {
+                cube_pass_->set_mvp_matrix(proj * view * model);
+            }
         }
-    }
 
-    void cleanup_resources()
-    {
-        // RAII handles cleanup
-    }
+        void update_fps()
+        {
+            frame_count_++;
+            auto current_time = std::chrono::high_resolution_clock::now();
+            auto duration     = std::chrono::duration_cast<std::chrono::milliseconds>(current_time - last_time_).count();
 
-    // Member variables
-    uint32_t width_ = 0;
-    uint32_t height_ = 0;
+            if (duration >= 1000)
+            {
+                current_fps_ = static_cast<float>(frame_count_) * 1000.0f / static_cast<float>(duration);
+                frame_count_ = 0;
+                last_time_   = current_time;
+            }
+        }
 
-    // Editor
-    std::unique_ptr<editor::Editor> editor_;
-    VkRenderPass viewport_render_pass_ = VK_NULL_HANDLE;
+        void cleanup_resources()
+        {
+            // RAII handles cleanup
+        }
 
-    // Camera
-    core::OrbitCamera camera_;
+        // Member variables
+        uint32_t width_  = 0;
+        uint32_t height_ = 0;
 
-    // Frame sync
-    std::unique_ptr<vulkan::FrameSyncManager> frame_sync_;
+        // Editor
+        std::unique_ptr<editor::Editor> editor_;
+        VkRenderPass                    viewport_render_pass_ = VK_NULL_HANDLE;
 
-    // Depth buffer for swap chain
-    std::unique_ptr<vulkan::DepthBuffer> depth_buffer_;
+        // Camera
+        core::OrbitCamera camera_;
 
-    // Framebuffer pool for swap chain images
-    std::unique_ptr<vulkan::FramebufferPool> framebuffer_pool_;
+        // Frame sync
+        std::unique_ptr<vulkan::FrameSyncManager> frame_sync_;
 
-    // Command buffers
-    std::unique_ptr<vulkan::RenderCommandPool> cmd_pool_;
-    std::vector<vulkan::RenderCommandBuffer> cmd_buffers_;
-    std::vector<vulkan::RenderCommandBuffer> cmd_buffers_imgui_;
+        // Depth buffer for swap chain
+        std::unique_ptr<vulkan::DepthBuffer> depth_buffer_;
 
-    // Mesh
-    std::unique_ptr<rendering::Mesh> mesh_;
-    std::unique_ptr<vulkan::Buffer> vertex_buffer_;
-    std::unique_ptr<vulkan::Buffer> index_buffer_;
+        // Framebuffer pool for swap chain images
+        std::unique_ptr<vulkan::FramebufferPool> framebuffer_pool_;
 
-    // Render Graph
-    rendering::RenderGraph render_graph_;
-    rendering::CubeRenderPass* cube_pass_ = nullptr;
+        // Command buffers
+        std::unique_ptr<vulkan::RenderCommandPool> cmd_pool_;
+        std::vector<vulkan::RenderCommandBuffer>   cmd_buffers_;
+        std::vector<vulkan::RenderCommandBuffer>   cmd_buffers_imgui_;
 
-    // Materials
-    std::unique_ptr<rendering::MaterialLoader> material_loader_;
-    std::shared_ptr<rendering::Material> current_material_;
-    std::vector<std::shared_ptr<rendering::Material>> materials_;
-    size_t current_material_index_ = 0;
+        // Mesh
+        std::unique_ptr<rendering::Mesh> mesh_;
+        std::unique_ptr<vulkan::Buffer>  vertex_buffer_;
+        std::unique_ptr<vulkan::Buffer>  index_buffer_;
 
-    // FPS tracking
-    std::chrono::high_resolution_clock::time_point last_time_;
-    uint32_t frame_count_ = 0;
-    float current_fps_ = 0.0f;
+        // Render Graph
+        rendering::RenderGraph     render_graph_;
+        rendering::CubeRenderPass* cube_pass_ = nullptr;
+
+        // Materials
+        std::unique_ptr<rendering::MaterialLoader>        material_loader_;
+        std::shared_ptr<rendering::Material>              current_material_;
+        std::vector<std::shared_ptr<rendering::Material>> materials_;
+        size_t                                            current_material_index_ = 0;
+
+        // FPS tracking
+        std::chrono::high_resolution_clock::time_point last_time_;
+        uint32_t                                       frame_count_ = 0;
+        float                                          current_fps_ = 0.0f;
 };
 
 int main(int /*argc*/, char* /*argv*/[])
