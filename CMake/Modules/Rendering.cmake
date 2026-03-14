@@ -10,6 +10,11 @@ target_link_libraries(VulkanEngineRendering PUBLIC
         VulkanEngineCore
 )
 
+# STB for texture loading
+if (stb_FOUND)
+    target_link_libraries(VulkanEngineRendering PUBLIC VulkanEngine::STB)
+endif ()
+
 # nlohmann_json for material JSON parsing
 if (nlohmann_json_FOUND)
     target_link_libraries(VulkanEngineRendering PUBLIC VulkanEngine::nlohmann_json)

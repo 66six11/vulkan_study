@@ -38,45 +38,46 @@ namespace vulkan_engine::rendering
     void test_render_graph_resource_management(std::shared_ptr<vulkan::DeviceManager> device);
 }
 
-// 3D vertex structure
+// 3D vertex structure with UV
 struct Vertex
 {
     float position[3];
     float color[3];
+    float uv[2];
 };
 
-// Cube vertices with colors
+// Cube vertices with colors and UVs
 const std::vector<Vertex> cube_vertices = {
-    // Front face (red)
-    {{-0.5f, -0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}},
-    {{0.5f, -0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}},
-    {{0.5f, 0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}},
-    {{-0.5f, 0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}},
+    // Front face (red) - UVs mapped to show grid properly
+    {{-0.5f, -0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f}},
+    {{0.5f, -0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 1.0f}},
+    {{0.5f, 0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+    {{-0.5f, 0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
     // Back face (green)
-    {{-0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-    {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-    {{0.5f, 0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-    {{-0.5f, 0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+    {{-0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f}},
+    {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f}},
+    {{0.5f, 0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+    {{-0.5f, 0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
     // Top face (blue)
-    {{-0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}},
-    {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}},
-    {{0.5f, 0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-    {{-0.5f, 0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+    {{-0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+    {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+    {{0.5f, 0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 0.0f}},
+    {{-0.5f, 0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f}},
     // Bottom face (yellow)
-    {{-0.5f, -0.5f, -0.5f}, {1.0f, 1.0f, 0.0f}},
-    {{0.5f, -0.5f, -0.5f}, {1.0f, 1.0f, 0.0f}},
-    {{0.5f, -0.5f, 0.5f}, {1.0f, 1.0f, 0.0f}},
-    {{-0.5f, -0.5f, 0.5f}, {1.0f, 1.0f, 0.0f}},
+    {{-0.5f, -0.5f, -0.5f}, {1.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+    {{0.5f, -0.5f, -0.5f}, {1.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+    {{0.5f, -0.5f, 0.5f}, {1.0f, 1.0f, 0.0f}, {1.0f, 1.0f}},
+    {{-0.5f, -0.5f, 0.5f}, {1.0f, 1.0f, 0.0f}, {0.0f, 1.0f}},
     // Right face (magenta)
-    {{0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 1.0f}},
-    {{0.5f, 0.5f, -0.5f}, {1.0f, 0.0f, 1.0f}},
-    {{0.5f, 0.5f, 0.5f}, {1.0f, 0.0f, 1.0f}},
-    {{0.5f, -0.5f, 0.5f}, {1.0f, 0.0f, 1.0f}},
+    {{0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+    {{0.5f, 0.5f, -0.5f}, {1.0f, 0.0f, 1.0f}, {0.0f, 0.0f}},
+    {{0.5f, 0.5f, 0.5f}, {1.0f, 0.0f, 1.0f}, {1.0f, 0.0f}},
+    {{0.5f, -0.5f, 0.5f}, {1.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
     // Left face (cyan)
-    {{-0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 1.0f}},
-    {{-0.5f, 0.5f, -0.5f}, {0.0f, 1.0f, 1.0f}},
-    {{-0.5f, 0.5f, 0.5f}, {0.0f, 1.0f, 1.0f}},
-    {{-0.5f, -0.5f, 0.5f}, {0.0f, 1.0f, 1.0f}},
+    {{-0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
+    {{-0.5f, 0.5f, -0.5f}, {0.0f, 1.0f, 1.0f}, {1.0f, 0.0f}},
+    {{-0.5f, 0.5f, 0.5f}, {0.0f, 1.0f, 1.0f}, {0.0f, 0.0f}},
+    {{-0.5f, -0.5f, 0.5f}, {0.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
 };
 
 // Cube indices
@@ -175,11 +176,13 @@ class CubeApplication : public application::ApplicationBase
             logger::info("Initializing Material System...");
             material_loader_ = std::make_unique<rendering::MaterialLoader>(device);
             material_loader_->set_base_directory("D:/TechArt/Vulkan/materials/");
+            material_loader_->set_texture_directory("D:/TechArt/Vulkan/");
 
             // Load materials (need render pass from swap chain)
             materials_.push_back(material_loader_->load("metal.json", swap_chain->default_render_pass()));
             materials_.push_back(material_loader_->load("plastic.json", swap_chain->default_render_pass()));
             materials_.push_back(material_loader_->load("emissive.json", swap_chain->default_render_pass()));
+            materials_.push_back(material_loader_->load("textured.json", swap_chain->default_render_pass()));
 
             // Set initial material
             if (!materials_.empty())
@@ -488,13 +491,13 @@ class CubeApplication : public application::ApplicationBase
         float                                          rotation_angle_ = 0.0f;
         std::chrono::high_resolution_clock::time_point start_time_;
 
-        std::unique_ptr<vulkan::FrameSyncManager>      frame_sync_;
-        std::unique_ptr<vulkan::DepthBuffer>           depth_buffer_;
-        std::unique_ptr<vulkan::FramebufferPool>       framebuffer_pool_;
-        std::unique_ptr<vulkan::RenderCommandPool>     cmd_pool_;
-        std::vector<vulkan::RenderCommandBuffer>       cmd_buffers_;
-        std::unique_ptr<vulkan::Buffer>                vertex_buffer_;
-        std::unique_ptr<vulkan::Buffer>                index_buffer_;
+        std::unique_ptr<vulkan::FrameSyncManager>  frame_sync_;
+        std::unique_ptr<vulkan::DepthBuffer>       depth_buffer_;
+        std::unique_ptr<vulkan::FramebufferPool>   framebuffer_pool_;
+        std::unique_ptr<vulkan::RenderCommandPool> cmd_pool_;
+        std::vector<vulkan::RenderCommandBuffer>   cmd_buffers_;
+        std::unique_ptr<vulkan::Buffer>            vertex_buffer_;
+        std::unique_ptr<vulkan::Buffer>            index_buffer_;
 
         // Render Graph
         rendering::RenderGraph     render_graph_;

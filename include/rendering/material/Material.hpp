@@ -114,10 +114,10 @@ namespace vulkan_engine::rendering
             struct UniformBufferData
             {
                 glm::vec4 color{1.0f, 1.0f, 1.0f, 1.0f};
-                float     roughness = 0.5f;
-                float     metallic  = 0.0f;
-                float     emissive  = 0.0f;
-                float     padding   = 0.0f;
+                float     roughness   = 0.5f;
+                float     metallic    = 0.0f;
+                float     emissive    = 0.0f;
+                float     has_texture = 0.0f; // 1.0 if texture is present
             };
 
             std::unique_ptr<vulkan::UniformBuffer<UniformBufferData>> uniform_buffer_;
@@ -139,6 +139,10 @@ namespace vulkan_engine::rendering
             // Default sampler for texture binding
             VkSampler default_sampler_ = VK_NULL_HANDLE;
 
+            // Default white texture (1x1 pixel, used when no texture is set)
+            std::shared_ptr<vulkan::Image> default_white_texture_;
+            VkImageView                    default_white_texture_view_ = VK_NULL_HANDLE;
+
             // Mutex for thread-safe uniform buffer updates
             mutable std::mutex uniform_mutex_;
 
@@ -147,6 +151,7 @@ namespace vulkan_engine::rendering
             void create_pipeline_layout();
             void create_descriptor_set();
             void create_default_sampler();
+            void create_default_white_texture();
             void update_descriptor_set();
             void update_uniform_buffer();
 

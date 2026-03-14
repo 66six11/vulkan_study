@@ -10,7 +10,7 @@ namespace vulkan_engine::rendering
     using json = nlohmann::json;
 
     MaterialLoader::MaterialLoader(std::shared_ptr<vulkan::DeviceManager> device)
-        : device_(std::move(device))
+        : device_(std::move(device)), texture_loader_(device_)
     {
     }
 
@@ -118,6 +118,72 @@ namespace vulkan_engine::rendering
                     float emissive = params["emissive"].value("value", 0.0f);
                     material->set_float("emissive", emissive);
                     logger::info("  Emissive: " + std::to_string(emissive));
+                }
+            }
+
+            // Parse and load textures
+            if (j.contains("textures"))
+            {
+                auto& textures = j["textures"];
+
+                // Albedo/Diffuse texture (binding 1)
+                if (textures.contains("albedo"))
+                {
+                    std::string texture_path = textures["albedo"].value("path", "");
+                    if (!texture_path.empty())
+                    {
+                        auto texture = texture_loader_.load_texture(texture_path, true);
+                        if (texture)
+                        {
+                            material->set_texture("albedo", texture, texture->view());
+                            logger::info("  Albedo texture: " + texture_path);
+                        }
+                    }
+                }
+
+                // Normal map (binding 2)
+                if (textures.contains("normal"))
+                {
+                    std::string texture_path = textures["normal"].value("path", "");
+                    if (!texture_path.empty())
+                    {
+                        auto texture = texture_loader_.load_texture(texture_path, true);
+                        if (texture)
+                        {
+                            material->set_texture("normal", texture, texture->view());
+                            logger::info("  Normal texture: " + texture_path);
+                        }
+                    }
+                }
+
+                // Roughness map (binding 3)
+                if (textures.contains("roughness"))
+                {
+                    std::string texture_path = textures["roughness"].value("path", "");
+                    if (!texture_path.empty())
+                    {
+                        auto texture = texture_loader_.load_texture(texture_path, true);
+                        if (texture)
+                        {
+                            material->set_texture("roughness", texture, texture->view());
+                            logger::info("  Roughness texture: " + texture_path);
+                        }
+                    }
+                }
+
+                // Metallic map (binding 4)
+                if (textures.contains("metallic"))
+                {
+                    std::string texture_path = textures["metallic"].value("path", "");
+                    if (!texture_path.empty())
+                    {
+                        auto texture = texture_loader_.load_texture(texture_path, true);
+                        if (texture)
+                        {
+                            material->set_texture("metallic", texture, texture->view());
+                            logger::info("  Metallic texture: " + texture_path);
+                        }
+                    }
                 }
             }
 

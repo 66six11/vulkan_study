@@ -21,6 +21,7 @@ namespace vulkan_engine::rendering
         create_pipeline_layout();
         create_descriptor_set();
         create_default_sampler();
+        create_default_white_texture();
     }
 
     Material::~Material()
@@ -114,6 +115,10 @@ namespace vulkan_engine::rendering
 
         // Clear textures (shared_ptr will handle cleanup)
         textures_.clear();
+
+        // Clear default white texture
+        default_white_texture_.reset();
+        default_white_texture_view_ = VK_NULL_HANDLE;
     }
 
     void Material::build()
@@ -134,14 +139,24 @@ namespace vulkan_engine::rendering
         pipeline_config.fragment_shader_path = config_.fragment_shader_path;
         pipeline_config.layout               = pipeline_layout_;
 
-        // Vertex input (position and color)
+        // Vertex input (position + color + uv)
+
         pipeline_config.vertex_bindings = {
-            {0, sizeof(float) * 6, VK_VERTEX_INPUT_RATE_VERTEX} // position(3) + color(3)
+
+            {0, sizeof(float) * 8, VK_VERTEX_INPUT_RATE_VERTEX} // position(3) + color(3) + uv(2)
+
         };
+
         pipeline_config.vertex_attributes = {
+
             {0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0},
-            // position
-            {1, 0, VK_FORMAT_R32G32B32_SFLOAT, sizeof(float) * 3} // color
+            // position at location 0
+
+            {1, 0, VK_FORMAT_R32G32B32_SFLOAT, sizeof(float) * 3},
+            // color at location 1
+
+            {2, 0, VK_FORMAT_R32G32_SFLOAT, sizeof(float) * 6} // uv at location 2
+
         };
 
         pipeline_config.primitive_topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
@@ -227,6 +242,14 @@ namespace vulkan_engine::rendering
         else if (name == "metallic") binding = 4;
 
         textures_[name] = {std::move(texture), view, binding};
+
+        // Update has_texture flag in uniform buffer
+        {
+            std::lock_guard<std::mutex> lock(uniform_mutex_);
+            UniformBufferData           data = uniform_buffer_->get_data(0);
+            data.has_texture                 = 1.0f;
+            uniform_buffer_->update(0, data);
+        }
 
         // Update descriptor set if already created
         if (descriptor_set_ != VK_NULL_HANDLE)
@@ -361,6 +384,160 @@ namespace vulkan_engine::rendering
         }
     }
 
+    void Material::create_default_white_texture()
+    {
+        // Create a 1x1 white texture
+        default_white_texture_ = std::make_shared<vulkan::Image>(
+                                                                 device_,
+                                                                 1,
+                                                                 1,
+                                                                 VK_FORMAT_R8G8B8A8_UNORM,
+                                                                 VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+                                                                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                                                                 1,
+                                                                 1);
+
+        // Create staging buffer with white pixel data
+        uint32_t white_pixel = 0xFFFFFFFF; // White (RGBA)
+
+        VkBuffer       staging_buffer;
+        VkDeviceMemory staging_memory;
+
+        VkBufferCreateInfo buffer_info{};
+        buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        buffer_info.size  = sizeof(white_pixel);
+        buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+
+        vkCreateBuffer(device_->device(), &buffer_info, nullptr, &staging_buffer);
+
+        VkMemoryRequirements mem_requirements;
+        vkGetBufferMemoryRequirements(device_->device(), staging_buffer, &mem_requirements);
+
+        VkMemoryAllocateInfo alloc_info{};
+        alloc_info.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        alloc_info.allocationSize  = mem_requirements.size;
+        alloc_info.memoryTypeIndex = device_->find_memory_type(
+                                                               mem_requirements.memoryTypeBits,
+                                                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+        vkAllocateMemory(device_->device(), &alloc_info, nullptr, &staging_memory);
+        vkBindBufferMemory(device_->device(), staging_buffer, staging_memory, 0);
+
+        void* data;
+        vkMapMemory(device_->device(), staging_memory, 0, sizeof(white_pixel), 0, &data);
+        memcpy(data, &white_pixel, sizeof(white_pixel));
+        vkUnmapMemory(device_->device(), staging_memory);
+
+        // Create command buffer for layout transition and copy
+        VkCommandPool   command_pool;
+        VkCommandBuffer command_buffer;
+
+        VkCommandPoolCreateInfo pool_info{};
+        pool_info.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        pool_info.queueFamilyIndex = 0;
+        pool_info.flags            = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+        vkCreateCommandPool(device_->device(), &pool_info, nullptr, &command_pool);
+
+        VkCommandBufferAllocateInfo cmd_alloc_info{};
+        cmd_alloc_info.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        cmd_alloc_info.commandPool        = command_pool;
+        cmd_alloc_info.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        cmd_alloc_info.commandBufferCount = 1;
+        vkAllocateCommandBuffers(device_->device(), &cmd_alloc_info, &command_buffer);
+
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        vkBeginCommandBuffer(command_buffer, &begin_info);
+
+        // Transition to TRANSFER_DST_OPTIMAL
+        VkImageMemoryBarrier barrier{};
+        barrier.sType                           = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.oldLayout                       = VK_IMAGE_LAYOUT_UNDEFINED;
+        barrier.newLayout                       = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        barrier.srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+        barrier.image                           = default_white_texture_->handle();
+        barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+        barrier.subresourceRange.baseMipLevel   = 0;
+        barrier.subresourceRange.levelCount     = 1;
+        barrier.subresourceRange.baseArrayLayer = 0;
+        barrier.subresourceRange.layerCount     = 1;
+        barrier.srcAccessMask                   = 0;
+        barrier.dstAccessMask                   = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+        vkCmdPipelineBarrier(
+                             command_buffer,
+                             VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                             VK_PIPELINE_STAGE_TRANSFER_BIT,
+                             0,
+                             0,
+                             nullptr,
+                             0,
+                             nullptr,
+                             1,
+                             &barrier);
+
+        // Copy buffer to image
+        VkBufferImageCopy region{};
+        region.bufferOffset                    = 0;
+        region.bufferRowLength                 = 0;
+        region.bufferImageHeight               = 0;
+        region.imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+        region.imageSubresource.mipLevel       = 0;
+        region.imageSubresource.baseArrayLayer = 0;
+        region.imageSubresource.layerCount     = 1;
+        region.imageOffset                     = {0, 0, 0};
+        region.imageExtent                     = {1, 1, 1};
+
+        vkCmdCopyBufferToImage(
+                               command_buffer,
+                               staging_buffer,
+                               default_white_texture_->handle(),
+                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                               1,
+                               &region);
+
+        // Transition to SHADER_READ_ONLY_OPTIMAL
+        barrier.oldLayout     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        barrier.newLayout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+        vkCmdPipelineBarrier(
+                             command_buffer,
+                             VK_PIPELINE_STAGE_TRANSFER_BIT,
+                             VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                             0,
+                             0,
+                             nullptr,
+                             0,
+                             nullptr,
+                             1,
+                             &barrier);
+
+        vkEndCommandBuffer(command_buffer);
+
+        // Submit
+        VkSubmitInfo submit_info{};
+        submit_info.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers    = &command_buffer;
+
+        vkQueueSubmit(device_->graphics_queue(), 1, &submit_info, VK_NULL_HANDLE);
+        vkQueueWaitIdle(device_->graphics_queue());
+
+        // Cleanup
+        vkFreeCommandBuffers(device_->device(), command_pool, 1, &command_buffer);
+        vkDestroyCommandPool(device_->device(), command_pool, nullptr);
+        vkFreeMemory(device_->device(), staging_memory, nullptr);
+        vkDestroyBuffer(device_->device(), staging_buffer, nullptr);
+
+        default_white_texture_view_ = default_white_texture_->view();
+
+        logger::info("Created default white texture for material: " + config_.name);
+    }
+
     void Material::update_descriptor_set()
     {
         if (!uniform_buffer_ || descriptor_set_ == VK_NULL_HANDLE)
@@ -385,27 +562,58 @@ namespace vulkan_engine::rendering
 
         vkUpdateDescriptorSets(device_->device(), 1, &descriptor_write, 0, nullptr);
 
-        // Update texture bindings
-        for (const auto& [name, binding] : textures_)
+        // Update texture bindings - always bind something to avoid validation errors
+
+        for (uint32_t binding_slot = 1; binding_slot <= 4; ++binding_slot)
+
         {
-            if (binding.image && binding.view != VK_NULL_HANDLE)
+            VkImageView view = default_white_texture_view_;
+
+            VkSampler sampler = default_sampler_;
+
+
+            // Check if we have a texture for this binding slot
+
+            for (const auto& [name, binding] : textures_)
+
             {
-                VkDescriptorImageInfo image_info{};
-                image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-                image_info.imageView   = binding.view;
-                image_info.sampler     = default_sampler_; // Use default sampler
+                if (binding.binding == binding_slot && binding.image && binding.view != VK_NULL_HANDLE)
 
-                VkWriteDescriptorSet texture_write{};
-                texture_write.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-                texture_write.dstSet          = descriptor_set_;
-                texture_write.dstBinding      = binding.binding;
-                texture_write.dstArrayElement = 0;
-                texture_write.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-                texture_write.descriptorCount = 1;
-                texture_write.pImageInfo      = &image_info;
+                {
+                    view = binding.view;
 
-                vkUpdateDescriptorSets(device_->device(), 1, &texture_write, 0, nullptr);
+                    break;
+                }
             }
+
+
+            VkDescriptorImageInfo image_info{};
+
+            image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+            image_info.imageView = view;
+
+            image_info.sampler = sampler;
+
+
+            VkWriteDescriptorSet texture_write{};
+
+            texture_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+
+            texture_write.dstSet = descriptor_set_;
+
+            texture_write.dstBinding = binding_slot;
+
+            texture_write.dstArrayElement = 0;
+
+            texture_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+
+            texture_write.descriptorCount = 1;
+
+            texture_write.pImageInfo = &image_info;
+
+
+            vkUpdateDescriptorSets(device_->device(), 1, &texture_write, 0, nullptr);
         }
     }
 } // namespace vulkan_engine::rendering

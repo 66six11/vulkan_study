@@ -1,6 +1,7 @@
 #pragma once
 
 #include "rendering/material/Material.hpp"
+#include "rendering/resources/TextureLoader.hpp"
 
 #include <string>
 #include <memory>
@@ -32,10 +33,14 @@ namespace vulkan_engine::rendering
             // Set materials base directory
             void set_base_directory(const std::string& path) { base_directory_ = path; }
 
+            // Set textures base directory
+            void set_texture_directory(const std::string& path) { texture_loader_.set_base_directory(path); }
+
         private:
             std::shared_ptr<vulkan::DeviceManager>                     device_;
             std::string                                                base_directory_ = "materials/";
             std::unordered_map<std::string, std::shared_ptr<Material>> material_cache_;
+            TextureLoader                                              texture_loader_;
 
             // Parse JSON file
             Material::Config parse_json(const std::string& path, VkRenderPass render_pass);
