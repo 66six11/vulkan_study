@@ -52,18 +52,18 @@ namespace vulkan_engine::rendering
         // Bind material (pipeline and descriptor sets)
         material->bind(cmd);
 
-        // Set viewport
+        // Set viewport - 使用渲染上下文的实际尺寸，而不是固定的配置尺寸
         cmd.set_viewport(
                          0.0f,
                          0.0f,
-                         static_cast<float>(config_.width),
-                         static_cast<float>(config_.height),
+                         static_cast<float>(ctx.width),
+                         static_cast<float>(ctx.height),
                          0.0f,
                          1.0f
                         );
 
-        // Set scissor
-        cmd.set_scissor(0, 0, config_.width, config_.height);
+        // Set scissor - 使用渲染上下文的实际尺寸
+        cmd.set_scissor(0, 0, ctx.width, ctx.height);
 
         // Push MVP matrix
         cmd.push_constants(material->pipeline_layout(),
