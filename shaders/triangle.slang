@@ -20,7 +20,7 @@ struct VertexInput
 struct VertexOutput
 {
     float4 position : SV_Position;
-    float3 color : COLOR;
+    float4 color : COLOR;
 };
 
 // Vertex Shader
@@ -29,7 +29,7 @@ VertexOutput vertexMain(VertexInput input)
 {
     VertexOutput output;
     output.position = mul(ubo.mvp, float4(input.position, 1.0));
-    output.color = input.color;
+    output.color = float4(input.color, 1.0);
     return output;
 }
 
@@ -37,5 +37,5 @@ VertexOutput vertexMain(VertexInput input)
 [shader("fragment")]
 float4 fragmentMain(VertexOutput input) : SV_Target
 {
-    return float4(input.color, 1.0);
+    return input.color;
 }

@@ -1,4 +1,6 @@
 ﻿#include "rendering/render_graph/RenderGraph.hpp"
+#include "rendering/render_graph/RenderGraphPass.hpp"
+#include "vulkan/command/CommandBuffer.hpp"
 #include <algorithm>
 #include <stdexcept>
 
@@ -73,6 +75,28 @@ namespace vulkan_engine::rendering
             // Placeholder - would need actual command buffer
             // node->execute(command_buffer);
             (void)node;
+        }
+    }
+
+    void RenderGraph::execute(vulkan::RenderCommandBuffer& cmd, const RenderContext& ctx)
+    {
+        if (!compiled_)
+        {
+            compile();
+        }
+
+        // Execute each node in order
+        for (auto* node : execution_order_)
+        {
+            if (auto* pass_base = dynamic_cast<RenderPassBase*>(node))
+            {
+                pass_base->execute(cmd, ctx);
+            }
+            else
+            {
+                // Fallback to basic execute
+                // node->execute(...);
+            }
         }
     }
 } // namespace vulkan_engine::rendering

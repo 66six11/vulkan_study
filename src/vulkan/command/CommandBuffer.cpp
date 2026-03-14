@@ -130,6 +130,28 @@ namespace vulkan_engine::vulkan
         vkCmdBindPipeline(cmd_buffer_, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
     }
 
+    void RenderCommandBuffer::bind_graphics_pipeline(GraphicsPipeline& pipeline)
+    {
+        vkCmdBindPipeline(cmd_buffer_, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.handle());
+    }
+
+    void RenderCommandBuffer::bind_descriptor_sets(
+        VkPipelineLayout                    layout,
+        uint32_t                            first_set,
+        const std::vector<VkDescriptorSet>& descriptor_sets,
+        const std::vector<uint32_t>&        dynamic_offsets)
+    {
+        vkCmdBindDescriptorSets(
+                                cmd_buffer_,
+                                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                layout,
+                                first_set,
+                                static_cast<uint32_t>(descriptor_sets.size()),
+                                descriptor_sets.data(),
+                                static_cast<uint32_t>(dynamic_offsets.size()),
+                                dynamic_offsets.empty() ? nullptr : dynamic_offsets.data());
+    }
+
     void RenderCommandBuffer::set_viewport(float x, float y, float width, float height, float min_depth, float max_depth)
     {
         VkViewport viewport{};

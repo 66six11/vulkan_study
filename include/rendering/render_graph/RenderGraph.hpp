@@ -7,10 +7,16 @@
 #include <concepts>
 #include <functional>
 
+namespace vulkan_engine::vulkan
+{
+    class RenderCommandBuffer;
+}
+
 namespace vulkan_engine::rendering
 {
     // Forward declarations
     class CommandBuffer;
+    struct RenderContext;
 
     // Resource handle - type-safe resource identifier
     template <typename T> class ResourceHandle
@@ -139,7 +145,17 @@ namespace vulkan_engine::rendering
             TextureHandle create_texture(const ResourceDesc& desc);
 
             // Pass creation
-            template <RenderPass Pass> void add_pass(Pass&& pass);
+            template <RenderPass Pass> void add_pass(Pass&& pass)
+            {
+                auto node = std::make_unique<std::decay_t<Pass>>(std::forward<Pass>(pass));
+                nodes_.push_back(std::move(node));
+            }
+
+            // Add a render graph node directly
+            void add_node(std::unique_ptr<RenderGraphNode> node)
+            {
+                nodes_.push_back(std::move(node));
+            }
 
             // Resource access
             void read(BufferHandle buffer);
@@ -157,6 +173,9 @@ namespace vulkan_engine::rendering
             friend class RenderGraph;
     };
 
+    // Forward declarations
+    struct RenderContext;
+
     // Main render graph class
     class RenderGraph
     {
@@ -167,14 +186,27 @@ namespace vulkan_engine::rendering
             // Compile the render graph
             void compile();
 
-            // Execute the render graph
+            // Execute the render graph (basic version)
             void execute();
+
+            // Execute with Vulkan command buffer and context
+            void execute(vulkan::RenderCommandBuffer& cmd, const RenderContext& ctx);
 
             // Get the builder for constructing the graph
             RenderGraphBuilder& builder() { return builder_; }
 
             // Resource access
             template <typename T> ResourceHandle<T> get_resource(const std::string& name) const;
+
+            // Check if compiled
+            bool is_compiled() const { return compiled_; }
+
+            // Reset compilation state
+            void reset()
+            {
+                compiled_ = false;
+                execution_order_.clear();
+            }
 
         private:
             RenderGraphBuilder            builder_;
