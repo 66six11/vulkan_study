@@ -127,11 +127,20 @@ endif ()
 
 # 可选：SPIRV-Tools for shader reflection
 if (VULKAN_ENGINE_USE_HOT_RELOAD)
-    find_package(SPIRV-Tools CONFIG QUIET)
+    # 优先查找 Conan 安装的路径
+    find_package(SPIRV-Tools CONFIG QUIET
+            PATHS
+            "${CMAKE_CURRENT_SOURCE_DIR}/build/generators"
+            "${CMAKE_CURRENT_SOURCE_DIR}/build/build/generators"
+            NO_DEFAULT_PATH
+    )
+    if (NOT SPIRV-Tools_FOUND)
+        find_package(SPIRV-Tools CONFIG QUIET)
+    endif ()
     if (SPIRV-Tools_FOUND)
         add_library(VulkanEngine::SPIRVTools INTERFACE IMPORTED)
         target_link_libraries(VulkanEngine::SPIRVTools INTERFACE SPIRV-Tools-opt)
-        message(STATUS "SPIRV-Tools enabled")
+        message(STATUS "SPIRV-Tools enabled: ${SPIRV-Tools_DIR}")
         set(VULKAN_ENGINE_HAS_SPIRVTOOLS TRUE)
     else ()
         message(WARNING "SPIRV-Tools not found, shader reflection limited")

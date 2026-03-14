@@ -52,6 +52,10 @@ class VulkanEngineConan(ConanFile):
         # Optional dependencies
         if self.options.with_async_loading:
             self.requires("taskflow/3.6.0")
+        
+        # Shader reflection for hot reload
+        if self.options.with_hot_reload:
+            self.requires("spirv-tools/1.3.268.0")
 
         # Development tools
         if self.options.with_tests:
