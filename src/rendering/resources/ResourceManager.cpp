@@ -6,10 +6,10 @@ namespace vulkan_engine::rendering
     struct ResourceManager::Impl
     {
         // Resource storage
-        std::unordered_map<ResourceID, Mesh>     meshes;
-        std::unordered_map<ResourceID, Texture>  textures;
-        std::unordered_map<ResourceID, Material> materials;
-        std::unordered_map<ResourceID, Shader>   shaders;
+        std::unordered_map<ResourceID, Mesh>             meshes;
+        std::unordered_map<ResourceID, Texture>          textures;
+        std::unordered_map<ResourceID, MaterialResource> materials;
+        std::unordered_map<ResourceID, Shader>           shaders;
 
         ResourceID next_id = 1;
 
@@ -49,8 +49,8 @@ namespace vulkan_engine::rendering
 
     ResourceID ResourceManager::create_material(const MaterialDesc& desc)
     {
-        auto     id = impl_->next_id++;
-        Material material;
+        auto             id = impl_->next_id++;
+        MaterialResource material;
         material.id          = id;
         material.name        = desc.name;
         impl_->materials[id] = std::move(material);
@@ -101,7 +101,7 @@ namespace vulkan_engine::rendering
         return (it != impl_->textures.end()) ? &it->second : nullptr;
     }
 
-    Material* ResourceManager::get_material(ResourceID id)
+    MaterialResource* ResourceManager::get_material(ResourceID id)
     {
         auto it = impl_->materials.find(id);
         return (it != impl_->materials.end()) ? &it->second : nullptr;

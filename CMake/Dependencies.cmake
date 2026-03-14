@@ -88,6 +88,22 @@ else ()
     set(stb_FOUND FALSE)
 endif ()
 
+# nlohmann_json for JSON parsing
+file(GLOB NLOHMANNJSON_DIRS "$ENV{USERPROFILE}/.conan2/p/nloh*/p/include")
+if (NLOHMANNJSON_DIRS)
+    list(GET NLOHMANNJSON_DIRS 0 NLOHMANNJSON_INCLUDE_DIR)
+endif ()
+
+if (NLOHMANNJSON_INCLUDE_DIR)
+    add_library(VulkanEngine::nlohmann_json INTERFACE IMPORTED)
+    target_include_directories(VulkanEngine::nlohmann_json INTERFACE ${NLOHMANNJSON_INCLUDE_DIR})
+    message(STATUS "nlohmann_json found: ${NLOHMANNJSON_INCLUDE_DIR}")
+    set(nlohmann_json_FOUND TRUE)
+else ()
+    message(WARNING "nlohmann_json not found via Conan, material JSON loading may fail")
+    set(nlohmann_json_FOUND FALSE)
+endif ()
+
 # 可选：Taskflow for async loading
 if (VULKAN_ENGINE_USE_ASYNC_LOADING)
     find_path(TASKFLOW_INCLUDE_DIR taskflow/taskflow.hpp

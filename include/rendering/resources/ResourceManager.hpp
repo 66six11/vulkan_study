@@ -40,7 +40,7 @@ namespace vulkan_engine::rendering
         // Vulkan image, etc.
     };
 
-    struct Material
+    struct MaterialResource
     {
         ResourceID  id = INVALID_RESOURCE_ID;
         std::string name;
@@ -97,10 +97,10 @@ namespace vulkan_engine::rendering
             bool       is_texture_loaded(ResourceID id) const;
 
             // Material management
-            ResourceID create_material(const MaterialDesc& desc);
-            void       unload_material(ResourceID id);
-            Material*  get_material(ResourceID id);
-            bool       is_material_loaded(ResourceID id) const;
+            ResourceID        create_material(const MaterialDesc& desc);
+            void              unload_material(ResourceID id);
+            MaterialResource* get_material(ResourceID id);
+            bool              is_material_loaded(ResourceID id) const;
 
             // Shader loading
             ResourceID load_shader(const std::filesystem::path& path, ShaderType type);

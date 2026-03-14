@@ -16,6 +16,13 @@
 #include "rendering/render_graph/RenderGraphPass.hpp"
 #include "rendering/render_graph/CubeRenderPass.hpp"
 
+// Material system includes
+#include "rendering/material/Material.hpp"
+#include "rendering/material/MaterialLoader.hpp"
+
+// Platform includes
+#include "platform/input/InputManager.hpp"
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -186,7 +193,25 @@ class CubeApplication : public application::ApplicationBase
             // Create descriptor sets
             create_descriptor_sets();
 
-            // Initialize Render Graph
+            // Initialize Material System
+            logger::info("Initializing Material System...");
+            material_loader_ = std::make_unique<rendering::MaterialLoader>(device);
+            material_loader_->set_base_directory("D:/TechArt/Vulkan/materials/");
+
+            // Load materials (need render pass from swap chain)
+            materials_.push_back(material_loader_->load("metal.json", swap_chain->default_render_pass()));
+            materials_.push_back(material_loader_->load("plastic.json", swap_chain->default_render_pass()));
+            materials_.push_back(material_loader_->load("emissive.json", swap_chain->default_render_pass()));
+
+            // Set initial material
+            if (!materials_.empty())
+            {
+                current_material_ = materials_[0];
+                logger::info("Loaded " + std::to_string(materials_.size()) + " materials");
+                logger::info("Press M to switch materials");
+            }
+
+            // Initialize Render Graph (uses loaded materials)
             initialize_render_graph();
 
             // Test Render Graph resource management
@@ -228,6 +253,26 @@ class CubeApplication : public application::ApplicationBase
             auto  now       = std::chrono::high_resolution_clock::now();
             float elapsed   = std::chrono::duration<float>(now - start_time_).count();
             rotation_angle_ = elapsed * 45.0f;
+
+            // Check for material switching (M key)
+            if (input_manager())
+            {
+                if (input_manager()->is_key_just_pressed(platform::Key::M))
+                {
+                    if (!materials_.empty())
+                    {
+                        current_material_index_ = (current_material_index_ + 1) % materials_.size();
+                        current_material_       = materials_[current_material_index_];
+                        logger::info("Switched to material: " + current_material_->name());
+
+                        // Update CubeRenderPass material
+                        if (cube_pass_)
+                        {
+                            cube_pass_->set_material(current_material_);
+                        }
+                    }
+                }
+            }
         }
 
         void on_render() override
@@ -243,9 +288,9 @@ class CubeApplication : public application::ApplicationBase
             // Acquire next image
             uint32_t image_index = 0;
             bool     acquired    = swap_chain->acquire_next_image(
-                                                                  frame_sync_->get_current_image_available_semaphore().handle(),
-                                                                  VK_NULL_HANDLE,
-                                                                  image_index);
+                                                           frame_sync_->get_current_image_available_semaphore().handle(),
+                                                           VK_NULL_HANDLE,
+                                                           image_index);
 
             if (!acquired)
             {
@@ -288,18 +333,30 @@ class CubeApplication : public application::ApplicationBase
 
             // Create cube render pass (will be reused each frame)
             rendering::CubeRenderPass::Config cube_config;
-            cube_config.name            = "CubeRenderPass";
-            cube_config.vertex_buffer   = vertex_buffer_.get();
-            cube_config.index_buffer    = index_buffer_.get();
-            cube_config.index_count     = static_cast<uint32_t>(cube_indices.size());
-            cube_config.pipeline        = pipeline_.get();
-            cube_config.pipeline_layout = pipeline_layout_;
-            cube_config.descriptor_sets = descriptor_sets_;
-            cube_config.color_output    = rendering::ImageHandle(); // Will be set per-frame
-            cube_config.depth_output    = depth_handle;
-            cube_config.width           = width_;
-            cube_config.height          = height_;
-            cube_config.frame_index     = 0;
+            cube_config.name          = "CubeRenderPass";
+            cube_config.vertex_buffer = vertex_buffer_.get();
+            cube_config.index_buffer  = index_buffer_.get();
+            cube_config.index_count   = static_cast<uint32_t>(cube_indices.size());
+
+            // Use material if available, otherwise fall back to legacy pipeline
+            if (current_material_)
+            {
+                cube_config.material_ref = current_material_;
+                logger::info("CubeRenderPass using material: " + current_material_->name());
+            }
+            else
+            {
+                cube_config.pipeline        = pipeline_.get();
+                cube_config.pipeline_layout = pipeline_layout_;
+                cube_config.descriptor_sets = descriptor_sets_;
+                logger::info("CubeRenderPass using legacy pipeline");
+            }
+
+            cube_config.color_output = rendering::ImageHandle(); // Will be set per-frame
+            cube_config.depth_output = depth_handle;
+            cube_config.width        = width_;
+            cube_config.height       = height_;
+            cube_config.frame_index  = 0;
 
             auto cube_pass = std::make_unique<rendering::CubeRenderPass>(cube_config);
             cube_pass_     = cube_pass.get(); // Save pointer for frame updates
@@ -614,10 +671,18 @@ class CubeApplication : public application::ApplicationBase
                                               100.0f);
             proj[1][1] *= -1;
 
-            UniformBufferObject ubo{};
-            ubo.mvp = proj * view * model;
+            glm::mat4 mvp = proj * view * model;
 
+            // Update legacy uniform buffer
+            UniformBufferObject ubo{};
+            ubo.mvp = mvp;
             uniform_buffer_->update(frame_index, ubo);
+
+            // Update CubeRenderPass MVP (for material system)
+            if (cube_pass_)
+            {
+                cube_pass_->set_mvp_matrix(mvp);
+            }
         }
 
         void recreate_resources(uint32_t width, uint32_t height)
@@ -698,6 +763,12 @@ class CubeApplication : public application::ApplicationBase
         // Render Graph
         rendering::RenderGraph     render_graph_;
         rendering::CubeRenderPass* cube_pass_ = nullptr; // Owned by render_graph_
+
+        // Material system
+        std::unique_ptr<rendering::MaterialLoader>        material_loader_;
+        std::shared_ptr<rendering::Material>              current_material_;
+        std::vector<std::shared_ptr<rendering::Material>> materials_;
+        size_t                                            current_material_index_ = 0;
 };
 
 int main(int /*argc*/, char* /*argv*/[])

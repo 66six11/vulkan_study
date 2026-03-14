@@ -72,14 +72,17 @@ namespace vulkan_engine::vulkan
                     if (mapped_data_[i])
                     {
                         vkUnmapMemory(device_->device(), memories_[i]);
+                        mapped_data_[i] = nullptr;
                     }
                     if (buffers_[i] != VK_NULL_HANDLE)
                     {
                         vkDestroyBuffer(device_->device(), buffers_[i], nullptr);
+                        buffers_[i] = VK_NULL_HANDLE;
                     }
                     if (memories_[i] != VK_NULL_HANDLE)
                     {
                         vkFreeMemory(device_->device(), memories_[i], nullptr);
+                        memories_[i] = VK_NULL_HANDLE;
                     }
                 }
             }
@@ -98,6 +101,20 @@ namespace vulkan_engine::vulkan
             void update(uint32_t frame_index, const T& data)
             {
                 std::memcpy(mapped_data_[frame_index], &data, sizeof(T));
+            }
+
+            // Get data for specific frame
+            T get_data(uint32_t frame_index) const
+            {
+                T data;
+                std::memcpy(&data, mapped_data_[frame_index], sizeof(T));
+                return data;
+            }
+
+            // Get data for current frame
+            T get_data() const
+            {
+                return get_data(current_frame_);
             }
 
             // Set current frame

@@ -1,0 +1,34 @@
+{
+  "name": "Metal",
+  "shader": {
+    "vertex": "shaders/pbr.vert.spv",
+    "fragment": "shaders/pbr.frag.spv"
+  },
+  "parameters": {
+    "color": {
+      "type": "vec3",
+      "value": [
+        0.8,
+        0.8,
+        0.9
+      ]
+    },
+    "roughness": {
+      "type": "float",
+      "value": 0.2
+    },
+    "metallic": {
+      "type": "float",
+      "value": 1.0
+    },
+    "emissive": {
+      "type": "float",
+      "value": 0.0
+    }
+  },
+  "render_states": {
+    "depth_test": true,
+    "depth_write": true,
+    "cull_mode": "back"
+  }
+}

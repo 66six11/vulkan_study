@@ -10,6 +10,11 @@ target_link_libraries(VulkanEngineRendering PUBLIC
         VulkanEngineCore
 )
 
+# nlohmann_json for material JSON parsing
+if (nlohmann_json_FOUND)
+    target_link_libraries(VulkanEngineRendering PUBLIC VulkanEngine::nlohmann_json)
+endif ()
+
 # 根据功能选项添加定义
 if (VULKAN_ENGINE_USE_RENDER_GRAPH)
     target_compile_definitions(VulkanEngineRendering PUBLIC

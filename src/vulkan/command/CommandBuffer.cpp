@@ -152,6 +152,16 @@ namespace vulkan_engine::vulkan
                                 dynamic_offsets.empty() ? nullptr : dynamic_offsets.data());
     }
 
+    void RenderCommandBuffer::push_constants(
+        VkPipelineLayout   layout,
+        VkShaderStageFlags stage_flags,
+        uint32_t           offset,
+        uint32_t           size,
+        const void*        values)
+    {
+        vkCmdPushConstants(cmd_buffer_, layout, stage_flags, offset, size, values);
+    }
+
     void RenderCommandBuffer::set_viewport(float x, float y, float width, float height, float min_depth, float max_depth)
     {
         VkViewport viewport{};

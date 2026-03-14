@@ -5,7 +5,6 @@
   },
   "include": [
     "build/build/generators/CMakePresets.json",
-    "build/generators/CMakePresets.json",
-    "cmake-build-debug-visual-studio/conan/build/generators/CMakePresets.json"
+    "build/generators/CMakePresets.json"
   ]
 }
