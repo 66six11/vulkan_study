@@ -1,5 +1,6 @@
 #include "application/app/Application.hpp"
 #include "core/utils/Logger.hpp"
+#include "core/math/Camera.hpp"
 #include "vulkan/device/Device.hpp"
 #include "vulkan/device/SwapChain.hpp"
 #include "vulkan/resources/Buffer.hpp"
@@ -205,10 +206,14 @@ class CubeApplication : public application::ApplicationBase
                 recreate_resources(width, height);
             });
 
-            // Initialize start time
-            start_time_ = std::chrono::high_resolution_clock::now();
+            // Initialize camera
+            camera_.set_target(glm::vec3(0.0f, 0.0f, 0.0f));
+            camera_.set_distance(3.0f);
+            camera_.set_rotation(45.0f, -30.0f);
+            camera_.set_distance_limits(1.0f, 10.0f);
 
             logger::info("Cube Application initialized successfully with Render Graph");
+            logger::info("Camera controls: Left mouse drag to rotate, scroll to zoom");
             return true;
         }
 
@@ -230,14 +235,28 @@ class CubeApplication : public application::ApplicationBase
         {
             (void)delta_time;
 
-            // Calculate rotation
-            auto  now       = std::chrono::high_resolution_clock::now();
-            float elapsed   = std::chrono::duration<float>(now - start_time_).count();
-            rotation_angle_ = elapsed * 45.0f;
-
-            // Check for material switching (M key)
+            // Handle camera input
             if (input_manager())
             {
+                // Mouse drag for orbit rotation
+                if (input_manager()->is_mouse_button_pressed(platform::MouseButton::Left))
+                {
+                    auto [delta_x, delta_y] = input_manager()->mouse_delta();
+
+                    if (delta_x != 0.0 || delta_y != 0.0)
+                    {
+                        camera_.on_mouse_drag(static_cast<float>(delta_x), static_cast<float>(delta_y));
+                    }
+                }
+
+                // Mouse scroll for zoom
+                double scroll = input_manager()->scroll_delta();
+                if (scroll != 0.0)
+                {
+                    camera_.on_mouse_scroll(static_cast<float>(scroll));
+                }
+
+                // Check for material switching (M key)
                 if (input_manager()->is_key_just_pressed(platform::Key::M))
                 {
                     if (!materials_.empty())
@@ -436,21 +455,18 @@ class CubeApplication : public application::ApplicationBase
 
         void update_mvp_matrix(uint32_t /*frame_index*/)
         {
+            // Model matrix (identity - cube stays at origin)
             glm::mat4 model = glm::mat4(1.0f);
-            model           = glm::rotate(model, glm::radians(rotation_angle_), glm::vec3(0.0f, 1.0f, 0.0f));
-            model           = glm::rotate(model, glm::radians(rotation_angle_ * 0.5f), glm::vec3(1.0f, 0.0f, 0.0f));
 
-            glm::mat4 view = glm::lookAt(
-                                         glm::vec3(2.0f, 2.0f, 2.0f),
-                                         glm::vec3(0.0f, 0.0f, 0.0f),
-                                         glm::vec3(0.0f, 1.0f, 0.0f));
+            // View matrix from orbit camera
+            glm::mat4 view = camera_.get_view_matrix();
 
-            glm::mat4 proj = glm::perspective(
-                                              glm::radians(45.0f),
-                                              static_cast<float>(width_) / static_cast<float>(height_),
-                                              0.1f,
-                                              100.0f);
-            proj[1][1] *= -1;
+            // Projection matrix
+            glm::mat4 proj = camera_.get_projection_matrix(
+                                                           45.0f,
+                                                           static_cast<float>(width_) / static_cast<float>(height_),
+                                                           0.1f,
+                                                           100.0f);
 
             glm::mat4 mvp = proj * view * model;
 
@@ -486,10 +502,11 @@ class CubeApplication : public application::ApplicationBase
         }
 
         // Member variables
-        uint32_t                                       width_          = 0;
-        uint32_t                                       height_         = 0;
-        float                                          rotation_angle_ = 0.0f;
-        std::chrono::high_resolution_clock::time_point start_time_;
+        uint32_t width_  = 0;
+        uint32_t height_ = 0;
+
+        // Orbit camera for viewing the cube
+        core::OrbitCamera camera_;
 
         std::unique_ptr<vulkan::FrameSyncManager>  frame_sync_;
         std::unique_ptr<vulkan::DepthBuffer>       depth_buffer_;

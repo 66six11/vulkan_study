@@ -64,20 +64,24 @@ namespace vulkan_engine::application
             // Process events
             process_events();
 
-            // Update input
+            // Update input state (process just_pressed/just_released)
             if (input_manager_)
             {
-                input_manager_->update();
-
-                // Check for exit key
+                // Check for exit key (before update to use just_pressed state)
                 if (input_manager_->is_key_just_pressed(platform::Key::Escape))
                 {
                     request_exit();
                 }
             }
 
-            // Update application
+            // Update application (use input values like mouse_delta here)
             on_update(delta_time);
+
+            // Clear input deltas after on_update has processed them
+            if (input_manager_)
+            {
+                input_manager_->update();
+            }
 
             // Check if swap chain needs recreation (e.g., window minimized)
             if (swap_chain_ && swap_chain_->needs_recreation())
