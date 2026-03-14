@@ -31,11 +31,10 @@ namespace vulkan_engine::rendering
             return;
         }
 
-        // Check if we have a material or legacy pipeline
         auto material = config_.material_ref.lock();
-        if (!material && !config_.pipeline)
+        if (!material)
         {
-            logger::error("CubeRenderPass: Missing pipeline or material");
+            logger::error("CubeRenderPass: Material not available");
             return;
         }
 
@@ -50,15 +49,8 @@ namespace vulkan_engine::rendering
 
         cmd.begin_render_pass(ctx.render_pass, ctx.framebuffer, render_area, {clear_values[0], clear_values[1]});
 
-        // Bind pipeline (prefer material if available)
-        if (material)
-        {
-            material->bind(cmd);
-        }
-        else
-        {
-            cmd.bind_graphics_pipeline(*config_.pipeline);
-        }
+        // Bind material (pipeline and descriptor sets)
+        material->bind(cmd);
 
         // Set viewport
         cmd.set_viewport(
@@ -73,23 +65,12 @@ namespace vulkan_engine::rendering
         // Set scissor
         cmd.set_scissor(0, 0, config_.width, config_.height);
 
-        // Bind descriptor set for MVP (legacy path, material handles its own descriptors)
-        if (!material && config_.frame_index < config_.descriptor_sets.size())
-        {
-            VkDescriptorSet descriptor_set = config_.descriptor_sets[config_.frame_index];
-            cmd.bind_descriptor_sets(config_.pipeline_layout, 0, {descriptor_set});
-        }
-
-        // Push MVP matrix (only if using material system with push constant support)
-        if (material)
-        {
-            cmd.push_constants(material->pipeline_layout(),
-                               VK_SHADER_STAGE_VERTEX_BIT,
-                               0,
-                               sizeof(glm::mat4),
-                               &current_mvp_);
-        }
-        // Legacy pipeline doesn't have push constant range, skip
+        // Push MVP matrix
+        cmd.push_constants(material->pipeline_layout(),
+                           VK_SHADER_STAGE_VERTEX_BIT,
+                           0,
+                           sizeof(glm::mat4),
+                           &current_mvp_);
 
         // Bind vertex buffer
         cmd.bind_vertex_buffer(config_.vertex_buffer->handle(), 0);
