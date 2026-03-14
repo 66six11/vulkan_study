@@ -13,7 +13,10 @@ namespace vulkan_engine::rendering
     {
     }
 
-    RenderGraphResourcePool::~RenderGraphResourcePool() = default;
+    RenderGraphResourcePool::~RenderGraphResourcePool()
+    {
+        reset();
+    }
 
     ImageResourceInfo* RenderGraphResourcePool::acquire_image(const ResourceDesc& desc, ImageHandle handle)
     {
@@ -166,7 +169,6 @@ namespace vulkan_engine::rendering
                                                desc.width,
                                                desc.height,
                                                format,
-                                               VK_IMAGE_TILING_OPTIMAL,
                                                usage,
                                                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     }

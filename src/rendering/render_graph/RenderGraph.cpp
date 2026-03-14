@@ -14,7 +14,11 @@ namespace vulkan_engine::rendering
 
     RenderGraph::RenderGraph() = default;
 
-    RenderGraph::~RenderGraph() = default;
+    RenderGraph::~RenderGraph()
+    {
+        // Ensure resources are cleaned up before device is destroyed
+        reset();
+    }
 
     void RenderGraph::initialize(std::shared_ptr<vulkan::DeviceManager> device)
     {

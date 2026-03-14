@@ -27,6 +27,12 @@
 
 using namespace vulkan_engine;
 
+// Forward declaration for Render Graph test
+namespace vulkan_engine::rendering
+{
+    void test_render_graph_resource_management(std::shared_ptr<vulkan::DeviceManager> device);
+}
+
 // Uniform buffer object for MVP matrix
 struct UniformBufferObject
 {
@@ -181,6 +187,10 @@ class CubeApplication : public application::ApplicationBase
 
             // Initialize Render Graph
             initialize_render_graph();
+
+            // Test Render Graph resource management
+            logger::info("\nRunning Render Graph Resource Management Test...");
+            rendering::test_render_graph_resource_management(device);
 
             // Register swap chain resize callback
             swap_chain->on_recreate([this](uint32_t width, uint32_t height)
