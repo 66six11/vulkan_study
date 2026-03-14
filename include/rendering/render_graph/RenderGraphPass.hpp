@@ -91,6 +91,8 @@ namespace vulkan_engine::rendering
                 uint32_t             stencil            = 0;
                 bool                 enable_color_clear = true;
                 bool                 enable_depth_clear = true;
+                ImageHandle          color_output; // Output color attachment
+                ImageHandle          depth_output; // Output depth attachment
             };
 
             explicit ClearRenderPass(const Config& config);

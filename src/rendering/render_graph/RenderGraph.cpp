@@ -32,6 +32,8 @@ namespace vulkan_engine::rendering
         compiled_ = false;
         execution_order_.clear();
         pass_barriers_.clear();
+        // Clear builder nodes to prevent accumulation
+        builder_ = RenderGraphBuilder();
         if (resource_pool_)
         {
             resource_pool_->reset();

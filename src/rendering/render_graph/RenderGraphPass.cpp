@@ -25,8 +25,15 @@ namespace vulkan_engine::rendering
 
     void ClearRenderPass::setup(RenderGraphBuilder& /*builder*/)
     {
-        // Clear pass doesn't need to declare external resources
-        // It writes to the framebuffer attachments
+        // Declare output resources for barrier generation
+        if (config_.color_output.valid())
+        {
+            image_outputs_.push_back(config_.color_output);
+        }
+        if (config_.depth_output.valid())
+        {
+            image_outputs_.push_back(config_.depth_output);
+        }
     }
 
     void ClearRenderPass::execute(vulkan::RenderCommandBuffer& cmd, const RenderContext& ctx)
