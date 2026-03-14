@@ -1,5 +1,9 @@
 ﻿#pragma once
 
+#include "rendering/render_graph/RenderGraphTypes.hpp"
+#include "vulkan/device/Device.hpp"
+
+#include <vulkan/vulkan.h>
 #include <memory>
 #include <vector>
 #include <string>
@@ -17,96 +21,9 @@ namespace vulkan_engine::rendering
     // Forward declarations
     class CommandBuffer;
     struct RenderContext;
-
-    // Resource handle - type-safe resource identifier
-    template <typename T> class ResourceHandle
-    {
-        public:
-            constexpr ResourceHandle() noexcept : id_{0}, generation_{0}
-            {
-            }
-
-            constexpr ResourceHandle(uint32_t id, uint32_t generation) noexcept
-                : id_{id}, generation_{generation}
-            {
-            }
-
-            // Allow conversion from other resource handle types (for internal storage)
-            template <typename U> constexpr ResourceHandle(ResourceHandle<U> other) noexcept
-                : id_{other.id()}, generation_{other.generation()}
-            {
-            }
-
-            constexpr bool     valid() const noexcept { return id_ != 0; }
-            constexpr uint32_t id() const noexcept { return id_; }
-            constexpr uint32_t generation() const noexcept { return generation_; }
-
-            constexpr bool operator==(const ResourceHandle& other) const noexcept
-            {
-                return id_ == other.id_ && generation_ == other.generation_;
-            }
-
-            constexpr bool operator!=(const ResourceHandle& other) const noexcept
-            {
-                return !(*this == other);
-            }
-
-        private:
-            uint32_t id_;
-            uint32_t generation_;
-    };
-
-    // Resource types
-    struct BufferResource
-    {
-    };
-
-    struct ImageResource
-    {
-    };
-
-    struct TextureResource
-    {
-    };
-
-    using BufferHandle  = ResourceHandle<BufferResource>;
-    using ImageHandle   = ResourceHandle<ImageResource>;
-    using TextureHandle = ResourceHandle<TextureResource>;
-
-    // Resource description
-    struct ResourceDesc
-    {
-        std::string name;
-
-        enum class Type
-        {
-            Buffer,
-            Image,
-            Texture
-        } type;
-
-        // Common properties
-        uint32_t width        = 0;
-        uint32_t height       = 0;
-        uint32_t depth        = 1;
-        uint32_t array_layers = 1;
-        uint32_t mip_levels   = 1;
-
-        // Usage flags
-        bool is_transient = false;
-        bool is_external  = false;
-
-        // Specific to buffer resources
-        uint64_t size = 0;
-
-        // Specific to image resources
-        enum class Format
-        {
-            R8G8B8A8_UNORM,
-            R16G16B16A16_SFLOAT,
-            D32_SFLOAT
-        } format = Format::R8G8B8A8_UNORM;
-    };
+    class RenderGraphResourcePool;
+    class BarrierManager;
+    class RenderGraphNode;
 
     // Render pass concept
     template <typename T>
@@ -180,10 +97,13 @@ namespace vulkan_engine::rendering
     class RenderGraph
     {
         public:
-            RenderGraph()  = default;
-            ~RenderGraph() = default;
+            RenderGraph();
+            ~RenderGraph();
 
-            // Compile the render graph
+            // Initialize with device
+            void initialize(std::shared_ptr<vulkan::DeviceManager> device);
+
+            // Compile the render graph - analyzes dependencies and generates barriers
             void compile();
 
             // Execute the render graph (basic version)
@@ -198,20 +118,51 @@ namespace vulkan_engine::rendering
             // Resource access
             template <typename T> ResourceHandle<T> get_resource(const std::string& name) const;
 
+            // Create a transient image resource
+            ImageHandle create_image(const ResourceDesc& desc);
+
+            // Create a transient buffer resource
+            BufferHandle create_buffer(const ResourceDesc& desc);
+
+            // Import external image (e.g., swap chain)
+            ImageHandle import_image(
+                VkImage            image,
+                VkImageView        view,
+                VkFormat           format,
+                uint32_t           width,
+                uint32_t           height,
+                const std::string& name);
+
             // Check if compiled
             bool is_compiled() const { return compiled_; }
 
-            // Reset compilation state
-            void reset()
-            {
-                compiled_ = false;
-                execution_order_.clear();
-            }
+            // Reset compilation state and release resources
+            void reset();
+
+            // Get resource pool
+            RenderGraphResourcePool* resource_pool() const { return resource_pool_.get(); }
 
         private:
             RenderGraphBuilder            builder_;
             bool                          compiled_ = false;
             std::vector<RenderGraphNode*> execution_order_;
+
+            // Resource management
+            std::shared_ptr<vulkan::DeviceManager>   device_;
+            std::unique_ptr<RenderGraphResourcePool> resource_pool_;
+            std::unique_ptr<BarrierManager>          barrier_manager_;
+
+            // Resource handle generation
+            uint32_t next_resource_id_ = 1;
+
+            // Per-pass barrier batches
+            std::vector<BarrierBatch> pass_barriers_;
+
+            // Analyze dependencies and build execution order
+            void build_execution_order();
+
+            // Generate barriers for all passes
+            void generate_barriers();
     };
 
     // Example render pass implementation
