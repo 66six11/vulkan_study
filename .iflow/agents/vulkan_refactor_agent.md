@@ -1,3 +1,8 @@
+---
+name: Vulkan项目重构Agent
+agent-type: specialized
+---
+
 # Vulkan项目重构Agent
 
 ## 职责范围

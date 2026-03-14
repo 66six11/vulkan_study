@@ -1,3 +1,8 @@
+---
+name: Vulkan C++ 图形学专家Agent
+agent-type: specialized
+---
+
 # Vulkan C++ 图形学专家 Agent
 
 ## 角色定义

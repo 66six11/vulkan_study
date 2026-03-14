@@ -1,3 +1,8 @@
+---
+name: C++专家Agent
+agent-type: specialized
+---
+
 # C++专家Agent
 
 ## 职责范围

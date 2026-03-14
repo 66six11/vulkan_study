@@ -1,3 +1,8 @@
+---
+name: 图形学Vulkan专家Agent
+agent-type: specialized
+---
+
 # 图形学Vulkan专家Agent
 
 ## 职责范围

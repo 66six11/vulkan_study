@@ -1,3 +1,8 @@
+---
+name: 项目管理Agent
+agent-type: specialized
+---
+
 # 项目管理Agent
 
 ## 职责范围
