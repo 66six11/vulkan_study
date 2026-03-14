@@ -18,6 +18,10 @@
 #include "rendering/material/Material.hpp"
 #include "rendering/material/MaterialLoader.hpp"
 
+// Mesh loading includes
+#include "rendering/resources/Mesh.hpp"
+#include "rendering/resources/ObjLoader.hpp"
+
 // Platform includes
 #include "platform/input/InputManager.hpp"
 
@@ -169,9 +173,34 @@ class CubeApplication : public application::ApplicationBase
                                                                     VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
             cmd_buffers_ = cmd_pool_->allocate(2);
 
-            // Create vertex and index buffers
-            create_vertex_buffer();
-            create_index_buffer();
+            // Try to load OBJ model, fallback to cube if not found
+            rendering::ObjLoader obj_loader;
+            std::string          obj_path = "D:/TechArt/Vulkan/model/未命名.obj";
+
+            if (obj_loader.can_load(obj_path))
+            {
+                logger::info("Loading OBJ model: " + obj_path);
+                rendering::MeshData mesh_data = obj_loader.load(obj_path);
+
+                if (!mesh_data.is_empty())
+                {
+                    mesh_ = std::make_unique<rendering::Mesh>();
+                    mesh_->upload(device, mesh_data);
+                    logger::info("OBJ model loaded and uploaded to GPU");
+                }
+                else
+                {
+                    logger::warn("Failed to load OBJ model, using default cube");
+                    create_vertex_buffer();
+                    create_index_buffer();
+                }
+            }
+            else
+            {
+                logger::info("No OBJ model found at " + obj_path + ", using default cube");
+                create_vertex_buffer();
+                create_index_buffer();
+            }
 
             // Initialize Material System
             logger::info("Initializing Material System...");
@@ -184,6 +213,7 @@ class CubeApplication : public application::ApplicationBase
             materials_.push_back(material_loader_->load("plastic.json", swap_chain->default_render_pass()));
             materials_.push_back(material_loader_->load("emissive.json", swap_chain->default_render_pass()));
             materials_.push_back(material_loader_->load("textured.json", swap_chain->default_render_pass()));
+            materials_.push_back(material_loader_->load("normal_vis.json", swap_chain->default_render_pass()));
 
             // Set initial material
             if (!materials_.empty())
@@ -333,10 +363,25 @@ class CubeApplication : public application::ApplicationBase
 
             // Create cube render pass (will be reused each frame)
             rendering::CubeRenderPass::Config cube_config;
-            cube_config.name          = "CubeRenderPass";
-            cube_config.vertex_buffer = vertex_buffer_.get();
-            cube_config.index_buffer  = index_buffer_.get();
-            cube_config.index_count   = static_cast<uint32_t>(cube_indices.size());
+            cube_config.name = "CubeRenderPass";
+
+            // Use mesh if loaded, otherwise use default cube buffers
+            if (mesh_ && mesh_->is_uploaded())
+            {
+                cube_config.vertex_buffer = mesh_->vertex_buffer();
+                cube_config.index_buffer  = mesh_->index_buffer();
+                cube_config.index_count   = mesh_->index_count();
+                cube_config.index_type    = VK_INDEX_TYPE_UINT32; // OBJ uses 32-bit indices
+                logger::info("Using OBJ mesh for rendering (32-bit indices)");
+            }
+            else
+            {
+                cube_config.vertex_buffer = vertex_buffer_.get();
+                cube_config.index_buffer  = index_buffer_.get();
+                cube_config.index_count   = static_cast<uint32_t>(cube_indices.size());
+                cube_config.index_type    = VK_INDEX_TYPE_UINT16; // Cube uses 16-bit indices
+                logger::info("Using default cube for rendering (16-bit indices)");
+            }
             cube_config.material_ref  = current_material_;
             cube_config.color_output  = rendering::ImageHandle(); // Will be set per-frame
             cube_config.depth_output  = depth_handle;
@@ -515,6 +560,9 @@ class CubeApplication : public application::ApplicationBase
         std::vector<vulkan::RenderCommandBuffer>   cmd_buffers_;
         std::unique_ptr<vulkan::Buffer>            vertex_buffer_;
         std::unique_ptr<vulkan::Buffer>            index_buffer_;
+
+        // Mesh (loaded from OBJ or default cube)
+        std::unique_ptr<rendering::Mesh> mesh_;
 
         // Render Graph
         rendering::RenderGraph     render_graph_;

@@ -22,16 +22,18 @@ SamplerState texture_sampler;
 struct VertexInput
 {
     [[vk::location(0)]] float3 position : POSITION;
-    [[vk::location(1)]] float3 color : COLOR;
+    [[vk::location(1)]] float3 normal : NORMAL;
     [[vk::location(2)]] float2 uv : TEXCOORD;
+    [[vk::location(3)]] float3 color : COLOR;
 };
 
 struct VertexOutput
 {
     float4 position : SV_Position;
     float3 world_pos : TEXCOORD0;
-    float3 color : TEXCOORD1;
-    float2 uv : TEXCOORD2;
+    float3 normal : TEXCOORD1;
+    float3 color : TEXCOORD2;
+    float2 uv : TEXCOORD3;
 };
 
 // Push constants for MVP matrix
@@ -47,6 +49,7 @@ VertexOutput vertexMain(VertexInput input)
     VertexOutput output;
     output.position = mul(pushConsts.mvp, float4(input.position, 1.0));
     output.world_pos = input.position;
+    output.normal = input.normal;
     output.color = input.color;
     output.uv = input.uv;
     return output;

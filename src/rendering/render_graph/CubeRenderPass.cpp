@@ -76,7 +76,7 @@ namespace vulkan_engine::rendering
         cmd.bind_vertex_buffer(config_.vertex_buffer->handle(), 0);
 
         // Bind index buffer
-        cmd.bind_index_buffer(config_.index_buffer->handle(), VK_INDEX_TYPE_UINT16);
+        cmd.bind_index_buffer(config_.index_buffer->handle(), config_.index_type);
 
         // Draw indexed
         cmd.draw_indexed(config_.index_count, 1, 0, 0, 0);

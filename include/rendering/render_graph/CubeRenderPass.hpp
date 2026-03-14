@@ -23,6 +23,7 @@ namespace vulkan_engine::rendering
                 vulkan::Buffer* vertex_buffer = nullptr;
                 vulkan::Buffer* index_buffer  = nullptr;
                 uint32_t        index_count   = 0;
+                VkIndexType     index_type    = VK_INDEX_TYPE_UINT16; // Default to 16-bit for cube
 
                 // Material (required for rendering)
                 // Using weak_ptr to avoid dangling pointer if Material is destroyed

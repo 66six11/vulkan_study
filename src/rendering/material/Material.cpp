@@ -139,29 +139,24 @@ namespace vulkan_engine::rendering
         pipeline_config.fragment_shader_path = config_.fragment_shader_path;
         pipeline_config.layout               = pipeline_layout_;
 
-        // Vertex input (position + color + uv)
-
+        // Vertex input matching MeshVertex: position(3) + normal(3) + uv(2) + color(3) = 11 floats = 44 bytes
         pipeline_config.vertex_bindings = {
-
-            {0, sizeof(float) * 8, VK_VERTEX_INPUT_RATE_VERTEX} // position(3) + color(3) + uv(2)
-
+            {0, sizeof(float) * 11, VK_VERTEX_INPUT_RATE_VERTEX}
         };
 
         pipeline_config.vertex_attributes = {
-
             {0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0},
-            // position at location 0
-
+            // position at location 0, offset 0
             {1, 0, VK_FORMAT_R32G32B32_SFLOAT, sizeof(float) * 3},
-            // color at location 1
-
-            {2, 0, VK_FORMAT_R32G32_SFLOAT, sizeof(float) * 6} // uv at location 2
-
+            // normal at location 1, offset 12
+            {2, 0, VK_FORMAT_R32G32_SFLOAT, sizeof(float) * 6},
+            // uv at location 2, offset 24
+            {3, 0, VK_FORMAT_R32G32B32_SFLOAT, sizeof(float) * 8} // color at location 3, offset 32
         };
 
         pipeline_config.primitive_topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
         pipeline_config.polygon_mode       = VK_POLYGON_MODE_FILL;
-        pipeline_config.cull_mode          = VK_CULL_MODE_BACK_BIT;
+        pipeline_config.cull_mode          = VK_CULL_MODE_NONE; // Disable culling for testing OBJ models
         pipeline_config.front_face         = VK_FRONT_FACE_COUNTER_CLOCKWISE;
         pipeline_config.depth_test_enable  = config_.depth_test;
         pipeline_config.depth_write_enable = config_.depth_write;
