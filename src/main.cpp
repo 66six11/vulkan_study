@@ -1,5 +1,6 @@
 #include "application/app/Application.hpp"
 #include "core/utils/Logger.hpp"
+#include "platform/filesystem/PathUtils.hpp"
 #include "core/math/Camera.hpp"
 #include "vulkan/device/Device.hpp"
 #include "vulkan/device/SwapChain.hpp"
@@ -255,14 +256,19 @@ class EditorApplication : public application::ApplicationBase
 
         void on_shutdown() override
         {
-            logger::info("Shutting down Editor Application");
-
             if (auto device = device_manager())
             {
                 vkDeviceWaitIdle(device->device());
             }
 
-            editor_->shutdown();
+            // Shutdown editor first
+            if (editor_)
+            {
+                editor_->shutdown();
+                editor_.reset();
+            }
+
+            // Clean up all Vulkan resources
             cleanup_resources();
         }
 
@@ -524,7 +530,7 @@ class EditorApplication : public application::ApplicationBase
         {
             auto                 device = device_manager();
             rendering::ObjLoader obj_loader;
-            std::string          obj_path = "D:/TechArt/Vulkan/model/三角化网格.obj";
+            std::string          obj_path = "D:/TechArt/Vulkan/model/mesh.obj";
 
             if (obj_loader.can_load(obj_path))
             {
@@ -566,10 +572,10 @@ class EditorApplication : public application::ApplicationBase
 
             VkDeviceSize index_size = sizeof(cube_indices[0]) * cube_indices.size();
             index_buffer_           = std::make_unique<vulkan::Buffer>(
-                                                                       device,
-                                                                       index_size,
-                                                                       VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-                                                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+                                                             device,
+                                                             index_size,
+                                                             VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                                                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
             void* idata = index_buffer_->map();
             memcpy(idata, cube_indices.data(), static_cast<size_t>(index_size));
             index_buffer_->unmap();
@@ -581,8 +587,8 @@ class EditorApplication : public application::ApplicationBase
             logger::info("Initializing Material System...");
 
             material_loader_ = std::make_unique<rendering::MaterialLoader>(device);
-            material_loader_->set_base_directory("D:/TechArt/Vulkan/materials/");
-            material_loader_->set_texture_directory("D:/TechArt/Vulkan/");
+            material_loader_->set_base_directory(core::PathUtils::materials_dir().string() + "/");
+            material_loader_->set_texture_directory(core::PathUtils::project_root().string() + "/");
 
             // Use new RenderTarget's render pass for material initialization
             logger::info("Material system using render_target_render_pass_: " +
@@ -695,7 +701,7 @@ class EditorApplication : public application::ApplicationBase
             ctx.width       = render_target_->width();
             ctx.height      = render_target_->height();
             ctx.render_pass = render_target_render_pass_;
-            ctx.framebuffer = render_target_framebuffer_;
+            ctx.framebuffer = render_target_->framebuffer_handle();
             ctx.device      = device_manager();
 
             render_graph_.execute(cmd, ctx);
@@ -844,52 +850,92 @@ class EditorApplication : public application::ApplicationBase
             if (!render_target_ || render_target_render_pass_ == VK_NULL_HANDLE)
                 return;
 
-            auto device = device_manager();
+            // 使用 RenderTarget 的 Framebuffer 管理（RAII）
+            render_target_->create_framebuffer(render_target_render_pass_);
 
-            // Wait for GPU to finish using the old framebuffer
-            vkDeviceWaitIdle(device->device());
-
-            // Destroy old framebuffer if exists
-            if (render_target_framebuffer_ != VK_NULL_HANDLE)
-            {
-                vkDestroyFramebuffer(device->device(), render_target_framebuffer_, nullptr);
-                render_target_framebuffer_ = VK_NULL_HANDLE;
-            }
-
-            // Create new framebuffer
-            std::array<VkImageView, 2> attachments = {
-                render_target_->color_image_view(),
-                render_target_->depth_image_view()
-            };
-
-            VkFramebufferCreateInfo framebuffer_info{};
-            framebuffer_info.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-            framebuffer_info.renderPass      = render_target_render_pass_;
-            framebuffer_info.attachmentCount = static_cast<uint32_t>(attachments.size());
-            framebuffer_info.pAttachments    = attachments.data();
-            framebuffer_info.width           = render_target_->width();
-            framebuffer_info.height          = render_target_->height();
-            framebuffer_info.layers          = 1;
-
-            if (vkCreateFramebuffer(device->device(), &framebuffer_info, nullptr, &render_target_framebuffer_) != VK_SUCCESS)
-            {
-                logger::error("Failed to create render target framebuffer");
-            }
-            else
+            if (render_target_->has_framebuffer())
             {
                 logger::info("RenderTarget framebuffer created: " + std::to_string(render_target_->width()) + "x" +
                              std::to_string(render_target_->height()));
+            }
+            else
+            {
+                logger::error("Failed to create render target framebuffer");
             }
         }
 
         void cleanup_resources()
         {
-            // Cleanup RenderTarget framebuffer
-            if (render_target_framebuffer_ != VK_NULL_HANDLE && device_manager())
+            // Note: Avoid logging at start to prevent Unicode issues
+            // 获取当前设备管理器
+            auto device_manager_ptr = device_manager();
+            if (!device_manager_ptr)
             {
-                vkDestroyFramebuffer(device_manager()->device(), render_target_framebuffer_, nullptr);
-                render_target_framebuffer_ = VK_NULL_HANDLE;
+                logger::error("DeviceManager is null in cleanup_resources()! Cannot clean up Vulkan resources.");
+                return;
             }
+
+            // 获取 VkDevice 句柄
+            VkDevice vk_device = device_manager_ptr->device();
+            if (vk_device == VK_NULL_HANDLE)
+            {
+                logger::error("VkDevice is null in cleanup_resources()!");
+                return;
+            }
+
+            // 等待设备空闲，确保所有正在执行的命令完成
+            vkDeviceWaitIdle(vk_device);
+
+            // 1. 首先清理渲染图系统
+            render_graph_.reset();
+            cube_pass_ = nullptr;
+
+            // 2. 清理 RenderTarget 的 Framebuffer
+            // RenderTarget 会在 cleanup() 或析构时自动销毁 Framebuffer
+            // 这里不需要手动操作，但为了清晰，显式调用 destroy_framebuffer
+            if (render_target_)
+            {
+                render_target_->destroy_framebuffer();
+            }
+            render_target_render_pass_ = VK_NULL_HANDLE;
+
+            // 3. Destroy materials and material loader (hold pipelines / descriptor sets)
+            current_material_.reset();
+            materials_.clear();
+            material_loader_.reset();
+
+            // 4. Destroy geometry buffers
+            vertex_buffer_.reset();
+            index_buffer_.reset();
+            mesh_.reset();
+
+            // 5. Destroy command buffers and pool
+            cmd_buffers_.clear();
+            cmd_buffers_imgui_.clear();
+            cmd_pool_.reset();
+
+            // 6. Destroy framebuffer pool (swap chain framebuffers)
+            // CRITICAL: Must destroy BEFORE device is destroyed
+            logger::info("Destroying FramebufferPool...");
+            framebuffer_pool_.reset();
+            logger::info("FramebufferPool destroyed");
+
+            // 7. Destroy frame sync objects
+            frame_sync_.reset();
+
+            // 8. Destroy viewport / render target (Image, ImageView, Memory)
+            viewport_.reset();
+            render_target_.reset();
+
+            // 9. Destroy depth buffer
+            depth_buffer_.reset();
+
+            // 10. Destroy render pass manager (owns all cached VkRenderPass objects)
+            render_pass_manager_.reset();
+
+            // 11. Destroy camera controller and camera (no Vulkan resources, but clean up)
+            camera_controller_.reset();
+            camera_.reset();
         }
 
         // Member variables
@@ -947,9 +993,8 @@ class EditorApplication : public application::ApplicationBase
         std::shared_ptr<rendering::RenderTarget> render_target_;
         std::shared_ptr<rendering::Viewport>     viewport_;
 
-        // RenderTarget's RenderPass and Framebuffer
-        VkRenderPass  render_target_render_pass_ = VK_NULL_HANDLE;
-        VkFramebuffer render_target_framebuffer_ = VK_NULL_HANDLE;
+        // RenderTarget's RenderPass (Framebuffer 由 RenderTarget 自己管理)
+        VkRenderPass render_target_render_pass_ = VK_NULL_HANDLE;
 };
 
 int main(int /*argc*/, char* /*argv*/[])
@@ -971,7 +1016,7 @@ int main(int /*argc*/, char* /*argv*/[])
         {
             app->run();
         }
-
+        
         app->shutdown();
 
         return 0;

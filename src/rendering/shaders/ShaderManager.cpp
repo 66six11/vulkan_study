@@ -1,4 +1,5 @@
 ﻿#include "rendering/shaders/ShaderManager.hpp"
+#include "platform/filesystem/PathUtils.hpp"
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
@@ -113,7 +114,7 @@ namespace vulkan_engine::rendering
         result.type    = type;
         result.name    = path.stem().string();
 
-        std::ifstream file(path, std::ios::binary | std::ios::ate);
+        auto file = core::PathUtils::open_input_file(path, std::ios::binary | std::ios::ate);
         if (!file.is_open())
         {
             result.error_message = "Failed to open SPIR-V file: " + path.string();
@@ -162,15 +163,15 @@ namespace vulkan_engine::rendering
         // Runtime compilation not supported - use pre-compiled .spv files
         // For Slang shaders, use compile_slang() method or pre-compile using slangc
         result.error_message = "Runtime shader compilation not supported. "
-                               "Please use pre-compiled .spv files or call compile_slang() for Slang shaders.";
+                "Please use pre-compiled .spv files or call compile_slang() for Slang shaders.";
 
         return result;
     }
 
     ShaderCompileResult ShaderManager::compile_slang(
         const std::filesystem::path& source_path,
-        ShaderType type,
-        const std::string& entry_point)
+        ShaderType                   type,
+        const std::string&           entry_point)
     {
         ShaderCompileResult result;
         result.success = false;

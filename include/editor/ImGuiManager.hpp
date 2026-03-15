@@ -54,6 +54,10 @@ namespace vulkan_engine::editor
             // Render ImGui to command buffer
             void render(VkCommandBuffer command_buffer);
 
+            // Get ImGui texture ID for viewport rendering
+            // This creates/manages the Vulkan descriptor set and sampler
+            ImTextureID get_viewport_texture_id(rendering::Viewport* viewport);
+
             // Check if initialized
             bool is_initialized() const { return initialized_; }
 

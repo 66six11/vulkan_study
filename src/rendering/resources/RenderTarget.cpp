@@ -1,4 +1,5 @@
 #include "rendering/resources/RenderTarget.hpp"
+#include "vulkan/resources/Framebuffer.hpp"
 #include "vulkan/utils/VulkanError.hpp"
 #include "core/utils/Logger.hpp"
 
@@ -91,6 +92,9 @@ namespace vulkan_engine::rendering
         VkDevice device = device_->device();
         vkDeviceWaitIdle(device);
 
+        // 首先销毁 Framebuffer（因为它依赖 ImageView）
+        destroy_framebuffer();
+
         if (color_image_view_ != VK_NULL_HANDLE)
         {
             vkDestroyImageView(device, color_image_view_, nullptr);
@@ -128,6 +132,9 @@ namespace vulkan_engine::rendering
     {
         if (width == width_ && height == height_)
             return;
+
+        // 先销毁 Framebuffer（因为它依赖旧的 ImageView）
+        destroy_framebuffer();
 
         cleanup();
         width_  = width;
@@ -349,5 +356,53 @@ namespace vulkan_engine::rendering
 
         vkFreeCommandBuffers(device, cmd_pool, 1, &cmd_buffer);
         vkDestroyCommandPool(device, cmd_pool, nullptr);
+    }
+
+    void RenderTarget::create_framebuffer(VkRenderPass render_pass)
+    {
+        if (!device_ || render_pass == VK_NULL_HANDLE)
+        {
+            return;
+        }
+
+        // 销毁旧的 Framebuffer（如果存在）
+        destroy_framebuffer();
+
+        // 收集附件
+        std::vector<VkImageView> attachments;
+        if (has_color())
+        {
+            attachments.push_back(color_image_view_);
+        }
+        if (has_depth())
+        {
+            attachments.push_back(depth_image_view_);
+        }
+
+        // 创建新的 Framebuffer
+        framebuffer_ = std::make_unique<vulkan::Framebuffer>(
+                                                             device_,
+                                                             render_pass,
+                                                             attachments,
+                                                             width_,
+                                                             height_,
+                                                             1 // layers
+                                                            );
+    }
+
+    void RenderTarget::destroy_framebuffer()
+    {
+        // Framebuffer 是 unique_ptr，reset 会自动销毁
+        framebuffer_.reset();
+    }
+
+    bool RenderTarget::has_framebuffer() const
+    {
+        return framebuffer_ != nullptr;
+    }
+
+    VkFramebuffer RenderTarget::framebuffer_handle() const
+    {
+        return framebuffer_ ? framebuffer_->handle() : VK_NULL_HANDLE;
     }
 } // namespace vulkan_engine::rendering

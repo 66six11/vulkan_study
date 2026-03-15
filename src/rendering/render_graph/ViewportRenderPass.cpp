@@ -9,12 +9,20 @@ namespace vulkan_engine::rendering
         : name_(config.name)
         , config_(config)
         , render_target_(config.render_target)
+        , render_pass_(config.render_pass)
     {
-        if (render_target_)
+        // Validate required parameters
+        if (!render_target_)
         {
-            create_render_pass();
-            create_framebuffer();
+            logger::error("ViewportRenderPass: RenderTarget is required");
+            return;
         }
+        if (render_pass_ == VK_NULL_HANDLE)
+        {
+            logger::error("ViewportRenderPass: External RenderPass is required (must be provided in Config)");
+            return;
+        }
+        // Framebuffer is managed externally, set via set_framebuffer()
     }
 
     void ViewportRenderPass::setup(RenderGraphBuilder& builder)
@@ -32,9 +40,15 @@ namespace vulkan_engine::rendering
     {
         (void)ctx;
 
-        if (!render_target_ || render_pass_ == VK_NULL_HANDLE || framebuffer_ == VK_NULL_HANDLE)
+        if (!render_target_ || render_pass_ == VK_NULL_HANDLE)
         {
-            logger::error("ViewportRenderPass: Resources not initialized");
+            logger::error("ViewportRenderPass: RenderTarget or RenderPass not initialized");
+            return;
+        }
+
+        if (framebuffer_ == VK_NULL_HANDLE)
+        {
+            logger::error("ViewportRenderPass: Framebuffer not set (must be set externally via set_framebuffer())");
             return;
         }
 
@@ -112,140 +126,16 @@ namespace vulkan_engine::rendering
 
     void ViewportRenderPass::recreate_framebuffer()
     {
-        cleanup_framebuffer();
-
-        if (render_target_)
-        {
-            create_framebuffer();
-        }
+        // Note: Both RenderPass and Framebuffer are managed externally
+        // This method is called when external resources are recreated
+        // ViewportRenderPass just updates its references via set_framebuffer()
     }
 
-    void ViewportRenderPass::create_render_pass()
+    ViewportRenderPass::~ViewportRenderPass()
     {
-        if (!render_target_ || !render_target_->device())
-            return;
-
-        VkDevice device = render_target_->device()->device();
-
-        std::vector<VkAttachmentDescription> attachments;
-        std::vector<VkAttachmentReference>   color_refs;
-        VkAttachmentReference                depth_ref{};
-        bool                                 has_depth = false;
-
-        // 颜色附件
-        if (render_target_->has_color())
-        {
-            VkAttachmentDescription color_attachment{};
-            color_attachment.format         = render_target_->color_format();
-            color_attachment.samples        = render_target_->samples();
-            color_attachment.loadOp         = config_.clear_color ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
-            color_attachment.storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
-            color_attachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            color_attachment.initialLayout  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            color_attachment.finalLayout    = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-            attachments.push_back(color_attachment);
-
-            VkAttachmentReference ref{};
-            ref.attachment = static_cast<uint32_t>(attachments.size()) - 1;
-            ref.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            color_refs.push_back(ref);
-        }
-
-        // 深度附件
-        if (render_target_->has_depth())
-        {
-            VkAttachmentDescription depth_attachment{};
-            depth_attachment.format         = render_target_->depth_format();
-            depth_attachment.samples        = render_target_->samples();
-            depth_attachment.loadOp         = config_.clear_depth ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
-            depth_attachment.storeOp        = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            depth_attachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            depth_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            depth_attachment.initialLayout  = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-            depth_attachment.finalLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-            attachments.push_back(depth_attachment);
-
-            depth_ref.attachment = static_cast<uint32_t>(attachments.size()) - 1;
-            depth_ref.layout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-            has_depth            = true;
-        }
-
-        VkSubpassDescription subpass{};
-        subpass.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass.colorAttachmentCount    = static_cast<uint32_t>(color_refs.size());
-        subpass.pColorAttachments       = color_refs.empty() ? nullptr : color_refs.data();
-        subpass.pDepthStencilAttachment = has_depth ? &depth_ref : nullptr;
-
-        VkSubpassDependency dependency{};
-        dependency.srcSubpass    = VK_SUBPASS_EXTERNAL;
-        dependency.dstSubpass    = 0;
-        dependency.srcStageMask  = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-        dependency.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-
-        VkRenderPassCreateInfo render_pass_info{};
-        render_pass_info.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        render_pass_info.attachmentCount = static_cast<uint32_t>(attachments.size());
-        render_pass_info.pAttachments    = attachments.data();
-        render_pass_info.subpassCount    = 1;
-        render_pass_info.pSubpasses      = &subpass;
-        render_pass_info.dependencyCount = 1;
-        render_pass_info.pDependencies   = &dependency;
-
-        VK_CHECK(vkCreateRenderPass(device, &render_pass_info, nullptr, &render_pass_));
-    }
-
-    void ViewportRenderPass::create_framebuffer()
-    {
-        if (!render_target_ || !render_target_->device() || render_pass_ == VK_NULL_HANDLE)
-            return;
-
-        VkDevice device = render_target_->device()->device();
-
-        std::vector<VkImageView> attachments;
-        if (render_target_->has_color())
-        {
-            attachments.push_back(render_target_->color_image_view());
-        }
-        if (render_target_->has_depth())
-        {
-            attachments.push_back(render_target_->depth_image_view());
-        }
-
-        VkFramebufferCreateInfo framebuffer_info{};
-        framebuffer_info.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebuffer_info.renderPass      = render_pass_;
-        framebuffer_info.attachmentCount = static_cast<uint32_t>(attachments.size());
-        framebuffer_info.pAttachments    = attachments.data();
-        framebuffer_info.width           = render_target_->width();
-        framebuffer_info.height          = render_target_->height();
-        framebuffer_info.layers          = 1;
-
-        VK_CHECK(vkCreateFramebuffer(device, &framebuffer_info, nullptr, &framebuffer_));
-    }
-
-    void ViewportRenderPass::cleanup_framebuffer()
-    {
-        if (!render_target_ || !render_target_->device())
-            return;
-
-        VkDevice device = render_target_->device()->device();
-        vkDeviceWaitIdle(device);
-
-        if (framebuffer_ != VK_NULL_HANDLE)
-        {
-            vkDestroyFramebuffer(device, framebuffer_, nullptr);
-            framebuffer_ = VK_NULL_HANDLE;
-        }
-
-        if (render_pass_ != VK_NULL_HANDLE)
-        {
-            vkDestroyRenderPass(device, render_pass_, nullptr);
-            render_pass_ = VK_NULL_HANDLE;
-        }
+        // Note: RenderPass and Framebuffer are managed externally
+        // Just clear our references
+        render_pass_ = VK_NULL_HANDLE;
+        framebuffer_ = VK_NULL_HANDLE;
     }
 } // namespace vulkan_engine::rendering

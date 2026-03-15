@@ -1,4 +1,6 @@
 #include "rendering/render_graph/RenderGraphPass.hpp"
+#include "vulkan/command/CommandBuffer.hpp"
+#include "vulkan/resources/Buffer.hpp"
 #include "core/utils/Logger.hpp"
 
 namespace vulkan_engine::rendering

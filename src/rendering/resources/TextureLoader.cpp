@@ -1,11 +1,15 @@
 ﻿#include "rendering/resources/TextureLoader.hpp"
 #include "core/utils/Logger.hpp"
+#include "platform/filesystem/PathUtils.hpp"
+
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
 #include <fstream>
 #include <cstring>
+#include <vector>
+#include <filesystem>
 
 namespace vulkan_engine::rendering
 {
@@ -29,26 +33,37 @@ namespace vulkan_engine::rendering
         (void)format; // Currently always uses VK_FORMAT_R8G8B8A8_UNORM
         std::string full_path = resolve_path(path);
 
-        // Check if file exists
-        std::ifstream file(full_path, std::ios::binary);
+        // Load file into memory first (handles Unicode paths correctly)
+        auto file = core::PathUtils::open_input_file(full_path, std::ios::binary | std::ios::ate);
         if (!file.is_open())
         {
-            logger::error("Failed to open texture file: " + full_path);
+            logger::error("Failed to open texture file: " + core::PathUtils::to_string(std::filesystem::path(full_path)));
+            return nullptr;
+        }
+
+        std::streamsize file_size = file.tellg();
+        file.seekg(0, std::ios::beg);
+        std::vector<uint8_t> buffer(file_size);
+        if (!file.read(reinterpret_cast<char*>(buffer.data()), file_size))
+        {
+            logger::error("Failed to read texture file: " + core::PathUtils::to_string(std::filesystem::path(full_path)));
             return nullptr;
         }
         file.close();
 
-        // Load image using stb_image
+        // Load image from memory using stb_image
         int      width, height, channels;
-        stbi_uc* pixels = stbi_load(full_path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+        stbi_uc* pixels = stbi_load_from_memory(buffer.data(), static_cast<int>(buffer.size()), &width, &height, &channels, STBI_rgb_alpha);
 
         if (!pixels)
         {
-            logger::error("Failed to load texture: " + std::string(stbi_failure_reason()) + " - " + full_path);
+            logger::error("Failed to load texture: " + std::string(stbi_failure_reason()) + " - " +
+                          core::PathUtils::to_string(std::filesystem::path(full_path)));
             return nullptr;
         }
 
-        logger::info("Loaded texture: " + full_path + " (" + std::to_string(width) + "x" + std::to_string(height) + ", " + std::to_string(channels) +
+        logger::info("Loaded texture: " + core::PathUtils::to_string(std::filesystem::path(full_path)) + " (" + std::to_string(width) + "x" +
+                     std::to_string(height) + ", " + std::to_string(channels) +
                      " channels)");
 
         // Create GPU image
@@ -62,27 +77,21 @@ namespace vulkan_engine::rendering
 
     std::string TextureLoader::resolve_path(const std::string& path) const
     {
-        // Try multiple search paths
-        std::vector<std::string> search_paths = {
-            base_directory_ + path,
-            path,
-            "../" + path,
-            "../../" + path,
-            "D:/TechArt/Vulkan/" + path
-        };
+        // 直接写死路径
+        std::string full_path = "D:/TechArt/Vulkan/Textures/" + path;
 
-        for (const auto& search_path : search_paths)
+        if (std::filesystem::exists(full_path))
         {
-            std::ifstream file(search_path, std::ios::binary);
-            if (file.is_open())
-            {
-                file.close();
-                return search_path;
-            }
+            return full_path;
         }
 
-        // Return original path if not found (will fail later with better error message)
-        return base_directory_ + path;
+        // Fallback: try path as-is
+        if (std::filesystem::exists(path))
+        {
+            return path;
+        }
+
+        return full_path;
     }
 
     std::shared_ptr<vulkan::Image> TextureLoader::create_image_from_data(
@@ -373,7 +382,7 @@ namespace vulkan_engine::rendering
 
     uint32_t TextureLoader::calculate_mip_levels(uint32_t width, uint32_t height) const
     {
-        uint32_t max_dim = std::max(width, height);
+        uint32_t max_dim = (width > height) ? width : height;
         uint32_t levels  = 0;
         while (max_dim > 0)
         {

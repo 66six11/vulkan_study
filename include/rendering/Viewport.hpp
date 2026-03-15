@@ -15,7 +15,9 @@ namespace vulkan_engine::rendering
      * 职责：
      * - 管理显示尺寸与渲染目标尺寸的关系
      * - 提供宽高比计算
-     * - 提供 ImGui 纹理ID
+     * - 提供对 RenderTarget 的访问（用于 ImGui 纹理创建）
+     * 
+     * 注意：ImGui 纹理ID的创建已移至 ImGuiManager，避免 Viewport 依赖 Vulkan 后端细节
      */
     class Viewport
     {
@@ -70,12 +72,13 @@ namespace vulkan_engine::rendering
             uint32_t render_width() const { return render_target_ ? render_target_->width() : 0; }
             uint32_t render_height() const { return render_target_ ? render_target_->height() : 0; }
 
-            // ImGui 纹理ID
-            ImTextureID imgui_texture_id() const;
+            // 获取颜色图像视图（供 ImGuiManager 创建纹理）
+            VkImageView color_image_view() const;
 
-            // 检查是否需要重新创建 ImGui 描述符集
-            bool needs_imgui_update() const { return imgui_needs_update_; }
-            void mark_imgui_updated() { imgui_needs_update_ = false; }
+            // 标记需要更新 ImGui 纹理
+            void mark_imgui_texture_dirty() { imgui_texture_dirty_ = true; }
+            bool is_imgui_texture_dirty() const { return imgui_texture_dirty_; }
+            void clear_imgui_texture_dirty() { imgui_texture_dirty_ = false; }
 
         private:
             std::shared_ptr<vulkan::DeviceManager> device_;
@@ -90,12 +93,7 @@ namespace vulkan_engine::rendering
             uint32_t pending_height_ = 0;
             bool     resize_pending_ = false;
 
-            // ImGui 资源
-            mutable VkDescriptorSet imgui_descriptor_set_ = VK_NULL_HANDLE;
-            mutable VkSampler       imgui_sampler_        = VK_NULL_HANDLE;
-            mutable bool            imgui_needs_update_   = true;
-
-            void create_imgui_sampler() const;
-            void create_imgui_descriptor_set() const;
+            // ImGui 纹理需要更新标志
+            bool imgui_texture_dirty_ = true;
     };
 } // namespace vulkan_engine::rendering

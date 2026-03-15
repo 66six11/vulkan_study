@@ -1,16 +1,18 @@
 #pragma once
 
 #include "rendering/render_graph/RenderGraph.hpp"
-#include "vulkan/command/CommandBuffer.hpp"
-#include "vulkan/pipelines/Pipeline.hpp"
-#include "vulkan/resources/Buffer.hpp"
-#include "vulkan/resources/Framebuffer.hpp"
-#include "vulkan/device/SwapChain.hpp"
-
 #include <glm/glm.hpp>
 #include <memory>
 #include <vector>
 #include <array>
+
+// Forward declarations for Vulkan backend types to reduce layer coupling
+namespace vulkan_engine::vulkan
+{
+    class RenderCommandBuffer;
+    class GraphicsPipeline;
+    class Buffer;
+}
 
 namespace vulkan_engine::rendering
 {

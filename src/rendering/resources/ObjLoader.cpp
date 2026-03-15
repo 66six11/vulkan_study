@@ -1,11 +1,13 @@
 #include "rendering/resources/ObjLoader.hpp"
 #include "core/utils/Logger.hpp"
+#include "platform/filesystem/PathUtils.hpp"
 #include <fstream>
 #include <sstream>
 #include <algorithm>
 #include <cctype>
 #include <array>
 #include <cmath>
+#include <filesystem>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -15,28 +17,12 @@
 
 namespace vulkan_engine::rendering
 {
-    #ifdef _WIN32
-    // Convert UTF-8 string to wide string for Windows
-    static std::wstring utf8_to_wstring(const std::string& str)
-    {
-        if (str.empty()) return std::wstring();
-        int          size_needed = MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), NULL, 0);
-        std::wstring wstr(size_needed, 0);
-        MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), &wstr[0], size_needed);
-        return wstr;
-    }
-    #endif
-
     MeshData ObjLoader::load(const std::string& path)
     {
         MeshData result;
         result.name = path;
 
-        #ifdef _WIN32
-        std::ifstream file(utf8_to_wstring(path));
-        #else
-        std::ifstream file(path);
-        #endif
+        auto file = core::PathUtils::open_input_file(path);
         if (!file.is_open())
         {
             last_error_ = "Failed to open file: " + path;
@@ -224,7 +210,7 @@ namespace vulkan_engine::rendering
             logger::info("  " + idx_str);
         }
 
-        logger::info("Loaded OBJ: " + path +
+        logger::info("Loaded OBJ: " + core::PathUtils::to_string(std::filesystem::path(path)) +
                      " - Positions: " + std::to_string(positions.size()) +
                      ", Normals: " + std::to_string(normals.size()) +
                      ", TexCoords: " + std::to_string(texcoords.size()) +
@@ -237,11 +223,7 @@ namespace vulkan_engine::rendering
 
     bool ObjLoader::can_load(const std::string& path) const
     {
-        #ifdef _WIN32
-        std::ifstream file(utf8_to_wstring(path));
-        #else
-        std::ifstream file(path);
-        #endif
+        auto file = core::PathUtils::open_input_file(path);
         return file.good();
     }
 

@@ -1,9 +1,14 @@
 ﻿#include "application/app/Application.hpp"
 #include "platform/windowing/Window.hpp"
 #include "platform/input/InputManager.hpp"
+#include "platform/filesystem/PathUtils.hpp"
 #include "vulkan/device/Device.hpp"
 #include "vulkan/device/SwapChain.hpp"
 #include <iostream>
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 namespace vulkan_engine::application
 {
@@ -17,6 +22,26 @@ namespace vulkan_engine::application
 
     bool ApplicationBase::initialize()
     {
+        // Initialize PathUtils with executable path to find correct project root
+        // This ensures assets are found regardless of working directory
+        {
+            std::filesystem::path exe_path;
+            #ifdef _WIN32
+            wchar_t buffer[MAX_PATH];
+            if (GetModuleFileNameW(nullptr, buffer, MAX_PATH) > 0)
+            {
+                exe_path = buffer;
+            }
+            #else
+            // Linux: read /proc/self/exe
+            if (std::filesystem::exists("/proc/self/exe"))
+            {
+                exe_path = std::filesystem::read_symlink("/proc/self/exe");
+            }
+            #endif
+            core::PathUtils::initialize(exe_path);
+        }
+
         // Initialize platform
         initialize_platform();
 

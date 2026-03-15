@@ -28,7 +28,7 @@
   },
   "textures": {
     "albedo": {
-      "path": "textures/CustomUVChecker_byValle_1K .png"
+      "path": "CustomUVChecker_byValle_1K .png"
     }
   },
   "render_states": {

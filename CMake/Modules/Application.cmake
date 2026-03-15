@@ -8,6 +8,7 @@ create_vulkan_module(Application STATIC)
 target_link_libraries(VulkanEngineApplication PUBLIC
         VulkanEngineVulkan
         VulkanEngineEditor
+        VulkanEnginePlatform
 )
 
 # 创建主可执行文件

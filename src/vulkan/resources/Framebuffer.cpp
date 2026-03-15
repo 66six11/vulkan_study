@@ -1,5 +1,6 @@
 #include "vulkan/resources/Framebuffer.hpp"
 #include "vulkan/utils/VulkanError.hpp"
+#include "core/utils/Logger.hpp"
 
 namespace vulkan_engine::vulkan
 {
@@ -43,7 +44,14 @@ namespace vulkan_engine::vulkan
     {
         if (framebuffer_ != VK_NULL_HANDLE && device_)
         {
+            logger::debug("Destroying VkFramebuffer: " + std::to_string(reinterpret_cast<uint64_t>(framebuffer_)));
             vkDestroyFramebuffer(device_->device(), framebuffer_, nullptr);
+            framebuffer_ = VK_NULL_HANDLE;
+        }
+        else if (framebuffer_ != VK_NULL_HANDLE)
+        {
+            logger::error("VkFramebuffer " + std::to_string(reinterpret_cast<uint64_t>(framebuffer_)) +
+                          " leaked! Device is null.");
         }
     }
 
@@ -102,6 +110,9 @@ namespace vulkan_engine::vulkan
         {
             throw VulkanError(result, "Failed to create framebuffer", __FILE__, __LINE__);
         }
+
+        logger::debug("Created VkFramebuffer: " + std::to_string(reinterpret_cast<uint64_t>(framebuffer_)) +
+                      " (width=" + std::to_string(width_) + ", height=" + std::to_string(height_) + ")");
     }
 
     // FramebufferBuilder implementation
@@ -205,6 +216,8 @@ namespace vulkan_engine::vulkan
 
     void FramebufferPool::clear()
     {
+        logger::debug("Clearing FramebufferPool, contains " + std::to_string(framebuffers_.size()) + " framebuffers");
         framebuffers_.clear();
+        logger::debug("FramebufferPool cleared");
     }
 } // namespace vulkan_engine::vulkan

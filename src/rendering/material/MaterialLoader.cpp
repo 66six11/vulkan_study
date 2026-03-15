@@ -1,5 +1,6 @@
 #include "rendering/material/MaterialLoader.hpp"
 #include "core/utils/Logger.hpp"
+#include "platform/filesystem/PathUtils.hpp"
 #include "platform/filesystem/FileSystem.hpp"
 
 #include <fstream>
@@ -16,13 +17,14 @@ namespace vulkan_engine::rendering
 
     std::shared_ptr<Material> MaterialLoader::load(const std::string& path, VkRenderPass render_pass)
     {
-        std::string full_path = base_directory_ + path;
+        // 直接写死路径，不解析
+        std::string full_path = "D:/TechArt/Vulkan/materials/" + path;
 
         // Parse JSON and create material
         try
         {
             // Read JSON file
-            std::ifstream file(full_path);
+            auto file = std::ifstream(full_path);
             if (!file.is_open())
             {
                 logger::error("Failed to open material file: " + full_path);
@@ -224,18 +226,25 @@ namespace vulkan_engine::rendering
 
     std::string MaterialLoader::resolve_path(const std::string& path) const
     {
-        // Try multiple search paths
+        // First try PathUtils resolution
+        auto resolved = core::PathUtils::resolve(path);
+        if (std::filesystem::exists(resolved))
+        {
+            return resolved.string();
+        }
+
+        // Try multiple search paths relative to base directory
         std::vector<std::string> search_paths = {
+            base_directory_ + path,
             path,
             "../" + path,
             "../../" + path,
             "../../../" + path,
-            "D:/TechArt/Vulkan/" + path
         };
 
         for (const auto& search_path : search_paths)
         {
-            std::ifstream file(search_path, std::ios::binary);
+            auto file = core::PathUtils::open_input_file(search_path, std::ios::binary);
             if (file.is_open())
             {
                 file.close();
@@ -243,7 +252,8 @@ namespace vulkan_engine::rendering
             }
         }
 
-        // Return original path if not found (will fail later with better error message)
-        return path;
+        // Return PathUtils resolved path even if not found
+        // (let the caller handle the error)
+        return resolved.string();
     }
 } // namespace vulkan_engine::rendering

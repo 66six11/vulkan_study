@@ -8,6 +8,17 @@
 
 namespace vulkan_engine::editor
 {
+    // Helper structure to manage viewport texture resources
+    struct ViewportTextureResources
+    {
+        VkSampler       sampler         = VK_NULL_HANDLE;
+        VkDescriptorSet descriptor_set  = VK_NULL_HANDLE;
+        VkImageView     last_image_view = VK_NULL_HANDLE; // Track to detect changes
+    };
+
+    // File-scope storage for viewport texture resources
+    static ViewportTextureResources s_viewport_texture;
+
     ImGuiManager::ImGuiManager() = default;
 
     ImGuiManager::~ImGuiManager()
@@ -122,6 +133,15 @@ namespace vulkan_engine::editor
 
         vkDeviceWaitIdle(device_->device());
 
+        // Clean up viewport texture resources
+        if (s_viewport_texture.sampler != VK_NULL_HANDLE)
+        {
+            vkDestroySampler(device_->device(), s_viewport_texture.sampler, nullptr);
+            s_viewport_texture.sampler = VK_NULL_HANDLE;
+        }
+        s_viewport_texture.descriptor_set  = VK_NULL_HANDLE;
+        s_viewport_texture.last_image_view = VK_NULL_HANDLE;
+
         ImGui_ImplVulkan_Shutdown();
         ImGui_ImplGlfw_Shutdown();
         ImGui::DestroyContext();
@@ -192,7 +212,8 @@ namespace vulkan_engine::editor
             }
 
             // Show the rendered texture with aspect ratio preservation (Cover mode)
-            ImTextureID texture_id = viewport->imgui_texture_id();
+            // Get texture ID from ImGuiManager (manages Vulkan descriptor set)
+            ImTextureID texture_id = get_viewport_texture_id(viewport);
             // logger::info("ImGuiManager: texture_id = " + std::to_string(reinterpret_cast<uint64_t>(texture_id)));
             if (texture_id)
             {
@@ -305,6 +326,68 @@ namespace vulkan_engine::editor
         {
             ImGui_ImplVulkan_RenderDrawData(draw_data, command_buffer);
         }
+    }
+
+    ImTextureID ImGuiManager::get_viewport_texture_id(rendering::Viewport* viewport)
+    {
+        if (!viewport || !device_)
+            return nullptr;
+
+        VkImageView current_image_view = viewport->color_image_view();
+        if (current_image_view == VK_NULL_HANDLE)
+            return nullptr;
+
+        // Check if we need to recreate the texture resources
+        // This happens on first call or when viewport's image view changes (resize)
+        if (s_viewport_texture.descriptor_set == VK_NULL_HANDLE ||
+            s_viewport_texture.sampler == VK_NULL_HANDLE ||
+            s_viewport_texture.last_image_view != current_image_view)
+        {
+            // Clean up old resources if they exist
+            if (s_viewport_texture.descriptor_set != VK_NULL_HANDLE)
+            {
+                // Note: ImGui manages descriptor set lifetime, we just create new ones
+                s_viewport_texture.descriptor_set = VK_NULL_HANDLE;
+            }
+            if (s_viewport_texture.sampler != VK_NULL_HANDLE)
+            {
+                vkDestroySampler(device_->device(), s_viewport_texture.sampler, nullptr);
+                s_viewport_texture.sampler = VK_NULL_HANDLE;
+            }
+
+            // Create sampler
+            VkSamplerCreateInfo sampler_info{};
+            sampler_info.sType                   = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+            sampler_info.magFilter               = VK_FILTER_LINEAR;
+            sampler_info.minFilter               = VK_FILTER_LINEAR;
+            sampler_info.mipmapMode              = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+            sampler_info.addressModeU            = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            sampler_info.addressModeV            = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            sampler_info.addressModeW            = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            sampler_info.anisotropyEnable        = VK_FALSE;
+            sampler_info.maxAnisotropy           = 1.0f;
+            sampler_info.borderColor             = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+            sampler_info.unnormalizedCoordinates = VK_FALSE;
+            sampler_info.compareEnable           = VK_FALSE;
+            sampler_info.mipLodBias              = 0.0f;
+            sampler_info.minLod                  = 0.0f;
+            sampler_info.maxLod                  = 1.0f;
+
+            VK_CHECK(vkCreateSampler(device_->device(), &sampler_info, nullptr, &s_viewport_texture.sampler));
+
+            // Create ImGui texture descriptor set
+            s_viewport_texture.descriptor_set =
+                    ImGui_ImplVulkan_AddTexture(
+                                                s_viewport_texture.sampler,
+                                                current_image_view,
+                                                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+            s_viewport_texture.last_image_view = current_image_view;
+
+            logger::info("Viewport texture recreated for new image view");
+        }
+
+        return reinterpret_cast<ImTextureID>(s_viewport_texture.descriptor_set);
     }
 
     void ImGuiManager::create_descriptor_pool(uint32_t image_count)

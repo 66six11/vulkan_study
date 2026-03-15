@@ -21,7 +21,8 @@ namespace vulkan_engine::rendering
             struct Config
             {
                 std::string                   name = "ViewportRenderPass";
-                std::shared_ptr<RenderTarget> render_target; // 渲染目标
+                std::shared_ptr<RenderTarget> render_target;                        // 渲染目标
+                VkRenderPass                  render_pass         = VK_NULL_HANDLE; // 外部传入的 RenderPass (必须)
                 bool                          clear_color         = true;
                 bool                          clear_depth         = true;
                 VkClearColorValue             clear_color_value   = {{0.1f, 0.1f, 0.1f, 1.0f}};
@@ -30,7 +31,7 @@ namespace vulkan_engine::rendering
             };
 
             explicit ViewportRenderPass(const Config& config);
-            ~ViewportRenderPass() override = default;
+            ~ViewportRenderPass() override;
 
             // 禁止拷贝
             ViewportRenderPass(const ViewportRenderPass&)            = delete;
@@ -57,6 +58,10 @@ namespace vulkan_engine::rendering
             // 获取渲染目标
             std::shared_ptr<RenderTarget> render_target() const { return render_target_; }
 
+            // 设置外部 Framebuffer（由调用者管理生命周期）
+            void          set_framebuffer(VkFramebuffer framebuffer) { framebuffer_ = framebuffer; }
+            VkFramebuffer framebuffer() const { return framebuffer_; }
+
             // 重新创建 Framebuffer（尺寸变化时调用）
             void recreate_framebuffer();
 
@@ -66,12 +71,8 @@ namespace vulkan_engine::rendering
             std::shared_ptr<RenderTarget>                render_target_;
             std::vector<std::unique_ptr<RenderPassBase>> sub_passes_;
 
-            // Vulkan 资源
-            VkRenderPass  render_pass_ = VK_NULL_HANDLE;
-            VkFramebuffer framebuffer_ = VK_NULL_HANDLE;
-
-            void create_render_pass();
-            void create_framebuffer();
-            void cleanup_framebuffer();
+            // Vulkan 资源 (外部管理，ViewportRenderPass 不拥有所有权)
+            VkRenderPass  render_pass_ = VK_NULL_HANDLE; // 由外部传入 (RenderPassManager)
+            VkFramebuffer framebuffer_ = VK_NULL_HANDLE; // 由外部传入 (main.cpp)
     };
 } // namespace vulkan_engine::rendering

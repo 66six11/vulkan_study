@@ -4,6 +4,12 @@
 #include <vulkan/vulkan.h>
 #include <memory>
 
+namespace vulkan_engine::vulkan
+{
+    // Forward declaration to avoid direct dependency on Vulkan backend details
+    class Framebuffer;
+}
+
 namespace vulkan_engine::rendering
 {
     /**
@@ -12,8 +18,8 @@ namespace vulkan_engine::rendering
      *
      * 职责：
      * - 管理颜色/深度 Image 和 ImageView
+     * - 管理自己的 Framebuffer（RAII）
      * - 提供尺寸信息
-     * - 不参与 RenderPass/Framebuffer 管理
      */
     class RenderTarget
     {
@@ -67,6 +73,12 @@ namespace vulkan_engine::rendering
             // 获取设备
             std::shared_ptr<vulkan::DeviceManager> device() const { return device_; }
 
+            // Framebuffer 管理
+            void          create_framebuffer(VkRenderPass render_pass);
+            void          destroy_framebuffer();
+            bool          has_framebuffer() const;
+            VkFramebuffer framebuffer_handle() const;
+
         private:
             std::shared_ptr<vulkan::DeviceManager> device_;
 
@@ -88,6 +100,9 @@ namespace vulkan_engine::rendering
             VkImage        depth_image_      = VK_NULL_HANDLE;
             VkDeviceMemory depth_memory_     = VK_NULL_HANDLE;
             VkImageView    depth_image_view_ = VK_NULL_HANDLE;
+
+            // Framebuffer（RAII 管理）
+            std::unique_ptr<vulkan::Framebuffer> framebuffer_;
 
             void create_images();
             void create_color_image();
