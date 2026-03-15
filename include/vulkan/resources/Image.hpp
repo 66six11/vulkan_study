@@ -38,8 +38,24 @@ namespace vulkan_engine::vulkan
             void create_view(VkImageViewType view_type, VkFormat format, const ImageSubresourceRange& range);
 
             // Layout transitions
-            void          transition_layout(VkImageLayout new_layout);
+            // Set layout tracking only (no barrier emitted)
+            void set_layout(VkImageLayout new_layout) { current_layout_ = new_layout; }
+
+            // Transition layout with actual barrier emission (requires command buffer)
+            void transition_layout(VkCommandBuffer cmd, VkImageLayout new_layout);
+
+            // Get current tracked layout
             VkImageLayout current_layout() const { return current_layout_; }
+
+            // Helper: determine access masks and stage masks for layout transition
+            struct TransitionInfo
+            {
+                VkAccessFlags        src_access_mask;
+                VkAccessFlags        dst_access_mask;
+                VkPipelineStageFlags src_stage_mask;
+                VkPipelineStageFlags dst_stage_mask;
+            };
+            static TransitionInfo get_transition_info(VkImageLayout old_layout, VkImageLayout new_layout);
 
             // Mipmaps
             void generate_mipmaps();

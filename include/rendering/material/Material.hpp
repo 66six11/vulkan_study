@@ -113,14 +113,19 @@ namespace vulkan_engine::rendering
             VkPipelineLayout                                                            pipeline_layout_       = VK_NULL_HANDLE;
             VkDescriptorSetLayout                                                       descriptor_set_layout_ = VK_NULL_HANDLE;
 
-            // Uniform buffer for material parameters
+            // Uniform buffer for material parameters (std140 layout)
             struct UniformBufferData
             {
-                glm::vec4 color{1.0f, 1.0f, 1.0f, 1.0f};
-                float     roughness   = 0.5f;
-                float     metallic    = 0.0f;
-                float     emissive    = 0.0f;
-                float     has_texture = 0.0f; // 1.0 if texture is present
+                glm::vec4 color{1.0f, 1.0f, 1.0f, 1.0f};        // offset 0,   size 16
+                float     roughness   = 0.5f;                   // offset 16,  size 4
+                float     metallic    = 0.0f;                   // offset 20,  size 4
+                float     emissive    = 0.0f;                   // offset 24,  size 4
+                float     has_texture = 0.0f;                   // offset 28,  size 4
+                // New fields for vec2/int/bool support
+                glm::vec2 uv_scale{1.0f, 1.0f};                 // offset 32,  size 8
+                int       texture_id  = 0;                      // offset 40,  size 4
+                int       use_normal_map = 0;                   // offset 44,  size 4 (bool as int)
+                float     padding     = 0.0f;                   // offset 48,  size 4 (padding to 64 bytes)
             };
 
             std::unique_ptr<vulkan::UniformBuffer<UniformBufferData>> uniform_buffer_;

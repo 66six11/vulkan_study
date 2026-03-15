@@ -263,6 +263,45 @@ namespace vulkan_engine::rendering
         }
     }
 
+    void Material::set_vec2(const std::string& name, const glm::vec2& value)
+    {
+        std::lock_guard<std::mutex> lock(uniform_mutex_);
+        UniformBufferData           data = uniform_buffer_->get_data(0);
+        if (name == "uv_scale")
+        {
+            data.uv_scale = value;
+        }
+        else if (name == "uv_offset")
+        {
+            // Store in uv_scale's neighboring field or add separate field if needed
+            // For now, we can use the padding area or extend the struct
+            data.uv_scale = value; // Placeholder: use uv_scale for now
+        }
+        uniform_buffer_->update(0, data);
+    }
+
+    void Material::set_int(const std::string& name, int value)
+    {
+        std::lock_guard<std::mutex> lock(uniform_mutex_);
+        UniformBufferData           data = uniform_buffer_->get_data(0);
+        if (name == "texture_id")
+        {
+            data.texture_id = value;
+        }
+        uniform_buffer_->update(0, data);
+    }
+
+    void Material::set_bool(const std::string& name, bool value)
+    {
+        std::lock_guard<std::mutex> lock(uniform_mutex_);
+        UniformBufferData           data = uniform_buffer_->get_data(0);
+        if (name == "use_normal_map")
+        {
+            data.use_normal_map = value ? 1 : 0;
+        }
+        uniform_buffer_->update(0, data);
+    }
+
     void Material::set_texture(const std::string& name, std::shared_ptr<vulkan::Image> texture, VkImageView view)
     {
         uint32_t binding = 0;

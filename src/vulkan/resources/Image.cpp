@@ -103,11 +103,119 @@ namespace vulkan_engine::vulkan
         }
     }
 
-    void Image::transition_layout(VkImageLayout new_layout)
+    void Image::transition_layout(VkCommandBuffer cmd, VkImageLayout new_layout)
     {
-        // This would typically be done via a command buffer
-        // For now, just track the layout
+        if (current_layout_ == new_layout)
+        {
+            return;
+        }
+
+        auto info = get_transition_info(current_layout_, new_layout);
+
+        VkImageMemoryBarrier barrier{};
+        barrier.sType                           = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.oldLayout                       = current_layout_;
+        barrier.newLayout                       = new_layout;
+        barrier.srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+        barrier.image                           = image_;
+        barrier.subresourceRange.aspectMask     = (format_ == VK_FORMAT_D32_SFLOAT || format_ == VK_FORMAT_D32_SFLOAT_S8_UINT || format_ == VK_FORMAT_D24_UNORM_S8_UINT)
+                                                      ? VK_IMAGE_ASPECT_DEPTH_BIT
+                                                      : VK_IMAGE_ASPECT_COLOR_BIT;
+        barrier.subresourceRange.baseMipLevel   = 0;
+        barrier.subresourceRange.levelCount     = mip_levels_;
+        barrier.subresourceRange.baseArrayLayer = 0;
+        barrier.subresourceRange.layerCount     = array_layers_;
+        barrier.srcAccessMask                   = info.src_access_mask;
+        barrier.dstAccessMask                   = info.dst_access_mask;
+
+        vkCmdPipelineBarrier(
+            cmd,
+            info.src_stage_mask,
+            info.dst_stage_mask,
+            0,
+            0, nullptr,
+            0, nullptr,
+            1, &barrier);
+
         current_layout_ = new_layout;
+    }
+
+    Image::TransitionInfo Image::get_transition_info(VkImageLayout old_layout, VkImageLayout new_layout)
+    {
+        TransitionInfo info{};
+
+        // Source stage and access
+        switch (old_layout)
+        {
+            case VK_IMAGE_LAYOUT_UNDEFINED:
+                info.src_access_mask = 0;
+                info.src_stage_mask  = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+                break;
+            case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+                info.src_access_mask = VK_ACCESS_TRANSFER_WRITE_BIT;
+                info.src_stage_mask  = VK_PIPELINE_STAGE_TRANSFER_BIT;
+                break;
+            case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+                info.src_access_mask = VK_ACCESS_TRANSFER_READ_BIT;
+                info.src_stage_mask  = VK_PIPELINE_STAGE_TRANSFER_BIT;
+                break;
+            case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+                info.src_access_mask = VK_ACCESS_SHADER_READ_BIT;
+                info.src_stage_mask  = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+                break;
+            case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+                info.src_access_mask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+                info.src_stage_mask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+                break;
+            case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+                info.src_access_mask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+                info.src_stage_mask  = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+                break;
+            case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
+                info.src_access_mask = VK_ACCESS_MEMORY_READ_BIT;
+                info.src_stage_mask  = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+                break;
+            default:
+                info.src_access_mask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+                info.src_stage_mask  = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+                break;
+        }
+
+        // Destination stage and access
+        switch (new_layout)
+        {
+            case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+                info.dst_access_mask = VK_ACCESS_TRANSFER_WRITE_BIT;
+                info.dst_stage_mask  = VK_PIPELINE_STAGE_TRANSFER_BIT;
+                break;
+            case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+                info.dst_access_mask = VK_ACCESS_TRANSFER_READ_BIT;
+                info.dst_stage_mask  = VK_PIPELINE_STAGE_TRANSFER_BIT;
+                break;
+            case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+                info.dst_access_mask = VK_ACCESS_SHADER_READ_BIT;
+                info.dst_stage_mask  = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+                break;
+            case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+                info.dst_access_mask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+                info.dst_stage_mask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+                break;
+            case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+                info.dst_access_mask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+                info.dst_stage_mask  = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+                break;
+            case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
+                info.dst_access_mask = 0;
+                info.dst_stage_mask  = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+                break;
+            default:
+                info.dst_access_mask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+                info.dst_stage_mask  = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+                break;
+        }
+
+        return info;
     }
 
     void Image::generate_mipmaps()

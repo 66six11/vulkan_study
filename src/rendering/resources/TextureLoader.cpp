@@ -363,8 +363,8 @@ namespace vulkan_engine::rendering
         vkFreeMemory(device_->device(), staging_memory, nullptr);
         vkDestroyBuffer(device_->device(), staging_buffer, nullptr);
 
-        // Update image layout tracking
-        image->transition_layout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        // Update image layout tracking (TextureLoader already emitted barriers)
+        image->set_layout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
         logger::info("Created GPU texture with " + std::to_string(mip_levels) + " mip levels");
 

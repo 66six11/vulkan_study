@@ -25,8 +25,6 @@ namespace vulkan_engine::rendering
 
     void CubeRenderPass::execute(vulkan::RenderCommandBuffer& cmd, const RenderContext& ctx)
     {
-        logger::info("CubeRenderPass::execute - Starting render");
-
         if (!config_.vertex_buffer || !config_.index_buffer)
         {
             logger::error("CubeRenderPass: Missing required geometry resources");
@@ -39,8 +37,6 @@ namespace vulkan_engine::rendering
             logger::error("CubeRenderPass: Material not available");
             return;
         }
-
-        logger::info("CubeRenderPass: Rendering with material " + material->name());
 
         // Begin render pass
         VkClearValue clear_values[2];
@@ -84,11 +80,9 @@ namespace vulkan_engine::rendering
 
         // Draw indexed
         cmd.draw_indexed(config_.index_count, 1, 0, 0, 0);
-        logger::info("CubeRenderPass: Draw call submitted");
 
         // End render pass
         cmd.end_render_pass();
-        logger::info("CubeRenderPass::execute - Completed");
     }
 
     void CubeRenderPass::set_mvp_matrix(const glm::mat4& mvp)

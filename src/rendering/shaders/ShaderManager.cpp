@@ -46,9 +46,20 @@ namespace vulkan_engine::rendering
             return it->second;
         }
 
-        // Load vertex and fragment shaders
-        auto vertex_shader   = load_shader(name + ".vert", ShaderType::Vertex);
-        auto fragment_shader = load_shader(name + ".frag", ShaderType::Fragment);
+        // Try to load pre-compiled SPIR-V files
+        // Slang naming convention: {name}.vert.spv, {name}.frag.spv
+        auto vertex_shader   = load_shader(name + ".vert.spv", ShaderType::Vertex);
+        auto fragment_shader = load_shader(name + ".frag.spv", ShaderType::Fragment);
+
+        // If not found, try alternative naming
+        if (!vertex_shader.success)
+        {
+            vertex_shader = load_shader(name + "_vert.spv", ShaderType::Vertex);
+        }
+        if (!fragment_shader.success)
+        {
+            fragment_shader = load_shader(name + "_frag.spv", ShaderType::Fragment);
+        }
 
         if (!vertex_shader.success || !fragment_shader.success)
         {
@@ -72,32 +83,71 @@ namespace vulkan_engine::rendering
 
         std::filesystem::path full_path = impl_->shader_directory / path;
 
-        // Read shader source
-        std::ifstream file(full_path);
-        if (!file.is_open())
+        // Check if file has .spv extension (pre-compiled SPIR-V)
+        if (full_path.extension() == ".spv")
         {
-            result.error_message = "Failed to open shader file: " + path.string();
-            return result;
+            result = load_spirv(full_path, type);
         }
-
-        std::stringstream buffer;
-        buffer << file.rdbuf();
-
-        // Compile shader
-        ShaderCompileInfo info;
-        info.name    = path.stem().string();
-        info.type    = type;
-        info.source  = buffer.str();
-        info.version = 450; // SPIR-V target version
-
-        result = compile_shader(info);
+        else
+        {
+            result.error_message = "Unsupported shader file format: " + full_path.extension().string() +
+                                   ". Expected .spv (pre-compiled SPIR-V)";
+        }
 
         if (result.success)
         {
             // Store timestamp for hot reload
-            impl_->file_timestamps[path.string()] = std::filesystem::last_write_time(full_path);
+            if (std::filesystem::exists(full_path))
+            {
+                impl_->file_timestamps[path.string()] = std::filesystem::last_write_time(full_path);
+            }
         }
 
+        return result;
+    }
+
+    ShaderCompileResult ShaderManager::load_spirv(const std::filesystem::path& path, ShaderType type)
+    {
+        ShaderCompileResult result;
+        result.success = false;
+        result.type    = type;
+        result.name    = path.stem().string();
+
+        std::ifstream file(path, std::ios::binary | std::ios::ate);
+        if (!file.is_open())
+        {
+            result.error_message = "Failed to open SPIR-V file: " + path.string();
+            return result;
+        }
+
+        auto file_size = static_cast<size_t>(file.tellg());
+        if (file_size == 0)
+        {
+            result.error_message = "SPIR-V file is empty: " + path.string();
+            return result;
+        }
+
+        if (file_size % 4 != 0)
+        {
+            result.error_message = "SPIR-V file size is not 4-byte aligned: " + path.string();
+            return result;
+        }
+
+        result.bytecode.resize(file_size / sizeof(uint32_t));
+
+        file.seekg(0);
+        file.read(reinterpret_cast<char*>(result.bytecode.data()), file_size);
+        file.close();
+
+        // Validate SPIR-V magic number
+        if (result.bytecode.empty() || result.bytecode[0] != 0x07230203)
+        {
+            result.error_message = "Invalid SPIR-V file (wrong magic number): " + path.string();
+            result.bytecode.clear();
+            return result;
+        }
+
+        result.success = true;
         return result;
     }
 
@@ -105,22 +155,66 @@ namespace vulkan_engine::rendering
     {
         ShaderCompileResult result;
         result.success = false;
-
-        // Placeholder: Actual SPIR-V compilation would go here
-        // For now, just store the source
         result.name    = info.name;
         result.type    = info.type;
         result.version = info.version;
 
-        // In a real implementation, this would:
-        // 1. Check cache
-        // 2. Call shaderc or similar to compile GLSL/HLSL to SPIR-V
-        // 3. Store the compiled bytecode
+        // Runtime compilation not supported - use pre-compiled .spv files
+        // For Slang shaders, use compile_slang() method or pre-compile using slangc
+        result.error_message = "Runtime shader compilation not supported. "
+                               "Please use pre-compiled .spv files or call compile_slang() for Slang shaders.";
 
-        // Mark as successful for now (actual bytecode would be empty)
-        result.success  = true;
-        result.bytecode = std::vector<uint32_t>(); // Placeholder
+        return result;
+    }
 
+    ShaderCompileResult ShaderManager::compile_slang(
+        const std::filesystem::path& source_path,
+        ShaderType type,
+        const std::string& entry_point)
+    {
+        ShaderCompileResult result;
+        result.success = false;
+        result.name    = source_path.stem().string();
+        result.type    = type;
+
+        // Check if slangc is available
+        // For now, just check if the expected output .spv file exists
+        std::filesystem::path spv_path = source_path;
+        spv_path.replace_extension();
+
+        // Determine output extension based on shader type
+        switch (type)
+        {
+            case ShaderType::Vertex:
+                spv_path += ".vert.spv";
+                break;
+            case ShaderType::Fragment:
+                spv_path += ".frag.spv";
+                break;
+            default:
+                result.error_message = "Unsupported shader type for Slang compilation";
+                return result;
+        }
+
+        // Check if pre-compiled .spv exists
+        if (std::filesystem::exists(spv_path))
+        {
+            result = load_spirv(spv_path, type);
+            if (result.success)
+            {
+                // Store timestamp for hot reload tracking
+                impl_->file_timestamps[source_path.string()] = std::filesystem::last_write_time(source_path);
+            }
+            return result;
+        }
+
+        // If .spv doesn't exist, report error with instructions
+        result.error_message = "Pre-compiled SPIR-V not found: " + spv_path.string() +
+                               "\nPlease compile Slang shader using: "
+                               "slangc -target spirv -stage " +
+                               (type == ShaderType::Vertex ? "vertex" : "fragment") +
+                               " -entry " + entry_point + " " + source_path.string() +
+                               " -o " + spv_path.string();
         return result;
     }
 

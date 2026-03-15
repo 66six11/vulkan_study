@@ -66,8 +66,15 @@ namespace vulkan_engine::rendering
 
             // Compile shaders
             ShaderCompileResult compile_shader(const ShaderCompileInfo& info);
-            ShaderCompileResult compile_glsl(const std::string& source, ShaderType type);
-            ShaderCompileResult compile_hlsl(const std::string& source, ShaderType type);
+
+            // Load pre-compiled SPIR-V
+            ShaderCompileResult load_spirv(const std::filesystem::path& path, ShaderType type);
+
+            // Slang compilation support (requires slangc in PATH)
+            ShaderCompileResult compile_slang(
+                const std::filesystem::path& source_path,
+                ShaderType type,
+                const std::string& entry_point = "main");
 
             // Reload
             void reload_shader(const std::string& name);

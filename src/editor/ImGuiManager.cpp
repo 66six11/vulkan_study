@@ -1,5 +1,4 @@
 #include "editor/ImGuiManager.hpp"
-#include "rendering/SceneViewport.hpp"
 #include "core/utils/Logger.hpp"
 #include "vulkan/utils/VulkanError.hpp"
 
@@ -194,7 +193,7 @@ namespace vulkan_engine::editor
 
             // Show the rendered texture with aspect ratio preservation (Cover mode)
             ImTextureID texture_id = viewport->imgui_texture_id();
-            logger::info("ImGuiManager: texture_id = " + std::to_string(reinterpret_cast<uint64_t>(texture_id)));
+            // logger::info("ImGuiManager: texture_id = " + std::to_string(reinterpret_cast<uint64_t>(texture_id)));
             if (texture_id)
             {
                 // 使用 display_extent（目标显示尺寸）计算宽高比

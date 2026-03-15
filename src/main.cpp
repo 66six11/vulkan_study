@@ -18,7 +18,6 @@
 // Editor includes
 #include "editor/Editor.hpp"
 #include "editor/ImGuiManager.hpp"
-#include "rendering/SceneViewport.hpp"
 
 // Render Graph includes
 #include "rendering/render_graph/RenderGraph.hpp"
@@ -341,14 +340,12 @@ class EditorApplication : public application::ApplicationBase
             VkCommandBuffer scene_cmd = record_scene_command_buffer(frame_index);
             if (scene_cmd != VK_NULL_HANDLE)
             {
-                logger::info("Submitting scene render command buffer...");
                 VkSubmitInfo submit_info{};
                 submit_info.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
                 submit_info.commandBufferCount = 1;
                 submit_info.pCommandBuffers    = &scene_cmd;
                 vkQueueSubmit(device->graphics_queue(), 1, &submit_info, VK_NULL_HANDLE);
                 vkQueueWaitIdle(device->graphics_queue()); // Wait for scene to finish
-                logger::info("Scene render completed");
             }
             else
             {
