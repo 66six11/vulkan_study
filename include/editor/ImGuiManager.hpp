@@ -2,7 +2,7 @@
 
 #include "vulkan/device/Device.hpp"
 #include "platform/windowing/Window.hpp"
-#include "rendering/SceneViewport.hpp"
+#include "rendering/Viewport.hpp"
 
 #include <imgui.h>
 #include <memory>
@@ -46,7 +46,7 @@ namespace vulkan_engine::editor
 
             // Draw editor layout with scene viewport
             // Returns viewport panel size for scene rendering
-            ImVec2 draw_editor_layout(rendering::SceneViewport* viewport);
+            ImVec2 draw_editor_layout(rendering::Viewport* viewport);
 
             // End frame and prepare draw data
             void end_frame();

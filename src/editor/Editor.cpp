@@ -1,7 +1,8 @@
 #include "editor/Editor.hpp"
 #include "core/utils/Logger.hpp"
 #include "rendering/render_graph/RenderGraph.hpp"
-#include "rendering/SceneViewport.hpp"
+#include "rendering/resources/RenderTarget.hpp"
+#include "rendering/Viewport.hpp"
 #include "vulkan/utils/VulkanError.hpp"
 
 #include <imgui_impl_vulkan.h>
@@ -19,13 +20,17 @@ namespace vulkan_engine::editor
     }
 
     void Editor::initialize(
-        std::shared_ptr<platform::Window>      window,
-        std::shared_ptr<vulkan::DeviceManager> device,
-        std::shared_ptr<vulkan::SwapChain>     swap_chain)
+        std::shared_ptr<platform::Window>        window,
+        std::shared_ptr<vulkan::DeviceManager>   device,
+        std::shared_ptr<vulkan::SwapChain>       swap_chain,
+        std::shared_ptr<rendering::RenderTarget> render_target,
+        std::shared_ptr<rendering::Viewport>     viewport)
     {
-        window_     = window;
-        device_     = device;
-        swap_chain_ = swap_chain;
+        window_        = window;
+        device_        = device;
+        swap_chain_    = swap_chain;
+        render_target_ = render_target;
+        viewport_      = viewport;
 
         // Get swap chain images for ImGui
         uint32_t image_count = swap_chain_->image_count();
@@ -33,15 +38,7 @@ namespace vulkan_engine::editor
         // Create ImGui manager
         imgui_manager_ = std::make_unique<ImGuiManager>();
 
-        // Create viewport with default size
-        viewport_ = std::make_unique<rendering::SceneViewport>();
-        rendering::SceneViewport::CreateInfo viewport_info{};
-        viewport_info.width  = 1280;
-        viewport_info.height = 720;
-        viewport_->initialize(device_, viewport_info);
-
         // Initialize ImGui with swap chain render pass
-        // Note: ImGui renders to swap chain, not viewport
         VkRenderPass render_pass = swap_chain_->default_render_pass();
         if (render_pass == VK_NULL_HANDLE)
         {
@@ -71,7 +68,7 @@ namespace vulkan_engine::editor
         vkDeviceWaitIdle(device_->device());
 
         imgui_manager_->shutdown();
-        viewport_->cleanup();
+        // Note: render_target_ and viewport_ are managed externally, don't cleanup here
 
         if (command_pool_ != VK_NULL_HANDLE)
         {
@@ -93,7 +90,21 @@ namespace vulkan_engine::editor
         // 应用 viewport 的延迟 resize（在 ImGui 开始帧之前）
         if (viewport_)
         {
-            viewport_->apply_pending_resize();
+            // 检查是否有待处理的 resize
+            if (viewport_->is_resize_pending())
+            {
+                // 获取新的尺寸（request_resize中设置的pending尺寸）
+                VkExtent2D new_extent = viewport_->pending_extent();
+
+                // 1. 先让 RenderTarget resize（这会重建 Image/ImageView）
+                viewport_->apply_pending_resize();
+
+                // 2. 然后创建新的 Framebuffer（使用新的 ImageView）
+                if (viewport_resize_callback_)
+                {
+                    viewport_resize_callback_(new_extent.width, new_extent.height);
+                }
+            }
         }
 
         imgui_manager_->begin_frame();
@@ -102,34 +113,10 @@ namespace vulkan_engine::editor
     VkCommandBuffer Editor::render_scene(
         std::shared_ptr<rendering::RenderGraph> render_graph)
     {
-        (void)render_graph; // TODO: Use render graph for scene rendering
-        if (!initialized_)
-        {
-            return VK_NULL_HANDLE;
-        }
-
-        VkCommandBuffer cmd = command_buffers_[current_image_index_];
-
-        vkResetCommandBuffer(cmd, 0);
-
-        VkCommandBufferBeginInfo begin_info = {};
-        begin_info.sType                    = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        begin_info.flags                    = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        vkBeginCommandBuffer(cmd, &begin_info);
-
-        // Begin viewport render pass
-        viewport_->begin_render_pass(cmd);
-
-        // Execute render graph
-        // Note: RenderGraph needs to be modified to support custom render pass
-        // For now, we just clear the viewport
-        // TODO: Integrate RenderGraph with viewport
-
-        viewport_->end_render_pass(cmd);
-
-        vkEndCommandBuffer(cmd);
-
-        return cmd;
+        (void)render_graph;
+        // Scene rendering is now handled in main.cpp using RenderTarget
+        // This method is kept for backwards compatibility but returns nullptr
+        return VK_NULL_HANDLE;
     }
 
     void Editor::end_frame(uint32_t image_index)
@@ -181,17 +168,6 @@ namespace vulkan_engine::editor
         return imgui_manager_ ? imgui_manager_->is_viewport_content_hovered() : false;
     }
 
-    VkRenderPass Editor::viewport_render_pass() const
-    {
-        return viewport_ ? viewport_->render_pass() : VK_NULL_HANDLE;
-    }
-
-    VkFramebuffer Editor::viewport_framebuffer() const
-    {
-        // SceneViewport doesn't expose framebuffer directly
-        // It's managed internally by begin_render_pass/end_render_pass
-        return VK_NULL_HANDLE;
-    }
 
     void Editor::create_command_pool()
     {

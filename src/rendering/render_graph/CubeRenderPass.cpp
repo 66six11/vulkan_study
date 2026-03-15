@@ -25,6 +25,8 @@ namespace vulkan_engine::rendering
 
     void CubeRenderPass::execute(vulkan::RenderCommandBuffer& cmd, const RenderContext& ctx)
     {
+        logger::info("CubeRenderPass::execute - Starting render");
+
         if (!config_.vertex_buffer || !config_.index_buffer)
         {
             logger::error("CubeRenderPass: Missing required geometry resources");
@@ -38,6 +40,8 @@ namespace vulkan_engine::rendering
             return;
         }
 
+        logger::info("CubeRenderPass: Rendering with material " + material->name());
+
         // Begin render pass
         VkClearValue clear_values[2];
         clear_values[0].color        = {{0.0f, 0.0f, 0.0f, 1.0f}};
@@ -49,8 +53,8 @@ namespace vulkan_engine::rendering
 
         cmd.begin_render_pass(ctx.render_pass, ctx.framebuffer, render_area, {clear_values[0], clear_values[1]});
 
-        // Bind material (pipeline and descriptor sets)
-        material->bind(cmd);
+        // Bind material (pipeline and descriptor sets) with current render pass
+        material->bind(cmd, ctx.render_pass);
 
         // Set viewport - 使用渲染上下文的实际尺寸，而不是固定的配置尺寸
         cmd.set_viewport(
@@ -80,9 +84,11 @@ namespace vulkan_engine::rendering
 
         // Draw indexed
         cmd.draw_indexed(config_.index_count, 1, 0, 0, 0);
+        logger::info("CubeRenderPass: Draw call submitted");
 
         // End render pass
         cmd.end_render_pass();
+        logger::info("CubeRenderPass::execute - Completed");
     }
 
     void CubeRenderPass::set_mvp_matrix(const glm::mat4& mvp)

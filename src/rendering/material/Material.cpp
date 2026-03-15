@@ -32,7 +32,7 @@ namespace vulkan_engine::rendering
     Material::Material(Material&& other) noexcept
         : device_(std::move(other.device_))
         , config_(std::move(other.config_))
-        , pipeline_(std::move(other.pipeline_))
+        , pipelines_(std::move(other.pipelines_))
         , pipeline_layout_(other.pipeline_layout_)
         , descriptor_set_layout_(other.descriptor_set_layout_)
         , uniform_buffer_(std::move(other.uniform_buffer_))
@@ -59,7 +59,7 @@ namespace vulkan_engine::rendering
 
             device_                     = std::move(other.device_);
             config_                     = std::move(other.config_);
-            pipeline_                   = std::move(other.pipeline_);
+            pipelines_                  = std::move(other.pipelines_);
             pipeline_layout_            = other.pipeline_layout_;
             descriptor_set_layout_      = other.descriptor_set_layout_;
             uniform_buffer_             = std::move(other.uniform_buffer_);
@@ -96,8 +96,8 @@ namespace vulkan_engine::rendering
             descriptor_pool_ = VK_NULL_HANDLE;
         }
 
-        // Destroy pipeline
-        pipeline_.reset();
+        // Destroy all pipelines
+        pipelines_.clear();
 
         // Destroy pipeline layout
         if (pipeline_layout_ != VK_NULL_HANDLE)
@@ -131,20 +131,30 @@ namespace vulkan_engine::rendering
         default_white_texture_view_ = VK_NULL_HANDLE;
     }
 
-    void Material::build()
+    void Material::build(VkRenderPass render_pass)
     {
-        if (pipeline_)
+        // Use provided render pass or fall back to config
+        VkRenderPass target_render_pass = (render_pass != VK_NULL_HANDLE) ? render_pass : config_.render_pass;
+
+        if (target_render_pass == VK_NULL_HANDLE)
         {
-            logger::warn("Material " + config_.name + " already built, rebuilding...");
-            pipeline_.reset();
+            logger::error("Material " + config_.name + " cannot build: no render pass specified");
+            return;
         }
 
-        // Update descriptor set
+        // Check if already built for this render pass
+        if (pipelines_.count(target_render_pass) > 0)
+        {
+            logger::warn("Material " + config_.name + " already built for render pass, skipping...");
+            return;
+        }
+
+        // Update descriptor set (only once, shared across all pipelines)
         update_descriptor_set();
 
         // Create pipeline
         vulkan::GraphicsPipelineConfig pipeline_config{};
-        pipeline_config.render_pass          = config_.render_pass;
+        pipeline_config.render_pass          = target_render_pass;
         pipeline_config.vertex_shader_path   = config_.vertex_shader_path;
         pipeline_config.fragment_shader_path = config_.fragment_shader_path;
         pipeline_config.layout               = pipeline_layout_;
@@ -175,8 +185,10 @@ namespace vulkan_engine::rendering
 
         try
         {
-            pipeline_ = std::make_unique<vulkan::GraphicsPipeline>(device_, pipeline_config);
-            logger::info("Material " + config_.name + " built successfully");
+            auto pipeline                  = std::make_unique<vulkan::GraphicsPipeline>(device_, pipeline_config);
+            pipelines_[target_render_pass] = std::move(pipeline);
+            logger::info("Material " + config_.name + " built successfully for render pass " +
+                         std::to_string(reinterpret_cast<uint64_t>(target_render_pass)));
         }
         catch (const std::exception& e)
         {
@@ -185,16 +197,29 @@ namespace vulkan_engine::rendering
         }
     }
 
-    void Material::bind(vulkan::RenderCommandBuffer& cmd)
+    void Material::bind(vulkan::RenderCommandBuffer& cmd, VkRenderPass render_pass)
     {
-        if (!pipeline_)
+        VkRenderPass target_render_pass = (render_pass != VK_NULL_HANDLE) ? render_pass : config_.render_pass;
+
+        // Check if we have a pipeline for this render pass
+        auto it = pipelines_.find(target_render_pass);
+        if (it == pipelines_.end())
         {
-            logger::error("Material " + config_.name + " not built, cannot bind");
-            return;
+            logger::warn("Material " + config_.name + " not built for render pass " +
+                         std::to_string(reinterpret_cast<uint64_t>(target_render_pass)) + ", building now...");
+            build(target_render_pass);
+
+            // Try again
+            it = pipelines_.find(target_render_pass);
+            if (it == pipelines_.end())
+            {
+                logger::error("Material " + config_.name + " failed to build for render pass, cannot bind");
+                return;
+            }
         }
 
         // Bind pipeline
-        cmd.bind_graphics_pipeline(*pipeline_);
+        cmd.bind_graphics_pipeline(*it->second);
 
         // Bind descriptor set
         if (descriptor_set_ != VK_NULL_HANDLE)

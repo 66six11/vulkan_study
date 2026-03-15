@@ -8,6 +8,12 @@
 #include "vulkan/resources/Framebuffer.hpp"
 #include "vulkan/command/CommandBuffer.hpp"
 #include "vulkan/sync/Synchronization.hpp"
+#include "vulkan/utils/CoordinateTransform.hpp"
+#include "vulkan/pipelines/RenderPassManager.hpp"
+
+// Viewport includes
+#include "rendering/Viewport.hpp"
+#include "rendering/resources/RenderTarget.hpp"
 
 // Editor includes
 #include "editor/Editor.hpp"
@@ -159,19 +165,44 @@ class EditorApplication : public application::ApplicationBase
             width_  = config().width;
             height_ = config().height;
 
-            // Create depth buffer and render pass FIRST (needed by Editor)
-            depth_buffer_            = std::make_unique<vulkan::DepthBuffer>(device, width_, height_);
-            bool render_pass_created = swap_chain->create_render_pass_with_depth(depth_buffer_->format());
-            if (!render_pass_created)
+            // Create depth buffer FIRST (needed by Editor)
+            depth_buffer_ = std::make_unique<vulkan::DepthBuffer>(device, width_, height_);
+
+            // Initialize RenderPassManager and create render pass
+            render_pass_manager_             = std::make_unique<vulkan::RenderPassManager>(device);
+            VkRenderPass present_render_pass = render_pass_manager_->get_present_render_pass_with_depth(
+                 swap_chain->format(),
+                 depth_buffer_->format()
+                );
+            if (present_render_pass == VK_NULL_HANDLE)
             {
                 logger::error("Failed to create render pass with depth");
                 return false;
             }
             logger::info("Render pass created successfully");
 
-            // Initialize Editor (includes ImGui and SceneViewport) AFTER render pass is created
+            // IMPORTANT: Update SwapChain's default render pass to match RenderPassManager
+            // This ensures Editor and Material use the same render pass
+            swap_chain->create_render_pass_with_depth(depth_buffer_->format());
+
+            // Initialize Viewport and RenderTarget FIRST (needed by materials and Editor)
+            initialize_viewport();
+
+            // Initialize Editor (with viewport for ImGui display)
             editor_ = std::make_unique<editor::Editor>();
-            editor_->initialize(window(), device, swap_chain);
+            editor_->initialize(window(), device, swap_chain, render_target_, viewport_);
+
+            // Set viewport resize callback to recreate framebuffer
+            editor_->set_viewport_resize_callback([this](uint32_t width, uint32_t height)
+            {
+                (void)width;
+                (void)height;
+                if (render_target_ && render_target_render_pass_ != VK_NULL_HANDLE)
+                {
+                    create_render_target_framebuffer();
+                    logger::info("Framebuffer recreated after viewport resize");
+                }
+            });
 
             // Create frame sync manager
             frame_sync_ = std::make_unique<vulkan::FrameSyncManager>(device, 2, swap_chain->image_count());
@@ -291,9 +322,9 @@ class EditorApplication : public application::ApplicationBase
             // Acquire next image
             uint32_t image_index = 0;
             bool     acquired    = swap_chain->acquire_next_image(
-                                                           frame_sync_->get_current_image_available_semaphore().handle(),
-                                                           VK_NULL_HANDLE,
-                                                           image_index);
+                                                                  frame_sync_->get_current_image_available_semaphore().handle(),
+                                                                  VK_NULL_HANDLE,
+                                                                  image_index);
 
             if (!acquired)
             {
@@ -310,12 +341,18 @@ class EditorApplication : public application::ApplicationBase
             VkCommandBuffer scene_cmd = record_scene_command_buffer(frame_index);
             if (scene_cmd != VK_NULL_HANDLE)
             {
+                logger::info("Submitting scene render command buffer...");
                 VkSubmitInfo submit_info{};
                 submit_info.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
                 submit_info.commandBufferCount = 1;
                 submit_info.pCommandBuffers    = &scene_cmd;
                 vkQueueSubmit(device->graphics_queue(), 1, &submit_info, VK_NULL_HANDLE);
                 vkQueueWaitIdle(device->graphics_queue()); // Wait for scene to finish
+                logger::info("Scene render completed");
+            }
+            else
+            {
+                logger::warn("Scene command buffer is null, skipping scene render");
             }
 
             // End editor frame (renders ImGui)
@@ -395,14 +432,62 @@ class EditorApplication : public application::ApplicationBase
 
             // 重建 depth buffer（匹配新的交换链尺寸）
 
+
             depth_buffer_.reset();
+
 
             depth_buffer_ = std::make_unique<vulkan::DepthBuffer>(device, swap_chain->width(), swap_chain->height());
 
 
-            // 重建 render pass
+            // 重建 render pass（RenderPassManager 会自动处理缓存）
 
-            swap_chain->create_render_pass_with_depth(depth_buffer_->format());
+
+            VkRenderPass present_render_pass = render_pass_manager_->get_present_render_pass_with_depth(
+
+
+                 swap_chain->format(),
+
+
+                 depth_buffer_->format()
+
+
+                );
+
+
+            if (present_render_pass == VK_NULL_HANDLE)
+
+
+            {
+                logger::error("Failed to recreate render pass");
+
+
+                return;
+            }
+
+
+            // 重建 Viewport 和 RenderTarget
+
+
+            if (render_target_)
+
+
+            {
+                render_target_->resize(swap_chain->width(), swap_chain->height());
+
+
+                // Recreate framebuffer for new size
+
+
+                create_render_target_framebuffer();
+            }
+
+
+            if (viewport_)
+
+
+            {
+                viewport_->resize(swap_chain->width(), swap_chain->height());
+            }
 
 
             // 重建 framebuffers
@@ -421,9 +506,10 @@ class EditorApplication : public application::ApplicationBase
             frame_sync_ = std::make_unique<vulkan::FrameSyncManager>(device, 2, swap_chain->image_count());
 
 
-            // 重建 ImGui
+            // 重建 ImGui（使用已创建的 present_render_pass）
 
-            editor_->recreate_render_pass(swap_chain->default_render_pass(), swap_chain->image_count());
+
+            editor_->recreate_render_pass(present_render_pass, swap_chain->image_count());
 
 
             // 清除 ImGui command buffers（强制按新的 image count 重新分配）
@@ -473,20 +559,20 @@ class EditorApplication : public application::ApplicationBase
 
             VkDeviceSize vertex_size = sizeof(cube_vertices[0]) * cube_vertices.size();
             vertex_buffer_           = std::make_unique<vulkan::Buffer>(
-                                                              device,
-                                                              vertex_size,
-                                                              VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                                                              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+                                                                        device,
+                                                                        vertex_size,
+                                                                        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                                                                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
             void* vdata = vertex_buffer_->map();
             memcpy(vdata, cube_vertices.data(), static_cast<size_t>(vertex_size));
             vertex_buffer_->unmap();
 
             VkDeviceSize index_size = sizeof(cube_indices[0]) * cube_indices.size();
             index_buffer_           = std::make_unique<vulkan::Buffer>(
-                                                             device,
-                                                             index_size,
-                                                             VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-                                                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+                                                                       device,
+                                                                       index_size,
+                                                                       VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                                                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
             void* idata = index_buffer_->map();
             memcpy(idata, cube_indices.data(), static_cast<size_t>(index_size));
             index_buffer_->unmap();
@@ -501,16 +587,22 @@ class EditorApplication : public application::ApplicationBase
             material_loader_->set_base_directory("D:/TechArt/Vulkan/materials/");
             material_loader_->set_texture_directory("D:/TechArt/Vulkan/");
 
-            // Create viewport render pass for material initialization
-            auto viewport = editor_->viewport();
-            if (viewport)
+            // Use new RenderTarget's render pass for material initialization
+            logger::info("Material system using render_target_render_pass_: " +
+                         std::to_string(reinterpret_cast<uint64_t>(render_target_render_pass_)));
+            logger::info("RenderTarget depth_format: " + std::to_string(render_target_->depth_format()));
+
+            if (render_target_render_pass_ != VK_NULL_HANDLE)
             {
-                VkRenderPass vp_render_pass = viewport->render_pass();
-                materials_.push_back(material_loader_->load("metal.json", vp_render_pass));
-                materials_.push_back(material_loader_->load("plastic.json", vp_render_pass));
-                materials_.push_back(material_loader_->load("emissive.json", vp_render_pass));
-                materials_.push_back(material_loader_->load("textured.json", vp_render_pass));
-                materials_.push_back(material_loader_->load("normal_vis.json", vp_render_pass));
+                materials_.push_back(material_loader_->load("metal.json", render_target_render_pass_));
+                materials_.push_back(material_loader_->load("plastic.json", render_target_render_pass_));
+                materials_.push_back(material_loader_->load("emissive.json", render_target_render_pass_));
+                materials_.push_back(material_loader_->load("textured.json", render_target_render_pass_));
+                materials_.push_back(material_loader_->load("normal_vis.json", render_target_render_pass_));
+            }
+            else
+            {
+                logger::error("RenderTarget render pass not available for material initialization");
             }
 
             if (!materials_.empty())
@@ -571,8 +663,14 @@ class EditorApplication : public application::ApplicationBase
                 image_views.push_back(swap_chain->get_image(i).view);
             }
 
+            // Use RenderPassManager to get present render pass with depth
+            VkRenderPass present_render_pass = render_pass_manager_->get_present_render_pass_with_depth(
+                 swap_chain->format(),
+                 depth_buffer_->format()
+                );
+
             framebuffer_pool_->create_for_swap_chain(
-                                                     swap_chain->default_render_pass(),
+                                                     present_render_pass,
                                                      image_views,
                                                      width_,
                                                      height_,
@@ -581,26 +679,26 @@ class EditorApplication : public application::ApplicationBase
 
         VkCommandBuffer record_scene_command_buffer(uint32_t frame_index)
         {
-            auto& cmd      = cmd_buffers_[frame_index];
-            auto  viewport = editor_->viewport();
+            auto& cmd = cmd_buffers_[frame_index];
 
-            if (!viewport || viewport->width() < 10 || viewport->height() < 10)
+            // Use new Viewport and RenderTarget
+            if (!viewport_ || !render_target_ || render_target_->width() < 10 || render_target_->height() < 10)
             {
-                logger::warn("Viewport too small or not available, skipping scene render");
+                logger::warn("RenderTarget too small or not available, skipping scene render");
                 return VK_NULL_HANDLE;
             }
 
             vkResetCommandBuffer(cmd.handle(), 0);
             cmd.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
-            // Execute render graph (CubeRenderPass will handle begin/end render pass)
+            // Execute render graph using RenderTarget
             rendering::RenderContext ctx;
             ctx.frame_index = frame_index;
             ctx.image_index = 0;
-            ctx.width       = viewport->width();
-            ctx.height      = viewport->height();
-            ctx.render_pass = viewport->render_pass();
-            ctx.framebuffer = viewport->framebuffer();
+            ctx.width       = render_target_->width();
+            ctx.height      = render_target_->height();
+            ctx.render_pass = render_target_render_pass_;
+            ctx.framebuffer = render_target_framebuffer_;
             ctx.device      = device_manager();
 
             render_graph_.execute(cmd, ctx);
@@ -634,9 +732,15 @@ class EditorApplication : public application::ApplicationBase
             cmd.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
             // Begin swap chain render pass
+            // Use RenderPassManager to get present render pass with depth
+            VkRenderPass present_render_pass = render_pass_manager_->get_present_render_pass_with_depth(
+                 swap_chain->format(),
+                 depth_buffer_->format()
+                );
+
             VkRenderPassBeginInfo render_pass_info{};
             render_pass_info.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-            render_pass_info.renderPass        = swap_chain->default_render_pass();
+            render_pass_info.renderPass        = present_render_pass;
             render_pass_info.framebuffer       = framebuffer_pool_->get_framebuffer(image_index)->handle();
             render_pass_info.renderArea.offset = {0, 0};
             // Use swap chain extent to ensure correct size after resize
@@ -666,27 +770,23 @@ class EditorApplication : public application::ApplicationBase
             glm::mat4 model = glm::mat4(1.0f);
             glm::mat4 view  = camera_->get_view_matrix();
 
-            // 关键：投影矩阵的宽高比必须与最终显示区域的宽高比一致
-            // 使用视窗的显示尺寸（而非实际渲染尺寸），处理延迟 resize 的情况
+            // 使用新的 Viewport 获取宽高比
             float aspect_ratio = static_cast<float>(width_) / static_cast<float>(height_);
 
-            if (editor_ && editor_->viewport())
+            if (viewport_)
             {
-                auto* viewport = editor_->viewport();
-                // 使用 display_extent（目标显示尺寸），与 ImGui 视窗尺寸一致
-                auto display_extent = viewport->display_extent();
-                if (display_extent.height > 0)
-                {
-                    aspect_ratio = static_cast<float>(display_extent.width) /
-                                   static_cast<float>(display_extent.height);
-                }
+                aspect_ratio = viewport_->aspect_ratio();
             }
 
+            // 获取 OpenGL 风格的投影矩阵（Camera 现在是 API 无关的）
             glm::mat4 proj = camera_->get_projection_matrix(45.0f, aspect_ratio, 0.1f, 100.0f);
+
+            // 转换为 Vulkan 投影矩阵（翻转 Y 轴）
+            glm::mat4 vulkan_proj = vulkan::CoordinateTransform::opengl_to_vulkan_projection(proj);
 
             if (cube_pass_)
             {
-                cube_pass_->set_mvp_matrix(proj * view * model);
+                cube_pass_->set_mvp_matrix(vulkan_proj * view * model);
             }
         }
 
@@ -704,9 +804,95 @@ class EditorApplication : public application::ApplicationBase
             }
         }
 
+        void initialize_viewport()
+        {
+            auto device = device_manager();
+
+            // Create RenderTarget
+            rendering::RenderTarget::CreateInfo rt_info;
+            rt_info.width        = width_;
+            rt_info.height       = height_;
+            rt_info.color_format = VK_FORMAT_B8G8R8A8_UNORM;
+            rt_info.depth_format = VK_FORMAT_D32_SFLOAT;
+            rt_info.create_color = true;
+            rt_info.create_depth = true;
+
+            render_target_ = std::make_shared<rendering::RenderTarget>();
+            render_target_->initialize(device, rt_info);
+            logger::info("RenderTarget initialized: " + std::to_string(width_) + "x" + std::to_string(height_));
+
+            // Create Viewport
+            viewport_ = std::make_shared<rendering::Viewport>();
+            viewport_->initialize(device, render_target_);
+            logger::info("Viewport initialized");
+
+            // Create RenderPass for RenderTarget (off-screen rendering)
+            logger::info("Creating offscreen render pass for RenderTarget:");
+            logger::info("  color_format: " + std::to_string(render_target_->color_format()));
+            logger::info("  depth_format: " + std::to_string(render_target_->depth_format()));
+
+            render_target_render_pass_ = render_pass_manager_->get_offscreen_render_pass(
+                                                                                         render_target_->color_format(),
+                                                                                         render_target_->depth_format()
+                                                                                        );
+
+            logger::info("Created render_target_render_pass_: " + std::to_string(reinterpret_cast<uint64_t>(render_target_render_pass_)));
+
+            // Create Framebuffer for RenderTarget
+            create_render_target_framebuffer();
+        }
+
+        void create_render_target_framebuffer()
+        {
+            if (!render_target_ || render_target_render_pass_ == VK_NULL_HANDLE)
+                return;
+
+            auto device = device_manager();
+
+            // Wait for GPU to finish using the old framebuffer
+            vkDeviceWaitIdle(device->device());
+
+            // Destroy old framebuffer if exists
+            if (render_target_framebuffer_ != VK_NULL_HANDLE)
+            {
+                vkDestroyFramebuffer(device->device(), render_target_framebuffer_, nullptr);
+                render_target_framebuffer_ = VK_NULL_HANDLE;
+            }
+
+            // Create new framebuffer
+            std::array<VkImageView, 2> attachments = {
+                render_target_->color_image_view(),
+                render_target_->depth_image_view()
+            };
+
+            VkFramebufferCreateInfo framebuffer_info{};
+            framebuffer_info.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+            framebuffer_info.renderPass      = render_target_render_pass_;
+            framebuffer_info.attachmentCount = static_cast<uint32_t>(attachments.size());
+            framebuffer_info.pAttachments    = attachments.data();
+            framebuffer_info.width           = render_target_->width();
+            framebuffer_info.height          = render_target_->height();
+            framebuffer_info.layers          = 1;
+
+            if (vkCreateFramebuffer(device->device(), &framebuffer_info, nullptr, &render_target_framebuffer_) != VK_SUCCESS)
+            {
+                logger::error("Failed to create render target framebuffer");
+            }
+            else
+            {
+                logger::info("RenderTarget framebuffer created: " + std::to_string(render_target_->width()) + "x" +
+                             std::to_string(render_target_->height()));
+            }
+        }
+
         void cleanup_resources()
         {
-            // RAII handles cleanup
+            // Cleanup RenderTarget framebuffer
+            if (render_target_framebuffer_ != VK_NULL_HANDLE && device_manager())
+            {
+                vkDestroyFramebuffer(device_manager()->device(), render_target_framebuffer_, nullptr);
+                render_target_framebuffer_ = VK_NULL_HANDLE;
+            }
         }
 
         // Member variables
@@ -756,6 +942,17 @@ class EditorApplication : public application::ApplicationBase
 
         // Camera controller
         std::unique_ptr<rendering::OrbitCameraController> camera_controller_;
+
+        // RenderPass manager
+        std::unique_ptr<vulkan::RenderPassManager> render_pass_manager_;
+
+        // Viewport and RenderTarget
+        std::shared_ptr<rendering::RenderTarget> render_target_;
+        std::shared_ptr<rendering::Viewport>     viewport_;
+
+        // RenderTarget's RenderPass and Framebuffer
+        VkRenderPass  render_target_render_pass_ = VK_NULL_HANDLE;
+        VkFramebuffer render_target_framebuffer_ = VK_NULL_HANDLE;
 };
 
 int main(int /*argc*/, char* /*argv*/[])

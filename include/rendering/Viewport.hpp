@@ -48,6 +48,9 @@ namespace vulkan_engine::rendering
             // 是否有待处理的大小调整
             bool is_resize_pending() const { return resize_pending_; }
 
+            // 获取待处理的尺寸
+            VkExtent2D pending_extent() const { return {pending_width_, pending_height_}; }
+
             // 立即调整大小
             void resize(uint32_t width, uint32_t height);
 
@@ -58,6 +61,10 @@ namespace vulkan_engine::rendering
             uint32_t width() const { return display_width_; }
             uint32_t height() const { return display_height_; }
             float    aspect_ratio() const;
+
+            // 兼容 SceneViewport 的 API
+            VkExtent2D extent() const { return {display_width_, display_height_}; }
+            VkExtent2D display_extent() const { return {display_width_, display_height_}; }
 
             // 渲染目标尺寸（可能与显示尺寸不同）
             uint32_t render_width() const { return render_target_ ? render_target_->width() : 0; }

@@ -152,7 +152,7 @@ namespace vulkan_engine::editor
         draw_menu_bar();
     }
 
-    ImVec2 ImGuiManager::draw_editor_layout(rendering::SceneViewport* viewport)
+    ImVec2 ImGuiManager::draw_editor_layout(rendering::Viewport* viewport)
     {
         ImVec2 viewport_size = ImVec2(1280, 720);
 
@@ -194,6 +194,7 @@ namespace vulkan_engine::editor
 
             // Show the rendered texture with aspect ratio preservation (Cover mode)
             ImTextureID texture_id = viewport->imgui_texture_id();
+            logger::info("ImGuiManager: texture_id = " + std::to_string(reinterpret_cast<uint64_t>(texture_id)));
             if (texture_id)
             {
                 // 使用 display_extent（目标显示尺寸）计算宽高比

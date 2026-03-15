@@ -75,11 +75,12 @@ namespace vulkan_engine::rendering
             Material(Material&& other) noexcept;
             Material& operator=(Material&& other) noexcept;
 
-            // Build the pipeline (call after all parameters are set)
-            void build();
+            // Build the pipeline for a specific render pass (call after all parameters are set)
+            void build(VkRenderPass render_pass = VK_NULL_HANDLE);
 
-            // Bind material for rendering
-            void bind(vulkan::RenderCommandBuffer& cmd);
+            // Bind material for rendering with specific render pass
+            // If render_pass is VK_NULL_HANDLE, uses the first built pipeline
+            void bind(vulkan::RenderCommandBuffer& cmd, VkRenderPass render_pass = VK_NULL_HANDLE);
 
             // Set parameter values
             void set_float(const std::string& name, float value);
@@ -92,23 +93,25 @@ namespace vulkan_engine::rendering
 
             // Getters
             const std::string& name() const { return config_.name; }
-            bool               is_built() const { return pipeline_ != nullptr; }
+            bool               is_built() const { return !pipelines_.empty(); }
+            bool               is_built_for(VkRenderPass render_pass) const { return pipelines_.count(render_pass) > 0; }
             VkPipelineLayout   pipeline_layout() const { return pipeline_layout_; }
 
-            // Access to pipeline for RenderPass binding
-            vulkan::GraphicsPipeline* pipeline() const { return pipeline_.get(); }
-
-            // Set render pass (must be called before build)
-            void set_render_pass(VkRenderPass render_pass) { config_.render_pass = render_pass; }
+            // Access to pipeline for specific render pass
+            vulkan::GraphicsPipeline* pipeline(VkRenderPass render_pass) const
+            {
+                auto it = pipelines_.find(render_pass);
+                return it != pipelines_.end() ? it->second.get() : nullptr;
+            }
 
         private:
             std::shared_ptr<vulkan::DeviceManager> device_;
             Config                                 config_;
 
-            // Pipeline
-            std::unique_ptr<vulkan::GraphicsPipeline> pipeline_;
-            VkPipelineLayout                          pipeline_layout_       = VK_NULL_HANDLE;
-            VkDescriptorSetLayout                     descriptor_set_layout_ = VK_NULL_HANDLE;
+            // Pipelines - one per render pass for compatibility
+            std::unordered_map<VkRenderPass, std::unique_ptr<vulkan::GraphicsPipeline>> pipelines_;
+            VkPipelineLayout                                                            pipeline_layout_       = VK_NULL_HANDLE;
+            VkDescriptorSetLayout                                                       descriptor_set_layout_ = VK_NULL_HANDLE;
 
             // Uniform buffer for material parameters
             struct UniformBufferData
