@@ -26,12 +26,11 @@ namespace vulkan_engine::core
                 return glm::lookAt(position, target_, glm::vec3(0.0f, 1.0f, 0.0f));
             }
 
-            // Get projection matrix
+            // Get projection matrix (API-agnostic, returns OpenGL-style projection)
+            // Note: For Vulkan, use CoordinateTransform::opengl_to_vulkan_projection()
             glm::mat4 get_projection_matrix(float fov_degrees, float aspect_ratio, float near_plane, float far_plane) const
             {
-                glm::mat4 proj = glm::perspective(glm::radians(fov_degrees), aspect_ratio, near_plane, far_plane);
-                proj[1][1] *= -1; // Flip Y for Vulkan
-                return proj;
+                return glm::perspective(glm::radians(fov_degrees), aspect_ratio, near_plane, far_plane);
             }
 
             // Get combined view-projection matrix
