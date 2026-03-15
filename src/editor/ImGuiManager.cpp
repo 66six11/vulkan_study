@@ -174,6 +174,9 @@ namespace vulkan_engine::editor
         // Get available size for viewport
         viewport_size = ImGui::GetContentRegionAvail();
 
+        // Reset content hovered state - will be set to true if mouse is over the image
+        viewport_content_hovered_ = false;
+
         // Display scene texture
         if (viewport && viewport_size.x > 0 && viewport_size.y > 0)
         {
@@ -220,7 +223,36 @@ namespace vulkan_engine::editor
                 }
                 // 否则比例相同，使用全纹理
 
+                // 获取当前光标位置（图像区域的左上角）
+                ImVec2 cursor_pos = ImGui::GetCursorScreenPos();
+
+                // ===== 修复：正确的绘制顺序 =====
+                // 1. 首先绘制 Image（只显示，不捕获输入）
                 ImGui::Image(texture_id, viewport_size, ImVec2(u0, v0), ImVec2(u1, v1));
+
+                // 2. 重置光标位置回图像左上角
+                ImGui::SetCursorScreenPos(cursor_pos);
+
+                // 3. 绘制 InvisibleButton 覆盖在 Image 上方（用于捕获输入）
+                // 使用 PushID 确保 ID 唯一
+                ImGui::PushID("scene_viewport");
+                ImGui::InvisibleButton("content",
+                                       viewport_size,
+                                       ImGuiButtonFlags_MouseButtonLeft |
+                                       ImGuiButtonFlags_MouseButtonRight |
+                                       ImGuiButtonFlags_MouseButtonMiddle);
+                ImGui::PopID();
+
+                // 4. 检测鼠标是否悬停或正在操作按钮
+                // IsItemHovered: 鼠标在区域内
+                // IsItemActive: 鼠标正在拖拽该按钮（即使移出区域也保持）
+                viewport_content_hovered_ = ImGui::IsItemHovered() || ImGui::IsItemActive();
+
+                // 5. 悬停或拖拽时显示抓手光标
+                if (viewport_content_hovered_)
+                {
+                    ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
+                }
             }
         }
 

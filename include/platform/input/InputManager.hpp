@@ -101,7 +101,7 @@ namespace vulkan_engine::platform
 
             std::pair<double, double> mouse_position() const;
             std::pair<double, double> mouse_delta() const;
-            double                    scroll_delta() const;
+            double                    scroll_delta(); // Non-const: resets after reading
 
             void set_cursor_mode(CursorMode mode);
 

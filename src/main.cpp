@@ -29,6 +29,9 @@
 // Platform includes
 #include "platform/input/InputManager.hpp"
 
+// Camera includes
+#include "rendering/camera/CameraController.hpp"
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -194,10 +197,23 @@ class EditorApplication : public application::ApplicationBase
             initialize_render_graph();
 
             // Initialize camera
-            camera_.set_target(glm::vec3(0.0f, 0.0f, 0.0f));
-            camera_.set_distance(3.0f);
-            camera_.set_rotation(45.0f, -30.0f);
-            camera_.set_distance_limits(1.0f, 10.0f);
+            camera_ = std::make_shared<core::OrbitCamera>();
+            camera_->set_target(glm::vec3(0.0f, 0.0f, 0.0f));
+            camera_->set_distance(3.0f);
+            camera_->set_rotation(45.0f, -30.0f);
+            camera_->set_distance_limits(1.0f, 10.0f);
+
+            // Initialize CameraController
+            rendering::OrbitCameraController::Config controller_config;
+            controller_config.use_imgui_input      = false; // 使用 InputManager 而不是 ImGui 输入
+            controller_config.rotation_sensitivity = 0.5f;
+            controller_config.zoom_speed           = 0.1f;
+            controller_config.require_mouse_drag   = true;
+            controller_config.rotate_button        = platform::MouseButton::Left;
+
+            camera_controller_ = std::make_unique<rendering::OrbitCameraController>(controller_config);
+            camera_controller_->attach_camera(camera_);
+            camera_controller_->attach_input_manager(input_manager());
 
             // Initialize FPS timer
             last_time_   = std::chrono::high_resolution_clock::now();
@@ -227,25 +243,12 @@ class EditorApplication : public application::ApplicationBase
             // Update FPS
             update_fps();
 
-            // Only process camera input when viewport is focused/hovered
-            if (editor_->is_viewport_hovered() && input_manager())
+            // Update CameraController
+            if (camera_controller_)
             {
-                // Mouse drag for orbit rotation
-                if (input_manager()->is_mouse_button_pressed(platform::MouseButton::Left))
-                {
-                    auto [delta_x, delta_y] = input_manager()->mouse_delta();
-                    if (delta_x != 0.0 || delta_y != 0.0)
-                    {
-                        camera_.on_mouse_drag(static_cast<float>(delta_x), static_cast<float>(delta_y));
-                    }
-                }
-
-                // Mouse scroll for zoom
-                double scroll = input_manager()->scroll_delta();
-                if (scroll != 0.0)
-                {
-                    camera_.on_mouse_scroll(static_cast<float>(scroll));
-                }
+                // Enable/disable based on viewport content hover state
+                camera_controller_->set_enabled(editor_->is_viewport_content_hovered());
+                camera_controller_->update(delta_time);
             }
 
             // Material switching (M key) - works globally
@@ -406,7 +409,7 @@ class EditorApplication : public application::ApplicationBase
 
             framebuffer_pool_.reset();
 
-                    framebuffer_pool_ = std::make_unique<vulkan::FramebufferPool>(device);
+            framebuffer_pool_ = std::make_unique<vulkan::FramebufferPool>(device);
 
             create_framebuffers();
 
@@ -661,12 +664,12 @@ class EditorApplication : public application::ApplicationBase
         void update_mvp_matrix()
         {
             glm::mat4 model = glm::mat4(1.0f);
-            glm::mat4 view  = camera_.get_view_matrix();
-            
+            glm::mat4 view  = camera_->get_view_matrix();
+
             // 关键：投影矩阵的宽高比必须与最终显示区域的宽高比一致
             // 使用视窗的显示尺寸（而非实际渲染尺寸），处理延迟 resize 的情况
             float aspect_ratio = static_cast<float>(width_) / static_cast<float>(height_);
-            
+
             if (editor_ && editor_->viewport())
             {
                 auto* viewport = editor_->viewport();
@@ -679,7 +682,7 @@ class EditorApplication : public application::ApplicationBase
                 }
             }
 
-            glm::mat4 proj = camera_.get_projection_matrix(45.0f, aspect_ratio, 0.1f, 100.0f);
+            glm::mat4 proj = camera_->get_projection_matrix(45.0f, aspect_ratio, 0.1f, 100.0f);
 
             if (cube_pass_)
             {
@@ -715,7 +718,7 @@ class EditorApplication : public application::ApplicationBase
         VkRenderPass                    viewport_render_pass_ = VK_NULL_HANDLE;
 
         // Camera
-        core::OrbitCamera camera_;
+        std::shared_ptr<core::OrbitCamera> camera_;
 
         // Frame sync
         std::unique_ptr<vulkan::FrameSyncManager> frame_sync_;
@@ -750,6 +753,9 @@ class EditorApplication : public application::ApplicationBase
         std::chrono::high_resolution_clock::time_point last_time_;
         uint32_t                                       frame_count_ = 0;
         float                                          current_fps_ = 0.0f;
+
+        // Camera controller
+        std::unique_ptr<rendering::OrbitCameraController> camera_controller_;
 };
 
 int main(int /*argc*/, char* /*argv*/[])

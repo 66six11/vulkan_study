@@ -176,6 +176,11 @@ namespace vulkan_engine::editor
         return imgui_manager_ ? imgui_manager_->is_viewport_hovered() : false;
     }
 
+    bool Editor::is_viewport_content_hovered() const
+    {
+        return imgui_manager_ ? imgui_manager_->is_viewport_content_hovered() : false;
+    }
+
     VkRenderPass Editor::viewport_render_pass() const
     {
         return viewport_ ? viewport_->render_pass() : VK_NULL_HANDLE;

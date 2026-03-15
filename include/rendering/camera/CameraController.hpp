@@ -4,6 +4,9 @@
 #include "platform/input/InputManager.hpp"
 #include <memory>
 
+// Forward declare ImGui IO
+struct ImGuiIO;
+
 namespace vulkan_engine::rendering
 {
     // 前向声明
@@ -27,8 +30,8 @@ namespace vulkan_engine::rendering
             /**
          * @brief 设置是否启用
          */
-            void set_enabled(bool enabled) { enabled_ = enabled; }
-            bool is_enabled() const { return enabled_; }
+            virtual void set_enabled(bool enabled) { enabled_ = enabled; }
+            bool         is_enabled() const { return enabled_; }
 
             /**
          * @brief 附加相机
@@ -68,6 +71,7 @@ namespace vulkan_engine::rendering
                 float                 zoom_speed           = 0.1f;                        // 缩放速度
                 bool                  require_mouse_drag   = true;                        // 是否需要拖拽（true=拖拽，false=悬停）
                 platform::MouseButton rotate_button        = platform::MouseButton::Left; // 旋转按键
+                bool                  use_imgui_input      = true;                        // 使用 ImGui 输入（避免与 ImGui 窗口冲突）
             };
 
             explicit OrbitCameraController(const Config& config = {});
@@ -81,6 +85,9 @@ namespace vulkan_engine::rendering
 
             // 检查是否正在拖拽
             bool is_dragging() const { return is_dragging_; }
+
+            // 设置启用状态（重写以处理拖拽状态重置）
+            void set_enabled(bool enabled) override;
 
         private:
             Config config_;

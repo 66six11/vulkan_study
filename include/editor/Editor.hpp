@@ -57,6 +57,9 @@ namespace vulkan_engine::editor
             bool is_viewport_focused() const;
             bool is_viewport_hovered() const;
 
+            // Check if mouse is over viewport content (not title bar)
+            bool is_viewport_content_hovered() const;
+
             // Update stats display
             void update_stats(const ImGuiManager::StatsData& stats);
 

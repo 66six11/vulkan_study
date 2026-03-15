@@ -12,6 +12,9 @@ typedef struct VkInstance_T*   VkInstance;
 
 namespace vulkan_engine::platform
 {
+    // Forward declaration
+    class InputManager;
+
     struct WindowConfig
     {
         std::string title      = "Vulkan Engine";
@@ -25,10 +28,14 @@ namespace vulkan_engine::platform
     class Window
     {
         public:
-            using ResizeCallback   = std::function<void(uint32_t width, uint32_t height)>;
-            using CloseCallback    = std::function<void()>;
-            using FocusCallback    = std::function<void(bool focused)>;
-            using MinimizeCallback = std::function<void(bool minimized)>;
+            using ResizeCallback      = std::function<void(uint32_t width, uint32_t height)>;
+            using CloseCallback       = std::function<void()>;
+            using FocusCallback       = std::function<void(bool focused)>;
+            using MinimizeCallback    = std::function<void(bool minimized)>;
+            using KeyCallback         = std::function<void(int key, int action)>;
+            using MouseButtonCallback = std::function<void(int button, int action)>;
+            using MouseMoveCallback   = std::function<void(double x, double y)>;
+            using ScrollCallback      = std::function<void(double xoffset, double yoffset)>;
 
             explicit Window(const WindowConfig& config);
             ~Window();
@@ -85,6 +92,15 @@ namespace vulkan_engine::platform
             void on_close(CloseCallback callback);
             void on_focus(FocusCallback callback);
             void on_minimize(MinimizeCallback callback);
+
+            // Input callbacks (for InputManager)
+            void on_key(KeyCallback callback);
+            void on_mouse_button(MouseButtonCallback callback);
+            void on_mouse_move(MouseMoveCallback callback);
+            void on_scroll(ScrollCallback callback);
+
+            // InputManager management
+            void set_input_manager(InputManager* input_manager);
 
         private:
             struct Impl;

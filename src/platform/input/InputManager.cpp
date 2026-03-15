@@ -41,81 +41,63 @@ namespace vulkan_engine::platform
 
     void InputManager::initialize()
     {
-        GLFWwindow* glfw_window = static_cast<GLFWwindow*>(impl_->window->native_handle());
+        // Store this pointer in Window for event forwarding
+        impl_->window->set_input_manager(this);
 
-        // Set up key callback
-        glfwSetKeyCallback(glfw_window,
-                           [](GLFWwindow* window, int key, int /*scancode*/, int action, int /*mods*/)
-                           {
-                               auto* self = static_cast<InputManager*>(glfwGetWindowUserPointer(window));
-                               if (self && self->impl_->key_callback)
-                               {
-                                   Key       mapped_key    = map_glfw_key(key);
-                                   KeyAction mapped_action = (action == GLFW_PRESS)
-                                                                 ? KeyAction::Press
-                                                                 : (action == GLFW_RELEASE)
-                                                                 ? KeyAction::Release
-                                                                 : KeyAction::Repeat;
-                                   self->impl_->key_callback(mapped_key, mapped_action);
-                               }
-                           });
+        // Set up callbacks through Window interface
+        impl_->window->on_key([this](int key, int action)
+        {
+            if (impl_->key_callback)
+            {
+                Key       mapped_key    = map_glfw_key(key);
+                KeyAction mapped_action = (action == GLFW_PRESS)
+                                              ? KeyAction::Press
+                                              : (action == GLFW_RELEASE)
+                                              ? KeyAction::Release
+                                              : KeyAction::Repeat;
+                impl_->key_callback(mapped_key, mapped_action);
+            }
+        });
 
-        // Set up mouse button callback
-        glfwSetMouseButtonCallback(glfw_window,
-                                   [](GLFWwindow* window, int button, int action, int /*mods*/)
-                                   {
-                                       auto* self = static_cast<InputManager*>(glfwGetWindowUserPointer(window));
-                                       if (self && self->impl_->mouse_button_callback)
-                                       {
-                                           MouseButton mapped_button = (button == GLFW_MOUSE_BUTTON_LEFT)
-                                                                           ? MouseButton::Left
-                                                                           : (button == GLFW_MOUSE_BUTTON_RIGHT)
-                                                                           ? MouseButton::Right
-                                                                           : (button == GLFW_MOUSE_BUTTON_MIDDLE)
-                                                                           ? MouseButton::Middle
-                                                                           : MouseButton::Button4;
-                                           MouseButtonAction mapped_action = (action == GLFW_PRESS)
-                                                                                 ? MouseButtonAction::Press
-                                                                                 : MouseButtonAction::Release;
-                                           self->impl_->mouse_button_callback(mapped_button, mapped_action);
-                                       }
-                                   });
+        impl_->window->on_mouse_button([this](int button, int action)
+        {
+            if (impl_->mouse_button_callback)
+            {
+                MouseButton mapped_button = (button == GLFW_MOUSE_BUTTON_LEFT)
+                                                ? MouseButton::Left
+                                                : (button == GLFW_MOUSE_BUTTON_RIGHT)
+                                                ? MouseButton::Right
+                                                : (button == GLFW_MOUSE_BUTTON_MIDDLE)
+                                                ? MouseButton::Middle
+                                                : MouseButton::Button4;
+                MouseButtonAction mapped_action = (action == GLFW_PRESS)
+                                                      ? MouseButtonAction::Press
+                                                      : MouseButtonAction::Release;
+                impl_->mouse_button_callback(mapped_button, mapped_action);
+            }
+        });
 
-        // Set up cursor position callback
-        glfwSetCursorPosCallback(glfw_window,
-                                 [](GLFWwindow* window, double xpos, double ypos)
-                                 {
-                                     auto* self = static_cast<InputManager*>(glfwGetWindowUserPointer(window));
-                                     if (self)
-                                     {
-                                         self->impl_->mouse_delta_x = xpos - self->impl_->mouse_x;
-                                         self->impl_->mouse_delta_y = ypos - self->impl_->mouse_y;
-                                         self->impl_->mouse_x       = xpos;
-                                         self->impl_->mouse_y       = ypos;
+        impl_->window->on_mouse_move([this](double xpos, double ypos)
+        {
+            impl_->mouse_delta_x = xpos - impl_->mouse_x;
+            impl_->mouse_delta_y = ypos - impl_->mouse_y;
+            impl_->mouse_x       = xpos;
+            impl_->mouse_y       = ypos;
 
-                                         if (self->impl_->mouse_move_callback)
-                                         {
-                                             self->impl_->mouse_move_callback(xpos, ypos);
-                                         }
-                                     }
-                                 });
+            if (impl_->mouse_move_callback)
+            {
+                impl_->mouse_move_callback(xpos, ypos);
+            }
+        });
 
-        // Set up scroll callback
-        glfwSetScrollCallback(glfw_window,
-                              [](GLFWwindow* window, double xoffset, double yoffset)
-                              {
-                                  auto* self = static_cast<InputManager*>(glfwGetWindowUserPointer(window));
-                                  if (self)
-                                  {
-                                      self->impl_->scroll_delta = yoffset;
-                                      if (self->impl_->scroll_callback)
-                                      {
-                                          self->impl_->scroll_callback(xoffset, yoffset);
-                                      }
-                                  }
-                              });
-
-        glfwSetWindowUserPointer(glfw_window, this);
+        impl_->window->on_scroll([this](double xoffset, double yoffset)
+        {
+            impl_->scroll_delta = yoffset;
+            if (impl_->scroll_callback)
+            {
+                impl_->scroll_callback(xoffset, yoffset);
+            }
+        });
     }
 
     void InputManager::update()
@@ -125,7 +107,7 @@ namespace vulkan_engine::platform
         impl_->mouse_previous = impl_->mouse_current;
         impl_->mouse_delta_x  = 0.0;
         impl_->mouse_delta_y  = 0.0;
-        impl_->scroll_delta   = 0.0;
+        // Note: scroll_delta is NOT reset here - it accumulates and is reset after reading
 
         GLFWwindow* glfw_window = static_cast<GLFWwindow*>(impl_->window->native_handle());
 
@@ -232,11 +214,16 @@ namespace vulkan_engine::platform
 
         // Update mouse state - only query mapped buttons
         static constexpr std::array<int, static_cast<size_t>(MouseButton::ButtonCount)> button_map = {
-            GLFW_MOUSE_BUTTON_LEFT,    // Left
-            GLFW_MOUSE_BUTTON_RIGHT,   // Right
-            GLFW_MOUSE_BUTTON_MIDDLE,  // Middle
-            GLFW_MOUSE_BUTTON_4,       // Button4
-            GLFW_MOUSE_BUTTON_5,       // Button5
+            GLFW_MOUSE_BUTTON_LEFT,
+            // Left
+            GLFW_MOUSE_BUTTON_RIGHT,
+            // Right
+            GLFW_MOUSE_BUTTON_MIDDLE,
+            // Middle
+            GLFW_MOUSE_BUTTON_4,
+            // Button4
+            GLFW_MOUSE_BUTTON_5,
+            // Button5
         };
 
         for (size_t i = 0; i < static_cast<size_t>(MouseButton::ButtonCount); ++i)
@@ -247,12 +234,17 @@ namespace vulkan_engine::platform
 
     void InputManager::shutdown()
     {
-        // Reset callbacks
-        GLFWwindow* glfw_window = static_cast<GLFWwindow*>(impl_->window->native_handle());
-        glfwSetKeyCallback(glfw_window, nullptr);
-        glfwSetMouseButtonCallback(glfw_window, nullptr);
-        glfwSetCursorPosCallback(glfw_window, nullptr);
-        glfwSetScrollCallback(glfw_window, nullptr);
+        // Clear InputManager callbacks (Window keeps its GLFW callbacks)
+        impl_->key_callback          = nullptr;
+        impl_->mouse_button_callback = nullptr;
+        impl_->mouse_move_callback   = nullptr;
+        impl_->scroll_callback       = nullptr;
+
+        // Clear InputManager pointer from Window
+        if (impl_->window)
+        {
+            impl_->window->set_input_manager(nullptr);
+        }
     }
 
     bool InputManager::is_key_pressed(Key key) const
@@ -299,9 +291,11 @@ namespace vulkan_engine::platform
         return {impl_->mouse_delta_x, impl_->mouse_delta_y};
     }
 
-    double InputManager::scroll_delta() const
+    double InputManager::scroll_delta()
     {
-        return impl_->scroll_delta;
+        double value        = impl_->scroll_delta;
+        impl_->scroll_delta = 0.0; // Reset after reading
+        return value;
     }
 
     void InputManager::set_cursor_mode(CursorMode mode)

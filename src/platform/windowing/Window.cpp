@@ -1,4 +1,5 @@
 ﻿#include "platform/windowing/Window.hpp"
+#include "platform/input/InputManager.hpp"
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -21,6 +22,15 @@ namespace vulkan_engine::platform
         CloseCallback    close_callback;
         FocusCallback    focus_callback;
         MinimizeCallback minimize_callback;
+
+        // Input callbacks (forwarded to InputManager)
+        KeyCallback         key_callback;
+        MouseButtonCallback mouse_button_callback;
+        MouseMoveCallback   mouse_move_callback;
+        ScrollCallback      scroll_callback;
+
+        // InputManager pointer for event forwarding
+        InputManager* input_manager = nullptr;
     };
 
     Window::Window(const WindowConfig& config)
@@ -55,10 +65,10 @@ namespace vulkan_engine::platform
             throw std::runtime_error("Failed to create GLFW window");
         }
 
-        // Set user pointer for callbacks
+        // Set user pointer for callbacks (Window pointer)
         glfwSetWindowUserPointer(impl_->handle, this);
 
-        // Setup callbacks
+        // Setup window callbacks
         glfwSetWindowSizeCallback(impl_->handle,
                                   [](GLFWwindow* window, int width, int height)
                                   {
@@ -80,6 +90,50 @@ namespace vulkan_engine::platform
                                            self->impl_->close_callback();
                                        }
                                    });
+
+        // Setup input callbacks (forward to InputManager if set)
+        glfwSetKeyCallback(impl_->handle,
+                           [](GLFWwindow* window, int key, int /*scancode*/, int action, int /*mods*/)
+                           {
+                               auto* self = static_cast<Window*>(glfwGetWindowUserPointer(window));
+                               if (self)
+                               {
+                                   if (self->impl_->key_callback)
+                                   {
+                                       self->impl_->key_callback(key, action);
+                                   }
+                               }
+                           });
+
+        glfwSetMouseButtonCallback(impl_->handle,
+                                   [](GLFWwindow* window, int button, int action, int /*mods*/)
+                                   {
+                                       auto* self = static_cast<Window*>(glfwGetWindowUserPointer(window));
+                                       if (self && self->impl_->mouse_button_callback)
+                                       {
+                                           self->impl_->mouse_button_callback(button, action);
+                                       }
+                                   });
+
+        glfwSetCursorPosCallback(impl_->handle,
+                                 [](GLFWwindow* window, double xpos, double ypos)
+                                 {
+                                     auto* self = static_cast<Window*>(glfwGetWindowUserPointer(window));
+                                     if (self && self->impl_->mouse_move_callback)
+                                     {
+                                         self->impl_->mouse_move_callback(xpos, ypos);
+                                     }
+                                 });
+
+        glfwSetScrollCallback(impl_->handle,
+                              [](GLFWwindow* window, double xoffset, double yoffset)
+                              {
+                                  auto* self = static_cast<Window*>(glfwGetWindowUserPointer(window));
+                                  if (self && self->impl_->scroll_callback)
+                                  {
+                                      self->impl_->scroll_callback(xoffset, yoffset);
+                                  }
+                              });
     }
 
     Window::~Window()
@@ -245,5 +299,30 @@ namespace vulkan_engine::platform
     void Window::on_minimize(MinimizeCallback callback)
     {
         impl_->minimize_callback = std::move(callback);
+    }
+
+    void Window::on_key(KeyCallback callback)
+    {
+        impl_->key_callback = std::move(callback);
+    }
+
+    void Window::on_mouse_button(MouseButtonCallback callback)
+    {
+        impl_->mouse_button_callback = std::move(callback);
+    }
+
+    void Window::on_mouse_move(MouseMoveCallback callback)
+    {
+        impl_->mouse_move_callback = std::move(callback);
+    }
+
+    void Window::on_scroll(ScrollCallback callback)
+    {
+        impl_->scroll_callback = std::move(callback);
+    }
+
+    void Window::set_input_manager(InputManager* input_manager)
+    {
+        impl_->input_manager = input_manager;
     }
 } // namespace vulkan_engine::platform

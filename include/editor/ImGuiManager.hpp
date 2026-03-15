@@ -61,6 +61,9 @@ namespace vulkan_engine::editor
             bool is_viewport_focused() const { return viewport_focused_; }
             bool is_viewport_hovered() const { return viewport_hovered_; }
 
+            // Check if mouse is over viewport content (not title bar)
+            bool is_viewport_content_hovered() const { return viewport_content_hovered_; }
+
             // Update stats data
             void update_stats(const StatsData& stats) { stats_data_ = stats; }
 
@@ -78,9 +81,10 @@ namespace vulkan_engine::editor
             VkDescriptorPool descriptor_pool_ = VK_NULL_HANDLE;
 
             // State
-            bool      initialized_      = false;
-            bool      viewport_focused_ = false;
-            bool      viewport_hovered_ = false;
+            bool      initialized_              = false;
+            bool      viewport_focused_         = false;
+            bool      viewport_hovered_         = false;
+            bool      viewport_content_hovered_ = false;
             StatsData stats_data_;
 
             // Panel visibility

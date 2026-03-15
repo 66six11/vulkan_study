@@ -61,27 +61,31 @@ namespace vulkan_engine::application
             float delta_time   = std::chrono::duration<float>(current_time - last_frame_time_).count();
             last_frame_time_   = current_time;
 
-            // Process events
-            process_events();
+            // Poll window events FIRST (processes GLFW events and triggers callbacks)
+            if (window_)
+            {
+                window_->poll_events();
+                if (window_->should_close())
+                {
+                    request_exit();
+                }
+            }
 
-            // Update input state (process just_pressed/just_released)
+            // Update input state SECOND (updates just_pressed/just_released states)
             if (input_manager_)
             {
-                // Check for exit key (before update to use just_pressed state)
+                input_manager_->update();
+
+                // Check for exit key
                 if (input_manager_->is_key_just_pressed(platform::Key::Escape))
                 {
                     request_exit();
                 }
             }
 
-            // Update application (use input values like mouse_delta here)
+            // Update application THIRD (uses current input values)
+            // Note: scroll_delta is accumulated and reset after reading
             on_update(delta_time);
-
-            // Clear input deltas after on_update has processed them
-            if (input_manager_)
-            {
-                input_manager_->update();
-            }
 
             // Check if swap chain needs recreation (e.g., window minimized)
             if (swap_chain_ && swap_chain_->needs_recreation())
@@ -94,23 +98,12 @@ namespace vulkan_engine::application
                 else
                 {
                     // Window is minimized, skip rendering
-                    window_->poll_events();
                     continue;
                 }
             }
 
-            // Render
+            // Render LAST
             on_render();
-
-            // Poll window events
-            if (window_)
-            {
-                window_->poll_events();
-                if (window_->should_close())
-                {
-                    request_exit();
-                }
-            }
         }
     }
 
