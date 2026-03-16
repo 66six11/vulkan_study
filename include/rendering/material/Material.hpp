@@ -54,14 +54,15 @@ namespace vulkan_engine::rendering
         public:
             struct Config
             {
-                std::string  name = "DefaultMaterial";
-                std::string  vertex_shader_path;
-                std::string  fragment_shader_path;
-                VkRenderPass render_pass      = VK_NULL_HANDLE;
-                bool         depth_test       = true;
-                bool         depth_write      = true;
-                VkCompareOp  depth_compare_op = VK_COMPARE_OP_LESS;
-                bool         blend_enable     = false;
+                std::string     name = "DefaultMaterial";
+                std::string     vertex_shader_path;
+                std::string     fragment_shader_path;
+                VkRenderPass    render_pass      = VK_NULL_HANDLE;
+                bool            depth_test       = true;
+                bool            depth_write      = true;
+                VkCompareOp     depth_compare_op = VK_COMPARE_OP_LESS;
+                bool            blend_enable     = false;
+                VkCullModeFlags cull_mode        = VK_CULL_MODE_BACK_BIT; // 默认启用背面剔除
             };
 
             Material(std::shared_ptr<vulkan::DeviceManager> device, const Config& config);

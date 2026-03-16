@@ -176,7 +176,7 @@ namespace vulkan_engine::rendering
 
         pipeline_config.primitive_topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
         pipeline_config.polygon_mode       = VK_POLYGON_MODE_FILL;
-        pipeline_config.cull_mode          = VK_CULL_MODE_NONE; // Disable culling for testing OBJ models
+        pipeline_config.cull_mode          = config_.cull_mode; // 默认背面剔除，可通过配置覆盖
         pipeline_config.front_face         = VK_FRONT_FACE_COUNTER_CLOCKWISE;
         pipeline_config.depth_test_enable  = config_.depth_test;
         pipeline_config.depth_write_enable = config_.depth_write;
