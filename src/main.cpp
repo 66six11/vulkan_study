@@ -999,6 +999,7 @@ class EditorApplication : public application::ApplicationBase
 
 int main(int /*argc*/, char* /*argv*/[])
 {
+    logger::info("中文打印测试");
     try
     {
         application::ApplicationConfig config{
