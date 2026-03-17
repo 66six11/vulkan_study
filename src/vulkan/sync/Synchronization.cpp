@@ -301,27 +301,55 @@ namespace vulkan_engine::vulkan
         vkQueueSubmit(queue, 1, &submit_info, fence_handle);
     }
 
-    // FrameSyncManager implementation
-    FrameSyncManager::FrameSyncManager(std::shared_ptr<DeviceManager> device, uint32_t frame_count, uint32_t image_count)
+    // FrameSyncManager implementation (simplified per-frame architecture)
+    FrameSyncManager::FrameSyncManager(
+        std::shared_ptr<DeviceManager> device,
+        uint32_t                       frame_count)
         : device_(std::move(device))
         , frame_count_(frame_count)
-        , image_count_(image_count > 0 ? image_count : frame_count)
     {
-        // Fences and acquire semaphores - per frame
-        fences_.reserve(frame_count);
-        image_available_semaphores_.reserve(frame_count);
-
-        for (uint32_t i = 0; i < frame_count; ++i)
+        if (frame_count_ == 0)
         {
-            fences_.push_back(std::make_unique < Fence > (device_, true)); // Start signaled
-            image_available_semaphores_.push_back(std::make_unique < Semaphore > (device_));
+            throw std::invalid_argument("frame_count must be > 0");
         }
 
-        // Render finished semaphores - per image to avoid reuse conflicts
-        render_finished_semaphores_.reserve(image_count_);
-        for (uint32_t i = 0; i < image_count_; ++i)
+        // Per-frame: CPU-GPU synchronization fences (for command buffer recycling)
+        frame_fences_.reserve(frame_count_);
+        for (uint32_t i = 0; i < frame_count_; ++i)
         {
-            render_finished_semaphores_.push_back(std::make_unique < Semaphore > (device_));
+            // Start signaled so first frame doesn't wait
+            frame_fences_.push_back(std::make_unique<Fence>(device_, true));
         }
+
+        // Per-frame: acquire semaphore for vkAcquireNextImageKHR
+        acquire_semaphores_.reserve(frame_count_);
+        for (uint32_t i = 0; i < frame_count_; ++i)
+        {
+            acquire_semaphores_.push_back(std::make_unique<Semaphore>(device_));
+        }
+
+        // Per-frame: scene finished semaphore (Scene -> ImGui dependency)
+        scene_finished_semaphores_.reserve(frame_count_);
+        for (uint32_t i = 0; i < frame_count_; ++i)
+        {
+            scene_finished_semaphores_.push_back(std::make_unique<Semaphore>(device_));
+        }
+
+        // Per-frame: render finished semaphore for vkQueuePresentKHR
+        render_finished_semaphores_.reserve(frame_count_);
+        for (uint32_t i = 0; i < frame_count_; ++i)
+        {
+            render_finished_semaphores_.push_back(std::make_unique<Semaphore>(device_));
+        }
+    }
+
+    void FrameSyncManager::wait_and_reset_frame_fence(uint32_t frame, uint64_t timeout)
+    {
+        frame_fences_[frame]->wait_and_reset(timeout);
+    }
+
+    void FrameSyncManager::wait_and_reset_current_frame_fence(uint64_t timeout)
+    {
+        frame_fences_[current_frame_]->wait_and_reset(timeout);
     }
 } // namespace vulkan_engine::vulkan

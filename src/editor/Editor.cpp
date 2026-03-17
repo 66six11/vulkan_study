@@ -1,6 +1,5 @@
 #include "editor/Editor.hpp"
 #include "core/utils/Logger.hpp"
-#include "rendering/render_graph/RenderGraph.hpp"
 #include "rendering/resources/RenderTarget.hpp"
 #include "rendering/Viewport.hpp"
 #include "vulkan/utils/VulkanError.hpp"
@@ -50,10 +49,6 @@ namespace vulkan_engine::editor
         }
         imgui_manager_->initialize(device_, window_, render_pass, image_count);
 
-        // Create command pool for viewport rendering
-        create_command_pool();
-        allocate_command_buffers(image_count);
-
         initialized_ = true;
         logger::info("Editor initialized");
     }
@@ -70,12 +65,6 @@ namespace vulkan_engine::editor
         imgui_manager_->shutdown();
         // Note: render_target_ and viewport_ are managed externally, don't cleanup here
 
-        if (command_pool_ != VK_NULL_HANDLE)
-        {
-            vkDestroyCommandPool(device_->device(), command_pool_, nullptr);
-            command_pool_ = VK_NULL_HANDLE;
-        }
-
         initialized_ = false;
         logger::info("Editor shutdown");
     }
@@ -88,7 +77,9 @@ namespace vulkan_engine::editor
         }
 
         // 应用 viewport 的延迟 resize（在 ImGui 开始帧之前）
-        if (viewport_)
+        // 注意：如果 deferred_resize_enabled_ 为 true，则跳过 resize 处理
+        // 由调用者在帧边界统一处理，以避免资源竞争
+        if (viewport_ && !deferred_resize_enabled_)
         {
             // 检查是否有待处理的 resize
             if (viewport_->is_resize_pending())
@@ -110,23 +101,14 @@ namespace vulkan_engine::editor
         imgui_manager_->begin_frame();
     }
 
-    VkCommandBuffer Editor::render_scene(
-        std::shared_ptr<rendering::RenderGraph> render_graph)
-    {
-        (void)render_graph;
-        // Scene rendering is now handled in main.cpp using RenderTarget
-        // This method is kept for backwards compatibility but returns nullptr
-        return VK_NULL_HANDLE;
-    }
-
     void Editor::end_frame(uint32_t image_index)
     {
+        (void)image_index; // Parameter kept for API compatibility
+
         if (!initialized_)
         {
             return;
         }
-
-        current_image_index_ = image_index;
 
         // Draw editor UI layout
         imgui_manager_->draw_editor_layout(viewport_.get());
@@ -166,30 +148,6 @@ namespace vulkan_engine::editor
     bool Editor::is_viewport_content_hovered() const
     {
         return imgui_manager_ ? imgui_manager_->is_viewport_content_hovered() : false;
-    }
-
-
-    void Editor::create_command_pool()
-    {
-        VkCommandPoolCreateInfo pool_info = {};
-        pool_info.sType                   = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        pool_info.flags                   = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-        pool_info.queueFamilyIndex        = device_->graphics_queue_family();
-
-        VK_CHECK(vkCreateCommandPool(device_->device(), &pool_info, nullptr, &command_pool_));
-    }
-
-    void Editor::allocate_command_buffers(uint32_t count)
-    {
-        command_buffers_.resize(count);
-
-        VkCommandBufferAllocateInfo alloc_info = {};
-        alloc_info.sType                       = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        alloc_info.commandPool                 = command_pool_;
-        alloc_info.level                       = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        alloc_info.commandBufferCount          = count;
-
-        VK_CHECK(vkAllocateCommandBuffers(device_->device(), &alloc_info, command_buffers_.data()));
     }
 
     void Editor::recreate_render_pass(VkRenderPass render_pass, uint32_t image_count)

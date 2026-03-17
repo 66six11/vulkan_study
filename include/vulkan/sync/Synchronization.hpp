@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "vulkan/device/Device.hpp"
 #include <vulkan/vulkan.h>
@@ -14,11 +14,9 @@ namespace vulkan_engine::vulkan
             Fence(std::shared_ptr<DeviceManager> device, bool signaled = false);
             ~Fence();
 
-            // Non-copyable
             Fence(const Fence&)            = delete;
             Fence& operator=(const Fence&) = delete;
 
-            // Movable
             Fence(Fence&& other) noexcept;
             Fence& operator=(Fence&& other) noexcept;
 
@@ -40,11 +38,9 @@ namespace vulkan_engine::vulkan
             explicit Semaphore(std::shared_ptr<DeviceManager> device);
             ~Semaphore();
 
-            // Non-copyable
             Semaphore(const Semaphore&)            = delete;
             Semaphore& operator=(const Semaphore&) = delete;
 
-            // Movable
             Semaphore(Semaphore&& other) noexcept;
             Semaphore& operator=(Semaphore&& other) noexcept;
 
@@ -72,11 +68,9 @@ namespace vulkan_engine::vulkan
             explicit Event(std::shared_ptr<DeviceManager> device);
             ~Event();
 
-            // Non-copyable
             Event(const Event&)            = delete;
             Event& operator=(const Event&) = delete;
 
-            // Movable
             Event(Event&& other) noexcept;
             Event& operator=(Event&& other) noexcept;
 
@@ -119,56 +113,80 @@ namespace vulkan_engine::vulkan
             std::shared_ptr<DeviceManager> device_;
     };
 
-    // Frame synchronization manager for double/triple buffering
-    // Uses per-image semaphores to avoid semaphore reuse conflicts
+    /**
+     * @brief Simplified frame synchronization manager
+     * 
+     * Pure per-frame architecture:
+     * - All resources indexed by frame index (0..max_frames_in_flight-1)
+     * - No per-image arrays to avoid confusion
+     * - Simple, predictable, easy to debug
+     */
     class FrameSyncManager
     {
         public:
-            FrameSyncManager(std::shared_ptr<DeviceManager> device, uint32_t frame_count, uint32_t image_count = 0);
+            /**
+             * @brief Construct frame sync manager
+             * 
+             * @param device Vulkan device manager
+             * @param frame_count Number of frames in flight (typically 2 or 3)
+             */
+            FrameSyncManager(
+                std::shared_ptr<DeviceManager> device,
+                uint32_t                       frame_count);
             ~FrameSyncManager() = default;
 
-            // Non-copyable
             FrameSyncManager(const FrameSyncManager&)            = delete;
             FrameSyncManager& operator=(const FrameSyncManager&) = delete;
 
-            // Get sync objects for current frame
-            uint32_t get_current_frame() const { return current_frame_; }
-            void     next_frame() { current_frame_ = (current_frame_ + 1) % frame_count_; }
-
-            // Per-frame sync objects
-            Fence& get_fence(uint32_t frame) { return *fences_[frame]; }
-            Fence& get_current_fence() { return *fences_[current_frame_]; }
-
-            // Image available semaphore - per frame (for acquire)
-            Semaphore& get_image_available_semaphore(uint32_t frame) { return *image_available_semaphores_[frame]; }
-            Semaphore& get_current_image_available_semaphore() { return *image_available_semaphores_[current_frame_]; }
-
-            // Render finished semaphore - per image (for present) to avoid reuse conflicts
-            Semaphore& get_render_finished_semaphore(uint32_t image_index) { return *render_finished_semaphores_[image_index]; }
-
-            // Convenience methods
-            void wait_for_current_frame_fence(uint64_t timeout = UINT64_MAX)
+            // Frame management
+            uint32_t current_frame() const { return current_frame_; }
+            
+            /**
+             * @brief Advance to next frame
+             * @return New frame index
+             */
+            uint32_t advance_frame()
             {
-                fences_[current_frame_]->wait(timeout);
+                current_frame_ = (current_frame_ + 1) % frame_count_;
+                return current_frame_;
             }
 
-            void reset_current_frame_fence() { fences_[current_frame_]->reset(); }
+            // Per-frame: CPU-GPU synchronization (for command buffer recycling)
+            Fence& get_frame_fence(uint32_t frame) { return *frame_fences_[frame]; }
+            Fence& get_current_frame_fence() { return *frame_fences_[current_frame_]; }
 
-            void wait_and_reset_current_fence(uint64_t timeout = UINT64_MAX)
-            {
-                fences_[current_frame_]->wait_and_reset(timeout);
-            }
+            /**
+             * @brief Wait for frame fence and reset for reuse
+             * 
+             * This ensures GPU has finished all work for this frame slot
+             * and the command buffers can be safely reset.
+             */
+            void wait_and_reset_frame_fence(uint32_t frame, uint64_t timeout = UINT64_MAX);
+            void wait_and_reset_current_frame_fence(uint64_t timeout = UINT64_MAX);
+
+            // Per-frame: GPU-GPU synchronization
+            Semaphore& get_acquire_semaphore(uint32_t frame) { return *acquire_semaphores_[frame]; }
+            Semaphore& get_current_acquire_semaphore() { return *acquire_semaphores_[current_frame_]; }
+
+            Semaphore& get_scene_finished_semaphore(uint32_t frame) { return *scene_finished_semaphores_[frame]; }
+            Semaphore& get_current_scene_finished_semaphore() { return *scene_finished_semaphores_[current_frame_]; }
+
+            Semaphore& get_render_finished_semaphore(uint32_t frame) { return *render_finished_semaphores_[frame]; }
+            Semaphore& get_current_render_finished_semaphore() { return *render_finished_semaphores_[current_frame_]; }
 
             uint32_t frame_count() const { return frame_count_; }
-            uint32_t image_count() const { return image_count_; }
 
         private:
-            std::shared_ptr<DeviceManager>          device_;
-            uint32_t                                frame_count_;
-            uint32_t                                image_count_;
-            uint32_t                                current_frame_ = 0;
-            std::vector<std::unique_ptr<Fence>>     fences_;
-            std::vector<std::unique_ptr<Semaphore>> image_available_semaphores_;
-            std::vector<std::unique_ptr<Semaphore>> render_finished_semaphores_;
+            std::shared_ptr<DeviceManager> device_;
+            uint32_t                       frame_count_;
+            uint32_t                       current_frame_ = 0;
+
+            // Per-frame: CPU-GPU synchronization (fence for command buffer lifecycle)
+            std::vector<std::unique_ptr<Fence>> frame_fences_;
+
+            // Per-frame: GPU-GPU synchronization
+            std::vector<std::unique_ptr<Semaphore>> acquire_semaphores_;      // vkAcquireNextImageKHR
+            std::vector<std::unique_ptr<Semaphore>> scene_finished_semaphores_;  // Scene -> ImGui dependency
+            std::vector<std::unique_ptr<Semaphore>> render_finished_semaphores_; // vkQueuePresentKHR
     };
 } // namespace vulkan_engine::vulkan

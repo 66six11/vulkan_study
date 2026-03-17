@@ -191,32 +191,34 @@ class EditorApplication : public application::ApplicationBase
             // Initialize Editor (with viewport for ImGui display)
             editor_ = std::make_unique<editor::Editor>();
             editor_->initialize(window(), device, swap_chain, render_target_, viewport_);
+            editor_->set_deferred_resize_enabled(true); // Enable deferred resize for resource safety
 
-            // Set viewport resize callback to recreate framebuffer
+            // Set viewport resize callback to mark pending resize
+            // Actual resize will be processed at end of frame in on_render()
             editor_->set_viewport_resize_callback([this](uint32_t width, uint32_t height)
             {
-                (void)width;
-                (void)height;
-                if (render_target_ && render_target_render_pass_ != VK_NULL_HANDLE)
-                {
-                    create_render_target_framebuffer();
-                    logger::info("Framebuffer recreated after viewport resize");
-                }
+                // Mark resize as pending - actual resize will happen at frame boundary
+                // to avoid resource competition with ongoing rendering
+                viewport_resize_pending_ = true;
+                viewport_resize_width_   = width;
+                viewport_resize_height_  = height;
+                logger::info("Viewport resize marked as pending: " + std::to_string(width) + "x" + std::to_string(height));
             });
 
-            // Create frame sync manager
-            frame_sync_ = std::make_unique<vulkan::FrameSyncManager>(device, 2, swap_chain->image_count());
+            // Create frame sync manager (pure per-frame architecture)
+            frame_sync_ = std::make_unique<vulkan::FrameSyncManager>(device, 2);
 
             // Create framebuffer pool for swap chain images
             framebuffer_pool_ = std::make_unique<vulkan::FramebufferPool>(device);
             create_framebuffers();
 
             // Create command pool and buffers
+            // Note: Scene command buffers are per-frame (not per-image)
             cmd_pool_ = std::make_unique<vulkan::RenderCommandPool>(
                                                                     device,
                                                                     0,
                                                                     VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-            cmd_buffers_ = cmd_pool_->allocate(swap_chain->image_count());
+            cmd_buffers_ = cmd_pool_->allocate(2); // MAX_FRAMES_IN_FLIGHT
 
             // Load mesh
             load_mesh();
@@ -321,13 +323,16 @@ class EditorApplication : public application::ApplicationBase
             auto device     = device_manager();
             auto swap_chain = this->swap_chain();
 
-            // Wait for current frame
-            frame_sync_->wait_and_reset_current_fence();
+            // Wait for previous frame to complete (CPU-GPU synchronization)
+            // This ensures command buffers can be safely reset and reused
+            frame_sync_->wait_and_reset_current_frame_fence();
 
-            // Acquire next image
+            // Acquire next image from swap chain
+            // Note: acquire semaphore is per-frame (not per-image) because we don't know
+            // which image we'll get until after acquisition
             uint32_t image_index = 0;
             bool     acquired    = swap_chain->acquire_next_image(
-                                                                  frame_sync_->get_current_image_available_semaphore().handle(),
+                                                                  frame_sync_->get_current_acquire_semaphore().handle(),
                                                                   VK_NULL_HANDLE,
                                                                   image_index);
 
@@ -336,22 +341,31 @@ class EditorApplication : public application::ApplicationBase
                 return;
             }
 
-            uint32_t frame_index = frame_sync_->get_current_frame();
+            uint32_t frame_index = frame_sync_->current_frame();
 
             // Begin editor frame (ImGui)
             editor_->begin_frame();
 
             // Render scene to viewport texture
             update_mvp_matrix();
+
+            // Record scene command buffer
             VkCommandBuffer scene_cmd = record_scene_command_buffer(frame_index);
+
             if (scene_cmd != VK_NULL_HANDLE)
             {
+                // Submit scene rendering and signal scene_finished semaphore
+                VkSemaphore signal_semaphores[] = {frame_sync_->get_current_scene_finished_semaphore().handle()};
+
                 VkSubmitInfo submit_info{};
-                submit_info.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-                submit_info.commandBufferCount = 1;
-                submit_info.pCommandBuffers    = &scene_cmd;
+                submit_info.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+                submit_info.commandBufferCount   = 1;
+                submit_info.pCommandBuffers      = &scene_cmd;
+                submit_info.signalSemaphoreCount = 1;
+                submit_info.pSignalSemaphores    = signal_semaphores;
+
+                // Scene submission - no fence needed, ImGui submit will use frame_fence
                 vkQueueSubmit(device->graphics_queue(), 1, &submit_info, VK_NULL_HANDLE);
-                vkQueueWaitIdle(device->graphics_queue()); // Wait for scene to finish
             }
             else
             {
@@ -362,16 +376,26 @@ class EditorApplication : public application::ApplicationBase
             editor_->end_frame(image_index);
 
             // Record ImGui rendering to swap chain
-            VkCommandBuffer gui_cmd = record_imgui_command_buffer(image_index);
+            // Note: ImGui CB is per-frame (not per-image) in simplified architecture
+            VkCommandBuffer gui_cmd = record_imgui_command_buffer(frame_index, image_index);
 
             // Submit ImGui rendering
-            VkSemaphore          wait_semaphores[]   = {frame_sync_->get_current_image_available_semaphore().handle()};
-            VkSemaphore          signal_semaphores[] = {frame_sync_->get_render_finished_semaphore(image_index).handle()};
-            VkPipelineStageFlags wait_stages[]       = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+            // Wait for: 1) swap chain image available, 2) scene rendering finished
+            VkSemaphore wait_semaphores[] = {
+                frame_sync_->get_current_acquire_semaphore().handle(),
+                frame_sync_->get_current_scene_finished_semaphore().handle()
+            };
+            // Per-frame: render finished semaphore (simplified architecture)
+            VkSemaphore          signal_semaphores[] = {frame_sync_->get_current_render_finished_semaphore().handle()};
+            VkPipelineStageFlags wait_stages[]       = {
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                // For acquire semaphore
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT // For scene_finished (viewport texture read)
+            };
 
             VkSubmitInfo submit_info{};
             submit_info.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-            submit_info.waitSemaphoreCount   = 1;
+            submit_info.waitSemaphoreCount   = 2;
             submit_info.pWaitSemaphores      = wait_semaphores;
             submit_info.pWaitDstStageMask    = wait_stages;
             submit_info.commandBufferCount   = 1;
@@ -379,120 +403,82 @@ class EditorApplication : public application::ApplicationBase
             submit_info.signalSemaphoreCount = 1;
             submit_info.pSignalSemaphores    = signal_semaphores;
 
-            VkFence fence = frame_sync_->get_current_fence().handle();
-            vkQueueSubmit(device->graphics_queue(), 1, &submit_info, fence);
+            // Use frame fence for command buffer lifecycle protection
+            VkFence frame_fence = frame_sync_->get_current_frame_fence().handle();
+            vkQueueSubmit(device->graphics_queue(), 1, &submit_info, frame_fence);
 
-            // Present
-            VkSemaphore present_semaphore = frame_sync_->get_render_finished_semaphore(image_index).handle();
+            // Present - wait for render_finished semaphore
+            VkSemaphore present_semaphore = frame_sync_->get_current_render_finished_semaphore().handle();
             swap_chain->present(device->graphics_queue(), image_index, present_semaphore);
 
-            // Next frame
-            frame_sync_->next_frame();
+            // Advance to next frame
+            frame_sync_->advance_frame();
+
+            // Process pending viewport resize at frame boundary
+            // This ensures GPU has finished using the resources before we destroy them
+            if (viewport_resize_pending_)
+            {
+                viewport_resize_pending_ = false;
+                process_viewport_resize(viewport_resize_width_, viewport_resize_height_);
+            }
         }
 
         void on_window_resize(const application::WindowResizeEvent& event) override
-
         {
-            uint32_t width = event.width;
-
+            uint32_t width  = event.width;
             uint32_t height = event.height;
 
-
             if (width == 0 || height == 0)
-
                 return;
 
-
-            width_ = width;
-
+            width_  = width;
             height_ = height;
 
-
-            auto device = device_manager();
-
+            auto device     = device_manager();
             auto swap_chain = this->swap_chain();
 
             if (!device || !swap_chain)
-
                 return;
 
-
             // 等待 GPU 完成所有操作
-
             vkDeviceWaitIdle(device->device());
 
-
             // 重建交换链（关键！必须与窗口尺寸匹配）
-
             if (!swap_chain->recreate())
-
             {
                 logger::error("Failed to recreate swap chain");
-
                 return;
             }
 
 
             // 重建 depth buffer（匹配新的交换链尺寸）
-
-
             depth_buffer_.reset();
-
-
             depth_buffer_ = std::make_unique<vulkan::DepthBuffer>(device, swap_chain->width(), swap_chain->height());
 
 
             // 重建 render pass（RenderPassManager 会自动处理缓存）
-
-
             VkRenderPass present_render_pass = render_pass_manager_->get_present_render_pass_with_depth(
-
-
                  swap_chain->format(),
-
-
                  depth_buffer_->format()
-
-
                 );
 
-
             if (present_render_pass == VK_NULL_HANDLE)
-
-
             {
                 logger::error("Failed to recreate render pass");
-
-
                 return;
             }
-
-
             // 重建 Viewport 和 RenderTarget
-
-
             if (render_target_)
-
-
             {
                 render_target_->resize(swap_chain->width(), swap_chain->height());
-
-
                 // Recreate framebuffer for new size
-
-
                 create_render_target_framebuffer();
             }
 
-
             if (viewport_)
-
-
             {
                 viewport_->resize(swap_chain->width(), swap_chain->height());
             }
-
-
             // 重建 framebuffers
 
             framebuffer_pool_.reset();
@@ -506,7 +492,7 @@ class EditorApplication : public application::ApplicationBase
 
             frame_sync_.reset();
 
-            frame_sync_ = std::make_unique<vulkan::FrameSyncManager>(device, 2, swap_chain->image_count());
+            frame_sync_ = std::make_unique<vulkan::FrameSyncManager>(device, 2);
 
 
             // 重建 ImGui（使用已创建的 present_render_pass）
@@ -682,7 +668,8 @@ class EditorApplication : public application::ApplicationBase
 
         VkCommandBuffer record_scene_command_buffer(uint32_t frame_index)
         {
-            auto& cmd = cmd_buffers_[frame_index];
+            auto&           cmd        = cmd_buffers_[frame_index];
+            VkCommandBuffer cmd_handle = cmd.handle();
 
             // Use new Viewport and RenderTarget
             if (!viewport_ || !render_target_ || render_target_->width() < 10 || render_target_->height() < 10)
@@ -691,7 +678,7 @@ class EditorApplication : public application::ApplicationBase
                 return VK_NULL_HANDLE;
             }
 
-            vkResetCommandBuffer(cmd.handle(), 0);
+            vkResetCommandBuffer(cmd_handle, 0);
             cmd.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
             // Execute render graph using RenderTarget
@@ -707,30 +694,30 @@ class EditorApplication : public application::ApplicationBase
             render_graph_.execute(cmd, ctx);
 
             cmd.end();
-
             return cmd.handle();
         }
 
-        VkCommandBuffer record_imgui_command_buffer(uint32_t image_index)
+        VkCommandBuffer record_imgui_command_buffer(uint32_t frame_index, uint32_t image_index)
         {
             auto swap_chain = this->swap_chain();
 
-            // Allocate imgui command buffers if not done
+            // Allocate imgui command buffers if not done (per-frame, not per-image)
             if (cmd_buffers_imgui_.empty())
             {
-                cmd_buffers_imgui_ = cmd_pool_->allocate(swap_chain->image_count());
+                cmd_buffers_imgui_ = cmd_pool_->allocate(2); // MAX_FRAMES_IN_FLIGHT
             }
 
-            // Check image_index is valid
-            if (image_index >= cmd_buffers_imgui_.size())
+            // Use frame_index for ImGui CB (per-frame architecture)
+            if (frame_index >= cmd_buffers_imgui_.size())
             {
-                logger::error("Invalid image_index: " + std::to_string(image_index) +
+                logger::error("Invalid frame_index: " + std::to_string(frame_index) +
                               ", vector size: " + std::to_string(cmd_buffers_imgui_.size()));
                 return VK_NULL_HANDLE;
             }
 
-            auto& cmd = cmd_buffers_imgui_[image_index];
-
+            // Record ImGui command buffer
+            // Note: frame fence already ensures previous frame's work is complete
+            auto& cmd = cmd_buffers_imgui_[frame_index];
             vkResetCommandBuffer(cmd.handle(), 0);
             cmd.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
@@ -764,7 +751,6 @@ class EditorApplication : public application::ApplicationBase
 
             vkCmdEndRenderPass(cmd.handle());
             cmd.end();
-
             return cmd.handle();
         }
 
@@ -995,6 +981,33 @@ class EditorApplication : public application::ApplicationBase
 
         // RenderTarget's RenderPass (Framebuffer 由 RenderTarget 自己管理)
         VkRenderPass render_target_render_pass_ = VK_NULL_HANDLE;
+
+        // Pending viewport resize (processed at frame boundary)
+        bool     viewport_resize_pending_ = false;
+        uint32_t viewport_resize_width_   = 0;
+        uint32_t viewport_resize_height_  = 0;
+
+        void process_viewport_resize(uint32_t width, uint32_t height)
+        {
+            if (!render_target_ || !viewport_ || render_target_render_pass_ == VK_NULL_HANDLE)
+                return;
+
+            // Wait for GPU to finish all operations before recreating resources
+            // This is safe because we're at frame boundary (after present)
+            if (auto device = device_manager())
+            {
+                vkDeviceWaitIdle(device->device());
+            }
+
+            // Apply viewport resize (rebuilds RenderTarget's Image/ImageView)
+            viewport_->apply_pending_resize();
+
+            // Recreate framebuffer with new ImageView
+            create_render_target_framebuffer();
+
+            logger::info("Viewport resize processed at frame boundary: " +
+                         std::to_string(width) + "x" + std::to_string(height));
+        }
 };
 
 int main(int /*argc*/, char* /*argv*/[])
@@ -1017,7 +1030,7 @@ int main(int /*argc*/, char* /*argv*/[])
         {
             app->run();
         }
-        
+
         app->shutdown();
 
         return 0;

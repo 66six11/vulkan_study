@@ -1,7 +1,6 @@
 #pragma once
 
 #include "editor/ImGuiManager.hpp"
-#include "rendering/render_graph/RenderGraph.hpp"
 #include "vulkan/device/Device.hpp"
 #include "vulkan/device/SwapChain.hpp"
 #include "platform/windowing/Window.hpp"
@@ -41,11 +40,6 @@ namespace vulkan_engine::editor
             // Begin editor frame - call at start of application frame
             void begin_frame();
 
-            // Render scene to viewport - call during rendering
-            // Returns command buffer for submission
-            VkCommandBuffer render_scene(
-                std::shared_ptr<rendering::RenderGraph> render_graph);
-
             // End editor frame and render UI - call after scene rendering
             void end_frame(uint32_t image_index);
 
@@ -79,11 +73,13 @@ namespace vulkan_engine::editor
             using ViewportResizeCallback = std::function<void(uint32_t width, uint32_t height)>;
             void set_viewport_resize_callback(ViewportResizeCallback callback) { viewport_resize_callback_ = callback; }
 
-        private:
-            void create_command_pool();
-            void allocate_command_buffers(uint32_t count);
-            void create_sync_objects();
+            // Enable/disable deferred resize mode
+            // When enabled, begin_frame() will not apply pending resizes immediately.
+            // Instead, the resize callback should be processed at frame boundary by caller.
+            void set_deferred_resize_enabled(bool enabled) { deferred_resize_enabled_ = enabled; }
+            bool is_deferred_resize_enabled() const { return deferred_resize_enabled_; }
 
+        private:
             std::shared_ptr<platform::Window>      window_;
             std::shared_ptr<vulkan::DeviceManager> device_;
             std::shared_ptr<vulkan::SwapChain>     swap_chain_;
@@ -92,15 +88,12 @@ namespace vulkan_engine::editor
             std::shared_ptr<rendering::RenderTarget> render_target_;
             std::shared_ptr<rendering::Viewport>     viewport_;
 
-            // Command buffers for viewport rendering
-            VkCommandPool                command_pool_ = VK_NULL_HANDLE;
-            std::vector<VkCommandBuffer> command_buffers_;
-
-            // ImGui uses swap chain images
-            uint32_t current_image_index_ = 0;
-
             // Callback for viewport resize events
             ViewportResizeCallback viewport_resize_callback_;
+
+            // Deferred resize mode - when enabled, begin_frame() won't apply pending resizes
+            // This allows caller to process resize at frame boundary for resource safety
+            bool deferred_resize_enabled_ = false;
 
             bool initialized_ = false;
     };
