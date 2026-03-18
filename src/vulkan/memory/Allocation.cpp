@@ -13,6 +13,7 @@ namespace vulkan_engine::vulkan::memory
             VmaAllocationInfo info;
             vmaGetAllocationInfo(allocator->handle(), allocation_, &info);
             mappedData_ = info.pMappedData;
+            // 注意：持久映射不设置 explicitlyMapped_，因为不需要 vmaUnmapMemory
         }
     }
 
@@ -25,9 +26,11 @@ namespace vulkan_engine::vulkan::memory
         : allocator_(std::move(other.allocator_))
         , allocation_(other.allocation_)
         , mappedData_(other.mappedData_)
+        , explicitlyMapped_(other.explicitlyMapped_)
     {
-        other.allocation_ = VK_NULL_HANDLE;
-        other.mappedData_ = nullptr;
+        other.allocation_       = VK_NULL_HANDLE;
+        other.mappedData_       = nullptr;
+        other.explicitlyMapped_ = false;
     }
 
     Allocation& Allocation::operator=(Allocation&& other) noexcept
@@ -35,11 +38,13 @@ namespace vulkan_engine::vulkan::memory
         if (this != &other)
         {
             cleanup();
-            allocator_        = std::move(other.allocator_);
-            allocation_       = other.allocation_;
-            mappedData_       = other.mappedData_;
-            other.allocation_ = VK_NULL_HANDLE;
-            other.mappedData_ = nullptr;
+            allocator_              = std::move(other.allocator_);
+            allocation_             = other.allocation_;
+            mappedData_             = other.mappedData_;
+            explicitlyMapped_       = other.explicitlyMapped_;
+            other.allocation_       = VK_NULL_HANDLE;
+            other.mappedData_       = nullptr;
+            other.explicitlyMapped_ = false;
         }
         return *this;
     }
@@ -50,10 +55,16 @@ namespace vulkan_engine::vulkan::memory
         {
             if (auto allocator = allocator_.lock())
             {
+                // 只有显式映射的才需要 vmaUnmapMemory，持久映射不需要
+                if (explicitlyMapped_ && mappedData_ != nullptr)
+                {
+                    vmaUnmapMemory(allocator->handle(), allocation_);
+                }
                 vmaFreeMemory(allocator->handle(), allocation_);
             }
-            allocation_ = VK_NULL_HANDLE;
-            mappedData_ = nullptr;
+            allocation_       = VK_NULL_HANDLE;
+            mappedData_       = nullptr;
+            explicitlyMapped_ = false;
         }
     }
 
@@ -110,6 +121,8 @@ namespace vulkan_engine::vulkan::memory
                 LOG_ERROR(oss.str());
                 return nullptr;
             }
+            // 标记为显式映射，析构时需要 vmaUnmapMemory
+            explicitlyMapped_ = true;
         }
         return mappedData_;
     }

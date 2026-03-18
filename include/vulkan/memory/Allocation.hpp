@@ -60,8 +60,9 @@ namespace vulkan_engine::vulkan::memory
 
         private:
             std::weak_ptr<VmaAllocator> allocator_;
-            VmaAllocation               allocation_ = VK_NULL_HANDLE;
-            void*                       mappedData_ = nullptr;
+            VmaAllocation               allocation_       = VK_NULL_HANDLE;
+            void*                       mappedData_       = nullptr;
+            bool                        explicitlyMapped_ = false; // 区分显式映射和持久映射
 
             void cleanup() noexcept;
     };
