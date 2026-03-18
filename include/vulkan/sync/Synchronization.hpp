@@ -140,7 +140,7 @@ namespace vulkan_engine::vulkan
 
             // Frame management
             uint32_t current_frame() const { return current_frame_; }
-            
+
             /**
              * @brief Advance to next frame
              * @return New frame index
@@ -185,7 +185,7 @@ namespace vulkan_engine::vulkan
             std::vector<std::unique_ptr<Fence>> frame_fences_;
 
             // Per-frame: GPU-GPU synchronization
-            std::vector<std::unique_ptr<Semaphore>> acquire_semaphores_;      // vkAcquireNextImageKHR
+            std::vector<std::unique_ptr<Semaphore>> acquire_semaphores_;         // vkAcquireNextImageKHR
             std::vector<std::unique_ptr<Semaphore>> scene_finished_semaphores_;  // Scene -> ImGui dependency
             std::vector<std::unique_ptr<Semaphore>> render_finished_semaphores_; // vkQueuePresentKHR
     };

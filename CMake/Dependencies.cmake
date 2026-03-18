@@ -138,12 +138,17 @@ else ()
 endif ()
 
 # 可选：Vulkan Memory Allocator
-option(VULKAN_ENGINE_USE_VMA "Use Vulkan Memory Allocator" OFF)
+option(VULKAN_ENGINE_USE_VMA "Use Vulkan Memory Allocator" ON)
 if (VULKAN_ENGINE_USE_VMA)
-    find_package(vma CONFIG QUIET)
-    if (vma_FOUND)
+    find_package(VulkanMemoryAllocator CONFIG QUIET
+            PATHS
+            "${CMAKE_CURRENT_SOURCE_DIR}/build/build/generators"
+            "${CMAKE_CURRENT_SOURCE_DIR}/build/generators"
+            NO_DEFAULT_PATH
+    )
+    if (VulkanMemoryAllocator_FOUND)
         add_library(VulkanEngine::VMA INTERFACE IMPORTED)
-        target_link_libraries(VulkanEngine::VMA INTERFACE vma::vma)
+        target_link_libraries(VulkanEngine::VMA INTERFACE GPUOpen::VulkanMemoryAllocator)
         message(STATUS "Vulkan Memory Allocator enabled")
         set(VULKAN_ENGINE_HAS_VMA TRUE)
     else ()

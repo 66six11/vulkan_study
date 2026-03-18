@@ -50,6 +50,7 @@ class VulkanEngineConan(ConanFile):
         self.requires("stb/cci.20230920")
         self.requires("nlohmann_json/3.11.2")
         self.requires("imgui/1.91.0")
+        self.requires("vulkan-memory-allocator/3.3.0")
 
         # Optional dependencies
         if self.options.with_async_loading:
@@ -76,6 +77,7 @@ class VulkanEngineConan(ConanFile):
         tc.variables["VULKAN_ENGINE_USE_HOT_RELOAD"] = self.options.with_hot_reload
         tc.variables["VULKAN_ENGINE_BUILD_TESTS"] = False
         tc.variables["VULKAN_ENGINE_BUILD_EXAMPLES"] = True
+        tc.variables["VULKAN_ENGINE_USE_VMA"] = True
         tc.generate()
         
         # Generate CMake find modules for dependencies
