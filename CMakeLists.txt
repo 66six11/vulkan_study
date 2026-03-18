@@ -61,7 +61,8 @@ print_configuration_summary()
 # 可选：创建测试目标
 if (VULKAN_ENGINE_BUILD_TESTS)
     enable_testing()
-    message(STATUS "Tests enabled (not yet implemented)")
+    message(STATUS "Tests enabled")
+    add_subdirectory(tests)
 endif ()
 
 # 可选：创建示例目标

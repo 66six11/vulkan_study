@@ -96,6 +96,8 @@ namespace vulkan_engine::vulkan::memory
         if (persistentMap)
         {
             allocInfo.flags |= VMA_ALLOCATION_CREATE_MAPPED_BIT;
+            // VMA 要求：使用 MAPPED_BIT 时必须指定 HOST_ACCESS 标志
+            allocInfo.flags |= VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
         }
 
         // 使用 uniform pool（如果可用）

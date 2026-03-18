@@ -1,3 +1,6 @@
+// 定义 VMA 实现宏（必须在一个 .cpp 文件中定义）
+#define VMA_IMPLEMENTATION
+
 #include "vulkan/memory/VmaAllocator.hpp"
 #include "core/utils/Logger.hpp"
 #include <cstring>

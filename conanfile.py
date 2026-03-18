@@ -65,8 +65,7 @@ class VulkanEngineConan(ConanFile):
 
         # Development tools
         if self.options.with_tests:
-            self.requires("catch2/3.4.0")
-            self.requires("benchmark/1.8.2")
+            self.requires("gtest/[>=1.14.0]")
     
     def validate(self):
         check_min_cppstd(self, "20")
