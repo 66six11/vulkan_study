@@ -5,7 +5,7 @@ if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/build/build/generators/conan_toolchain.c
     include("${CMAKE_CURRENT_SOURCE_DIR}/build/build/generators/conan_toolchain.cmake")
 endif ()
 
-project(VulkanEngine VERSION 2.0.0 LANGUAGES CXX)
+project(VulkanEngine VERSION 2.0.0 LANGUAGES C CXX)
 
 # 设置 C++ 标准
 set(CMAKE_CXX_STANDARD 20)

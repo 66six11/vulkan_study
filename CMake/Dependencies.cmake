@@ -140,20 +140,64 @@ endif ()
 # 可选：Vulkan Memory Allocator
 option(VULKAN_ENGINE_USE_VMA "Use Vulkan Memory Allocator" ON)
 if (VULKAN_ENGINE_USE_VMA)
-    find_package(VulkanMemoryAllocator CONFIG QUIET
-            PATHS
-            "${CMAKE_CURRENT_SOURCE_DIR}/build/build/generators"
-            "${CMAKE_CURRENT_SOURCE_DIR}/build/generators"
-            NO_DEFAULT_PATH
-    )
-    if (VulkanMemoryAllocator_FOUND)
-        add_library(VulkanEngine::VMA INTERFACE IMPORTED)
-        target_link_libraries(VulkanEngine::VMA INTERFACE GPUOpen::VulkanMemoryAllocator)
-        message(STATUS "Vulkan Memory Allocator enabled")
+    set(VMA_FOUND FALSE)
+
+    # 方法1: 尝试 find_package (Conan 生成器)
+    find_package(VulkanMemoryAllocator CONFIG QUIET)
+    if (VulkanMemoryAllocator_FOUND OR TARGET GPUOpen::VulkanMemoryAllocator)
+        # 创建 VulkanEngine::VMA 别名指向 Conan 的目标
+        if (NOT TARGET VulkanEngine::VMA)
+            add_library(VulkanEngine::VMA INTERFACE IMPORTED)
+            if (TARGET GPUOpen::VulkanMemoryAllocator)
+                target_link_libraries(VulkanEngine::VMA INTERFACE GPUOpen::VulkanMemoryAllocator)
+            endif ()
+            # 设置包含目录（Conan 使用变量而不是目标属性）
+            if (DEFINED VulkanMemoryAllocator_INCLUDE_DIRS)
+                target_include_directories(VulkanEngine::VMA INTERFACE ${VulkanMemoryAllocator_INCLUDE_DIRS})
+            elseif (DEFINED VulkanMemoryAllocator_INCLUDE_DIR)
+                target_include_directories(VulkanEngine::VMA INTERFACE ${VulkanMemoryAllocator_INCLUDE_DIR})
+            endif ()
+        endif ()
+        message(STATUS "Vulkan Memory Allocator enabled (find_package)")
         set(VULKAN_ENGINE_HAS_VMA TRUE)
-    else ()
-        message(WARNING "VMA requested but not found")
-        set(VULKAN_ENGINE_HAS_VMA FALSE)
+        set(VMA_FOUND TRUE)
+    endif ()
+
+    # 方法2: 手动查找头文件路径
+    if (NOT VMA_FOUND)
+        find_file(VMA_HEADER_PATH vk_mem_alloc.h
+            PATHS
+                "${CMAKE_CURRENT_SOURCE_DIR}/build/build/generators"
+                "${CMAKE_CURRENT_SOURCE_DIR}/build/generators"
+                "${CMAKE_CURRENT_SOURCE_DIR}/cmake-build-debug-visual-studio/conan/build/generators"
+                "${CMAKE_CURRENT_SOURCE_DIR}/cmake-build-release-visual-studio/conan/build/generators"
+            NO_DEFAULT_PATH
+        )
+        if (VMA_HEADER_PATH)
+            get_filename_component(VMA_INCLUDE_DIR ${VMA_HEADER_PATH} DIRECTORY)
+            add_library(VulkanEngine::VMA INTERFACE IMPORTED)
+            target_include_directories(VulkanEngine::VMA INTERFACE ${VMA_INCLUDE_DIR})
+            message(STATUS "Vulkan Memory Allocator enabled: ${VMA_INCLUDE_DIR}")
+            set(VULKAN_ENGINE_HAS_VMA TRUE)
+            set(VMA_FOUND TRUE)
+            unset(VMA_HEADER_PATH CACHE)
+        endif ()
+    endif ()
+
+    # 方法3: 回退到 Conan 缓存目录
+    if (NOT VMA_FOUND)
+        file(GLOB VMA_INCLUDE_DIRS "$ENV{USERPROFILE}/.conan2/p/vulka*/p/include")
+        if (VMA_INCLUDE_DIRS)
+            list(GET VMA_INCLUDE_DIRS 0 VMA_INCLUDE_DIR)
+            add_library(VulkanEngine::VMA INTERFACE IMPORTED)
+            target_include_directories(VulkanEngine::VMA INTERFACE ${VMA_INCLUDE_DIR})
+            message(STATUS "Vulkan Memory Allocator enabled: ${VMA_INCLUDE_DIR}")
+            set(VULKAN_ENGINE_HAS_VMA TRUE)
+            set(VMA_FOUND TRUE)
+        else ()
+            message(WARNING "VMA requested but not found")
+            set(VULKAN_ENGINE_HAS_VMA FALSE)
+        endif ()
     endif ()
 else ()
     set(VULKAN_ENGINE_HAS_VMA FALSE)

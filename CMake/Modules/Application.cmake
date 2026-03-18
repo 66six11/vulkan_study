@@ -18,6 +18,9 @@ add_executable(vulkan-engine
 
 target_link_libraries(vulkan-engine PRIVATE VulkanEngineApplication)
 
+# 修复 MSVC 运行时库冲突
+fix_msvc_runtime_conflicts(vulkan-engine)
+
 # 设置可执行文件属性
 set_target_properties(vulkan-engine PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin

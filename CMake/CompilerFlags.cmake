@@ -1,5 +1,13 @@
 # 编译器标志集中管理
 
+# MSVC 运行时库配置
+if (MSVC)
+    # 确保所有配置使用动态运行时库 (/MD /MDd)
+    # 避免与 Conan 依赖的运行时库冲突
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+    message(STATUS "强制 MSVC 运行时库: ${CMAKE_MSVC_RUNTIME_LIBRARY}")
+endif ()
+
 # 通用警告标志
 set(VULKAN_ENGINE_WARNINGS
         /W4            # MSVC: 警告级别4
@@ -155,5 +163,16 @@ function(enable_static_analysis TARGET)
             )
             message(STATUS "Enabled cppcheck for ${TARGET}")
         endif ()
+    endif ()
+endfunction()
+
+# 修复 MSVC 运行时库链接警告
+function(fix_msvc_runtime_conflicts TARGET)
+    if (MSVC)
+        # 忽略运行时库冲突警告 LNK4098
+        target_link_options(${TARGET} PRIVATE
+                $<$<CONFIG:Debug>:/NODEFAULTLIB:MSVCRT>
+                $<$<CONFIG:Release>:/NODEFAULTLIB:MSVCRTD>
+        )
     endif ()
 endfunction()
