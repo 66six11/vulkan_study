@@ -206,8 +206,14 @@ class EditorApplication : public application::ApplicationBase
                 logger::info("Viewport resize marked as pending: " + std::to_string(width) + "x" + std::to_string(height));
             });
 
-            // Create frame sync manager (pure per-frame architecture)
+            // Create frame sync manager (hybrid per-frame fence + per-image semaphore)
             frame_sync_ = std::make_unique<vulkan::FrameSyncManager>(device, 2);
+
+            // Resize per-image render_finished semaphores for swapchain
+            if (swap_chain)
+            {
+                frame_sync_->resize_render_finished_semaphores(swap_chain->image_count());
+            }
 
             // Create framebuffer pool for swap chain images
             framebuffer_pool_ = std::make_unique<vulkan::FramebufferPool>(device);
@@ -333,9 +339,9 @@ class EditorApplication : public application::ApplicationBase
             // which image we'll get until after acquisition
             uint32_t image_index = 0;
             bool     acquired    = swap_chain->acquire_next_image(
-                                                                  frame_sync_->get_current_acquire_semaphore().handle(),
-                                                                  VK_NULL_HANDLE,
-                                                                  image_index);
+                                                           frame_sync_->get_current_acquire_semaphore().handle(),
+                                                           VK_NULL_HANDLE,
+                                                           image_index);
 
             if (!acquired)
             {
@@ -377,17 +383,16 @@ class EditorApplication : public application::ApplicationBase
             editor_->end_frame(image_index);
 
             // Record ImGui rendering to swap chain
-            // Note: ImGui CB is per-frame (not per-image) in simplified architecture
             VkCommandBuffer gui_cmd = record_imgui_command_buffer(frame_index, image_index);
 
             // Submit ImGui rendering
-            // Wait for: 1) swap chain image available, 2) scene rendering finished
+            // Wait for: 1) swap chain image available (per-frame acquire semaphore), 2) scene rendering finished
             VkSemaphore wait_semaphores[] = {
                 frame_sync_->get_current_acquire_semaphore().handle(),
                 frame_sync_->get_current_scene_finished_semaphore().handle()
             };
-            // Per-frame: render finished semaphore (simplified architecture)
-            VkSemaphore          signal_semaphores[] = {frame_sync_->get_current_render_finished_semaphore().handle()};
+            // Per-image: render finished semaphore for present
+            VkSemaphore          signal_semaphores[] = {frame_sync_->get_render_finished_semaphore(image_index).handle()};
             VkPipelineStageFlags wait_stages[]       = {
                 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                 // For acquire semaphore
@@ -408,8 +413,8 @@ class EditorApplication : public application::ApplicationBase
             VkFence frame_fence = frame_sync_->get_current_frame_fence().handle();
             vkQueueSubmit(device->graphics_queue(), 1, &submit_info, frame_fence);
 
-            // Present - wait for render_finished semaphore
-            VkSemaphore present_semaphore = frame_sync_->get_current_render_finished_semaphore().handle();
+            // Present - wait for per-image render_finished semaphore
+            VkSemaphore present_semaphore = frame_sync_->get_render_finished_semaphore(image_index).handle();
             swap_chain->present(device->graphics_queue(), image_index, present_semaphore);
 
             // Advance to next frame
@@ -489,11 +494,10 @@ class EditorApplication : public application::ApplicationBase
             create_framebuffers();
 
 
-            // 重建 FrameSyncManager（image_count 可能已改变）
-
+            // 重建 FrameSyncManager（per-frame acquire + per-image render_finished）
             frame_sync_.reset();
-
             frame_sync_ = std::make_unique<vulkan::FrameSyncManager>(device, 2);
+            frame_sync_->resize_render_finished_semaphores(swap_chain->image_count());
 
 
             // 重建 ImGui（使用已创建的 present_render_pass）
@@ -549,10 +553,10 @@ class EditorApplication : public application::ApplicationBase
 
             VkDeviceSize vertex_size = sizeof(cube_vertices[0]) * cube_vertices.size();
             vertex_buffer_           = std::make_unique<vulkan::Buffer>(
-                                                                        device,
-                                                                        vertex_size,
-                                                                        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                                                                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+                                                              device,
+                                                              vertex_size,
+                                                              VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                                                              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
             void* vdata = vertex_buffer_->map();
             memcpy(vdata, cube_vertices.data(), static_cast<size_t>(vertex_size));
             vertex_buffer_->unmap();

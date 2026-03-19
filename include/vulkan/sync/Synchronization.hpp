@@ -116,10 +116,13 @@ namespace vulkan_engine::vulkan
     /**
      * @brief Simplified frame synchronization manager
      * 
-     * Pure per-frame architecture:
-     * - All resources indexed by frame index (0..max_frames_in_flight-1)
-     * - No per-image arrays to avoid confusion
-     * - Simple, predictable, easy to debug
+     * Hybrid architecture:
+     * - Per-frame: Fence (for command buffer lifecycle management)
+     * - Per-image: Semaphore (for swapchain image synchronization)
+     * 
+     * This design follows Vulkan best practices:
+     * - Each swapchain image gets its own acquire/render_finished semaphore
+     * - Fence tracks per-frame CPU-GPU synchronization
      */
     class FrameSyncManager
     {
@@ -128,17 +131,17 @@ namespace vulkan_engine::vulkan
              * @brief Construct frame sync manager
              * 
              * @param device Vulkan device manager
-             * @param frame_count Number of frames in flight (typically 2 or 3)
+             * @param max_frames_in_flight Maximum frames in flight (typically 2 or 3)
              */
             FrameSyncManager(
                 std::shared_ptr<DeviceManager> device,
-                uint32_t                       frame_count);
+                uint32_t                       max_frames_in_flight);
             ~FrameSyncManager() = default;
 
             FrameSyncManager(const FrameSyncManager&)            = delete;
             FrameSyncManager& operator=(const FrameSyncManager&) = delete;
 
-            // Frame management
+            // Frame management (for command buffer recycling)
             uint32_t current_frame() const { return current_frame_; }
 
             /**
@@ -147,7 +150,7 @@ namespace vulkan_engine::vulkan
              */
             uint32_t advance_frame()
             {
-                current_frame_ = (current_frame_ + 1) % frame_count_;
+                current_frame_ = (current_frame_ + 1) % max_frames_in_flight_;
                 return current_frame_;
             }
 
@@ -164,29 +167,43 @@ namespace vulkan_engine::vulkan
             void wait_and_reset_frame_fence(uint32_t frame, uint64_t timeout = UINT64_MAX);
             void wait_and_reset_current_frame_fence(uint64_t timeout = UINT64_MAX);
 
-            // Per-frame: GPU-GPU synchronization
-            Semaphore& get_acquire_semaphore(uint32_t frame) { return *acquire_semaphores_[frame]; }
+            // Per-frame: acquire semaphore for vkAcquireNextImageKHR
+            // (must be per-frame because we don't know image index until after acquire)
             Semaphore& get_current_acquire_semaphore() { return *acquire_semaphores_[current_frame_]; }
+            
+            // Per-image: render finished semaphore for vkQueuePresentKHR
+            // (must be per-image because swapchain may present images out of order)
+            Semaphore& get_render_finished_semaphore(uint32_t image_index) { return *render_finished_semaphores_[image_index]; }
+            
+            // Resize per-image semaphores when swapchain is recreated
+            void resize_render_finished_semaphores(uint32_t image_count);
 
+            // Per-frame: Scene rendering synchronization
             Semaphore& get_scene_finished_semaphore(uint32_t frame) { return *scene_finished_semaphores_[frame]; }
             Semaphore& get_current_scene_finished_semaphore() { return *scene_finished_semaphores_[current_frame_]; }
 
-            Semaphore& get_render_finished_semaphore(uint32_t frame) { return *render_finished_semaphores_[frame]; }
-            Semaphore& get_current_render_finished_semaphore() { return *render_finished_semaphores_[current_frame_]; }
+            uint32_t max_frames_in_flight() const { return max_frames_in_flight_; }
 
-            uint32_t frame_count() const { return frame_count_; }
+            /**
+             * @brief Resize semaphore arrays for swapchain image count
+             * Call this after swapchain recreation when image count changes
+             */
+
 
         private:
             std::shared_ptr<DeviceManager> device_;
-            uint32_t                       frame_count_;
+            uint32_t                       max_frames_in_flight_;
             uint32_t                       current_frame_ = 0;
 
             // Per-frame: CPU-GPU synchronization (fence for command buffer lifecycle)
             std::vector<std::unique_ptr<Fence>> frame_fences_;
 
-            // Per-frame: GPU-GPU synchronization
+            // Per-frame: Scene -> ImGui dependency
+            std::vector<std::unique_ptr<Semaphore>> scene_finished_semaphores_;
+
+            // Per-image: GPU-GPU synchronization for swapchain
+            // These are indexed by swapchain image index
             std::vector<std::unique_ptr<Semaphore>> acquire_semaphores_;         // vkAcquireNextImageKHR
-            std::vector<std::unique_ptr<Semaphore>> scene_finished_semaphores_;  // Scene -> ImGui dependency
             std::vector<std::unique_ptr<Semaphore>> render_finished_semaphores_; // vkQueuePresentKHR
     };
 } // namespace vulkan_engine::vulkan

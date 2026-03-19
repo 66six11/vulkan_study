@@ -138,10 +138,10 @@ TEST_F(VmaAllocatorTest, InitialStatsAreEmpty)
     EXPECT_FALSE(statsJson.empty());
     // 验证是有效的JSON格式（以{开头）
     EXPECT_EQ(statsJson.front(), '{');
-    
+
     // 输出 JSON 内容供查看
     std::cout << "\n=== VMA Stats JSON (detailed) ===\n" << statsJson << "\n=== End JSON ===\n";
-    
+
     // 输出简略版本
     std::string briefJson = allocator->buildStatsString(false);
     std::cout << "\n=== VMA Stats JSON (brief) ===\n" << briefJson << "\n=== End JSON ===\n";
@@ -243,7 +243,7 @@ TEST_F(VmaBufferTest, PersistentMapping)
     VmaAllocationCreateInfo allocInfo = {};
     allocInfo.usage                   = VMA_MEMORY_USAGE_AUTO_PREFER_HOST;
     allocInfo.flags                   = VMA_ALLOCATION_CREATE_MAPPED_BIT |
-                      VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+                                        VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 
     auto buffer = std::make_shared<VmaBuffer>(
                                               allocator,
@@ -449,8 +449,8 @@ TEST_F(VmaImageTest, TextureWithMipmaps)
     imageInfo.tiling            = VK_IMAGE_TILING_OPTIMAL;
     imageInfo.initialLayout     = VK_IMAGE_LAYOUT_UNDEFINED;
     imageInfo.usage             = VK_IMAGE_USAGE_TRANSFER_DST_BIT |
-                      VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
-                      VK_IMAGE_USAGE_SAMPLED_BIT;
+                                  VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+                                  VK_IMAGE_USAGE_SAMPLED_BIT;
     imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 
     VmaAllocationCreateInfo allocInfo = {};
@@ -763,11 +763,11 @@ TEST_F(VmaAllocatorTest, PrintStatsDoesNotThrow)
     allocInfo.usage                   = VMA_MEMORY_USAGE_AUTO;
 
     auto buffer = std::make_shared<VmaBuffer>(
-        allocator,
-        1024,
-        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-        allocInfo
-    );
+                                              allocator,
+                                              1024,
+                                              VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                                              allocInfo
+                                             );
 
     EXPECT_NO_THROW(allocator->printStats());
 }
@@ -788,11 +788,11 @@ TEST_F(VmaAllocatorTest, BuildStatsString)
     allocInfo.usage                   = VMA_MEMORY_USAGE_AUTO;
 
     auto buffer = std::make_shared<VmaBuffer>(
-        allocator,
-        1024,
-        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-        allocInfo
-    );
+                                              allocator,
+                                              1024,
+                                              VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                                              allocInfo
+                                             );
 
     std::string statsAfter = allocator->buildStatsString(true);
     EXPECT_FALSE(statsAfter.empty());
@@ -809,11 +809,11 @@ TEST_F(VmaAllocatorTest, DumpAllocations)
     allocInfo.usage                   = VMA_MEMORY_USAGE_AUTO;
 
     auto buffer = std::make_shared<VmaBuffer>(
-        allocator,
-        1024,
-        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-        allocInfo
-    );
+                                              allocator,
+                                              1024,
+                                              VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                                              allocInfo
+                                             );
 
     EXPECT_NO_THROW(allocator->dumpAllocations());
 }
@@ -829,11 +829,12 @@ TEST_F(VmaAllocatorTest, BudgetTrackingAfterAllocation)
     allocInfo.usage                   = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
 
     auto buffer = std::make_shared<VmaBuffer>(
-        allocator,
-        1024 * 1024, // 1MB
-        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-        allocInfo
-    );
+                                              allocator,
+                                              1024 * 1024,
+                                              // 1MB
+                                              VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                                              allocInfo
+                                             );
 
     // 获取创建后的预算
     auto budgetsAfter = allocator->getHeapBudgets();
