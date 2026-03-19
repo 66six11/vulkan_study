@@ -29,9 +29,13 @@ namespace vulkan_engine::rendering
         float    delta_time   = 0.0f;
         float    elapsed_time = 0.0f;
 
-        // Vulkan objects
+        // Vulkan objects (for traditional render pass)
         VkRenderPass  render_pass = VK_NULL_HANDLE;
         VkFramebuffer framebuffer = VK_NULL_HANDLE;
+
+        // Dynamic Rendering attachments (alternative to render_pass/framebuffer)
+        VkImageView color_image_view = VK_NULL_HANDLE;
+        VkImageView depth_image_view = VK_NULL_HANDLE;
 
         // Device
         std::shared_ptr<vulkan::DeviceManager> device;

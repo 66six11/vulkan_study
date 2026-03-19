@@ -227,11 +227,18 @@ namespace vulkan_engine::vulkan
 
         // Required device extensions
         std::vector<const char*> device_extensions = {
-            VK_KHR_SWAPCHAIN_EXTENSION_NAME
+            VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+            VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME // Enable Dynamic Rendering
         };
+
+        // Enable Dynamic Rendering feature
+        VkPhysicalDeviceDynamicRenderingFeatures dynamic_rendering_features{};
+        dynamic_rendering_features.sType            = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES;
+        dynamic_rendering_features.dynamicRendering = VK_TRUE;
 
         VkDeviceCreateInfo create_info{};
         create_info.sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+        create_info.pNext                   = &dynamic_rendering_features; // Chain dynamic rendering features
         create_info.queueCreateInfoCount    = static_cast<uint32_t>(queue_create_infos.size());
         create_info.pQueueCreateInfos       = queue_create_infos.data();
         create_info.pEnabledFeatures        = &device_features;
@@ -245,6 +252,10 @@ namespace vulkan_engine::vulkan
             return false;
         }
         device_.set_handle(device_handle);
+
+        // Mark dynamic rendering as enabled
+        features_.dynamic_rendering = true;
+        LOG_INFO("Dynamic Rendering enabled");
 
         // Get graphics queue
         VkQueue queue_handle = VK_NULL_HANDLE;
@@ -301,11 +312,30 @@ namespace vulkan_engine::vulkan
         std::vector<VkExtensionProperties> available_extensions(extension_count);
         vkEnumerateDeviceExtensionProperties(device, nullptr, &extension_count, available_extensions.data());
 
-        std::set<std::string> required_extensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+        std::set<std::string> required_extensions = {
+            VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+            VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME
+        };
 
         for (const auto& extension : available_extensions)
         {
             required_extensions.erase(extension.extensionName);
+        }
+
+        // Also check if dynamic rendering feature is supported
+        VkPhysicalDeviceDynamicRenderingFeatures dynamic_rendering_features{};
+        dynamic_rendering_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES;
+
+        VkPhysicalDeviceFeatures2 features2{};
+        features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+        features2.pNext = &dynamic_rendering_features;
+
+        vkGetPhysicalDeviceFeatures2(device, &features2);
+
+        if (!dynamic_rendering_features.dynamicRendering)
+        {
+            LOG_WARN("Device does not support Dynamic Rendering");
+            return false;
         }
 
         return required_extensions.empty();

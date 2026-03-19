@@ -20,6 +20,41 @@ namespace vulkan_engine::rendering
         reset();
     }
 
+    RenderGraph::RenderGraph(RenderGraph&& other) noexcept
+        : builder_(std::move(other.builder_))
+        , compiled_(other.compiled_)
+        , execution_order_(std::move(other.execution_order_))
+        , device_(std::move(other.device_))
+        , resource_pool_(std::move(other.resource_pool_))
+        , barrier_manager_(std::move(other.barrier_manager_))
+        , next_resource_id_(other.next_resource_id_)
+        , pass_barriers_(std::move(other.pass_barriers_))
+    {
+        other.compiled_         = false;
+        other.next_resource_id_ = 1;
+    }
+
+    RenderGraph& RenderGraph::operator=(RenderGraph&& other) noexcept
+    {
+        if (this != &other)
+        {
+            reset();
+
+            builder_          = std::move(other.builder_);
+            compiled_         = other.compiled_;
+            execution_order_  = std::move(other.execution_order_);
+            device_           = std::move(other.device_);
+            resource_pool_    = std::move(other.resource_pool_);
+            barrier_manager_  = std::move(other.barrier_manager_);
+            next_resource_id_ = other.next_resource_id_;
+            pass_barriers_    = std::move(other.pass_barriers_);
+
+            other.compiled_         = false;
+            other.next_resource_id_ = 1;
+        }
+        return *this;
+    }
+
     void RenderGraph::initialize(std::shared_ptr<vulkan::DeviceManager> device)
     {
         device_          = std::move(device);

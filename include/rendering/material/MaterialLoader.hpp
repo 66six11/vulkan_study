@@ -18,8 +18,11 @@ namespace vulkan_engine::rendering
             explicit MaterialLoader(std::shared_ptr<vulkan::DeviceManager> device);
             ~MaterialLoader() = default;
 
-            // Load a material from JSON file
+            // Load a material from JSON file (traditional render pass)
             std::shared_ptr<Material> load(const std::string& path, VkRenderPass render_pass);
+
+            // Load a material from JSON file (dynamic rendering with formats)
+            std::shared_ptr<Material> load(const std::string& path, VkFormat color_format, VkFormat depth_format);
 
             // Get cached material
             std::shared_ptr<Material> get(const std::string& name) const;

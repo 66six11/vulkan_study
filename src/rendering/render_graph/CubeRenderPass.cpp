@@ -38,31 +38,19 @@ namespace vulkan_engine::rendering
             return;
         }
 
-        // Begin render pass
-        VkClearValue clear_values[2];
-        clear_values[0].color        = {{0.0f, 0.0f, 0.0f, 1.0f}};
-        clear_values[1].depthStencil = {1.0f, 0};
+        // Bind material
+        material->bind(cmd);
 
-        VkRect2D render_area{};
-        render_area.offset = {0, 0};
-        render_area.extent = {ctx.width, ctx.height};
-
-        cmd.begin_render_pass(ctx.render_pass, ctx.framebuffer, render_area, {clear_values[0], clear_values[1]});
-
-        // Bind material (pipeline and descriptor sets) with current render pass
-        material->bind(cmd, ctx.render_pass);
-
-        // Set viewport - 使用渲染上下文的实际尺寸，而不是固定的配置尺寸
+        // Set viewport
         cmd.set_viewport(
                          0.0f,
                          0.0f,
                          static_cast<float>(ctx.width),
                          static_cast<float>(ctx.height),
                          0.0f,
-                         1.0f
-                        );
+                         1.0f);
 
-        // Set scissor - 使用渲染上下文的实际尺寸
+        // Set scissor
         cmd.set_scissor(0, 0, ctx.width, ctx.height);
 
         // Push MVP matrix
@@ -80,9 +68,6 @@ namespace vulkan_engine::rendering
 
         // Draw indexed
         cmd.draw_indexed(config_.index_count, 1, 0, 0, 0);
-
-        // End render pass
-        cmd.end_render_pass();
     }
 
     void CubeRenderPass::set_mvp_matrix(const glm::mat4& mvp)

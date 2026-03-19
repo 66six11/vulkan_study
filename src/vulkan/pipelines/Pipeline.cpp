@@ -1,6 +1,7 @@
 ﻿#include "vulkan/pipelines/Pipeline.hpp"
 #include "vulkan/pipelines/ShaderModule.hpp"
 #include "vulkan/utils/VulkanError.hpp"
+#include "core/utils/Logger.hpp"
 #include <fstream>
 #include <stdexcept>
 
@@ -192,6 +193,13 @@ namespace vulkan_engine::vulkan
             owned_layout_ = nullptr;
         }
 
+        // Setup dynamic rendering info if no render pass is provided
+        VkPipelineRenderingCreateInfo rendering_info{};
+        rendering_info.sType                   = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+        rendering_info.colorAttachmentCount    = (config.color_format != VK_FORMAT_UNDEFINED) ? 1 : 0;
+        rendering_info.pColorAttachmentFormats = (config.color_format != VK_FORMAT_UNDEFINED) ? &config.color_format : nullptr;
+        rendering_info.depthAttachmentFormat   = config.depth_format;
+
         // Create pipeline
         VkGraphicsPipelineCreateInfo pipeline_info{};
         pipeline_info.sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -206,9 +214,26 @@ namespace vulkan_engine::vulkan
         pipeline_info.pColorBlendState    = &color_blending;
         pipeline_info.pDynamicState       = &dynamic_state;
         pipeline_info.layout              = layout;
-        pipeline_info.renderPass          = config.render_pass;
         pipeline_info.subpass             = config.subpass;
-        pipeline_info.basePipelineHandle  = VK_NULL_HANDLE;
+
+        // Use dynamic rendering info if no render pass
+        logger::debug("Pipeline config: render_pass=" + std::to_string(reinterpret_cast<uint64_t>(config.render_pass)) +
+                      ", color_format=" + std::to_string(config.color_format));
+
+        if (config.render_pass == VK_NULL_HANDLE && config.color_format != VK_FORMAT_UNDEFINED)
+        {
+            pipeline_info.pNext      = &rendering_info;
+            pipeline_info.renderPass = VK_NULL_HANDLE; // Dynamic Rendering uses VK_NULL_HANDLE
+            logger::debug("Creating pipeline with Dynamic Rendering: color_format=" +
+                          std::to_string(config.color_format) + ", depth_format=" + std::to_string(config.depth_format));
+        }
+        else
+        {
+            pipeline_info.renderPass = config.render_pass;
+            logger::debug("Creating pipeline with RenderPass: " +
+                          std::to_string(reinterpret_cast<uint64_t>(config.render_pass)));
+        }
+        pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
 
         VkResult result = vkCreateGraphicsPipelines(device_->device(), VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &pipeline_);
         if (result != VK_SUCCESS)

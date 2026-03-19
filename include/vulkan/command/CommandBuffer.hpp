@@ -54,6 +54,17 @@ namespace vulkan_engine::vulkan
 
             void end_render_pass();
 
+            // Dynamic Rendering (Vulkan 1.3+)
+            void begin_dynamic_rendering(
+                VkImageView         color_view,
+                VkImageView         depth_view,
+                uint32_t            width,
+                uint32_t            height,
+                const VkClearValue* color_clear = nullptr,
+                const VkClearValue* depth_clear = nullptr);
+
+            void end_dynamic_rendering();
+
             // Pipeline
             void bind_pipeline(VkPipeline pipeline);
             void bind_graphics_pipeline(GraphicsPipeline& pipeline);

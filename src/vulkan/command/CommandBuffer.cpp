@@ -125,6 +125,52 @@ namespace vulkan_engine::vulkan
         vkCmdEndRenderPass(cmd_buffer_);
     }
 
+    void RenderCommandBuffer::begin_dynamic_rendering(
+        VkImageView         color_view,
+        VkImageView         depth_view,
+        uint32_t            width,
+        uint32_t            height,
+        const VkClearValue* color_clear,
+        const VkClearValue* depth_clear)
+    {
+        VkRenderingAttachmentInfo color_attachment{};
+        color_attachment.sType       = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+        color_attachment.imageView   = color_view;
+        color_attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        color_attachment.loadOp      = color_clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+        color_attachment.storeOp     = VK_ATTACHMENT_STORE_OP_STORE;
+        if (color_clear)
+        {
+            color_attachment.clearValue = *color_clear;
+        }
+
+        VkRenderingAttachmentInfo depth_attachment{};
+        depth_attachment.sType       = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+        depth_attachment.imageView   = depth_view;
+        depth_attachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        depth_attachment.loadOp      = depth_clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+        depth_attachment.storeOp     = VK_ATTACHMENT_STORE_OP_STORE;
+        if (depth_clear)
+        {
+            depth_attachment.clearValue = *depth_clear;
+        }
+
+        VkRenderingInfo rendering_info{};
+        rendering_info.sType                = VK_STRUCTURE_TYPE_RENDERING_INFO;
+        rendering_info.renderArea           = {{0, 0}, {width, height}};
+        rendering_info.layerCount           = 1;
+        rendering_info.colorAttachmentCount = 1;
+        rendering_info.pColorAttachments    = &color_attachment;
+        rendering_info.pDepthAttachment     = depth_view != VK_NULL_HANDLE ? &depth_attachment : nullptr;
+
+        vkCmdBeginRendering(cmd_buffer_, &rendering_info);
+    }
+
+    void RenderCommandBuffer::end_dynamic_rendering()
+    {
+        vkCmdEndRendering(cmd_buffer_);
+    }
+
     void RenderCommandBuffer::bind_pipeline(VkPipeline pipeline)
     {
         vkCmdBindPipeline(cmd_buffer_, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);

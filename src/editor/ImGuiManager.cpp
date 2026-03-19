@@ -67,7 +67,7 @@ namespace vulkan_engine::editor
         init_info.Queue                     = device->graphics_queue();
         init_info.PipelineCache             = VK_NULL_HANDLE;
         init_info.DescriptorPool            = descriptor_pool_;
-        init_info.RenderPass                = render_pass; // <-- MISSING! Added now
+        init_info.RenderPass                = render_pass; // Use provided render pass for ImGui
         init_info.Subpass                   = 0;
         init_info.MinImageCount             = image_count;
         init_info.ImageCount                = image_count;

@@ -64,6 +64,10 @@ namespace vulkan_engine::vulkan
         VkPipelineLayout layout      = VK_NULL_HANDLE;
         VkRenderPass     render_pass = VK_NULL_HANDLE;
         uint32_t         subpass     = 0;
+
+        // Dynamic Rendering formats (used when render_pass is VK_NULL_HANDLE)
+        VkFormat color_format = VK_FORMAT_UNDEFINED;
+        VkFormat depth_format = VK_FORMAT_UNDEFINED;
     };
 
     class GraphicsPipeline

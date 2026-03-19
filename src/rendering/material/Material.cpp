@@ -32,7 +32,7 @@ namespace vulkan_engine::rendering
     Material::Material(Material&& other) noexcept
         : device_(std::move(other.device_))
         , config_(std::move(other.config_))
-        , pipelines_(std::move(other.pipelines_))
+        , pipeline_(std::move(other.pipeline_))
         , pipeline_layout_(other.pipeline_layout_)
         , descriptor_set_layout_(other.descriptor_set_layout_)
         , uniform_buffer_(std::move(other.uniform_buffer_))
@@ -59,7 +59,7 @@ namespace vulkan_engine::rendering
 
             device_                     = std::move(other.device_);
             config_                     = std::move(other.config_);
-            pipelines_                  = std::move(other.pipelines_);
+            pipeline_                   = std::move(other.pipeline_);
             pipeline_layout_            = other.pipeline_layout_;
             descriptor_set_layout_      = other.descriptor_set_layout_;
             uniform_buffer_             = std::move(other.uniform_buffer_);
@@ -96,8 +96,8 @@ namespace vulkan_engine::rendering
             descriptor_pool_ = VK_NULL_HANDLE;
         }
 
-        // Destroy all pipelines
-        pipelines_.clear();
+        // Destroy pipeline
+        pipeline_.reset();
 
         // Destroy pipeline layout
         if (pipeline_layout_ != VK_NULL_HANDLE)
@@ -131,30 +131,34 @@ namespace vulkan_engine::rendering
         default_white_texture_view_ = VK_NULL_HANDLE;
     }
 
-    void Material::build(VkRenderPass render_pass)
+    void Material::build(VkFormat color_format, VkFormat depth_format)
     {
-        // Use provided render pass or fall back to config
-        VkRenderPass target_render_pass = (render_pass != VK_NULL_HANDLE) ? render_pass : config_.render_pass;
-
-        if (target_render_pass == VK_NULL_HANDLE)
+        if (color_format == VK_FORMAT_UNDEFINED)
         {
-            logger::error("Material " + config_.name + " cannot build: no render pass specified");
+            logger::error("Material " + config_.name + " cannot build: no color format provided");
             return;
         }
 
-        // Check if already built for this render pass
-        if (pipelines_.count(target_render_pass) > 0)
+        // Check if already built
+        if (pipeline_ != nullptr)
         {
-            logger::warn("Material " + config_.name + " already built for render pass, skipping...");
+            logger::warn("Material " + config_.name + " already built, skipping...");
             return;
         }
 
-        // Update descriptor set (only once, shared across all pipelines)
+        build_internal(color_format, depth_format);
+    }
+
+    void Material::build_internal(VkFormat color_format, VkFormat depth_format)
+    {
+        // Update descriptor set
         update_descriptor_set();
 
-        // Create pipeline
+        // Create pipeline config for dynamic rendering
         vulkan::GraphicsPipelineConfig pipeline_config{};
-        pipeline_config.render_pass          = target_render_pass;
+        pipeline_config.render_pass          = VK_NULL_HANDLE; // Dynamic rendering
+        pipeline_config.color_format         = color_format;
+        pipeline_config.depth_format         = depth_format;
         pipeline_config.vertex_shader_path   = config_.vertex_shader_path;
         pipeline_config.fragment_shader_path = config_.fragment_shader_path;
         pipeline_config.layout               = pipeline_layout_;
@@ -176,7 +180,7 @@ namespace vulkan_engine::rendering
 
         pipeline_config.primitive_topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
         pipeline_config.polygon_mode       = VK_POLYGON_MODE_FILL;
-        pipeline_config.cull_mode          = config_.cull_mode; // 默认背面剔除，可通过配置覆盖
+        pipeline_config.cull_mode          = config_.cull_mode;
         pipeline_config.front_face         = VK_FRONT_FACE_COUNTER_CLOCKWISE;
         pipeline_config.depth_test_enable  = config_.depth_test;
         pipeline_config.depth_write_enable = config_.depth_write;
@@ -185,10 +189,8 @@ namespace vulkan_engine::rendering
 
         try
         {
-            auto pipeline                  = std::make_unique<vulkan::GraphicsPipeline>(device_, pipeline_config);
-            pipelines_[target_render_pass] = std::move(pipeline);
-            logger::info("Material " + config_.name + " built successfully for render pass " +
-                         std::to_string(reinterpret_cast<uint64_t>(target_render_pass)));
+            pipeline_ = std::make_unique<vulkan::GraphicsPipeline>(device_, pipeline_config);
+            logger::info("Material " + config_.name + " built successfully");
         }
         catch (const std::exception& e)
         {
@@ -197,29 +199,16 @@ namespace vulkan_engine::rendering
         }
     }
 
-    void Material::bind(vulkan::RenderCommandBuffer& cmd, VkRenderPass render_pass)
+    void Material::bind(vulkan::RenderCommandBuffer& cmd)
     {
-        VkRenderPass target_render_pass = (render_pass != VK_NULL_HANDLE) ? render_pass : config_.render_pass;
-
-        // Check if we have a pipeline for this render pass
-        auto it = pipelines_.find(target_render_pass);
-        if (it == pipelines_.end())
+        if (!pipeline_)
         {
-            logger::warn("Material " + config_.name + " not built for render pass " +
-                         std::to_string(reinterpret_cast<uint64_t>(target_render_pass)) + ", building now...");
-            build(target_render_pass);
-
-            // Try again
-            it = pipelines_.find(target_render_pass);
-            if (it == pipelines_.end())
-            {
-                logger::error("Material " + config_.name + " failed to build for render pass, cannot bind");
-                return;
-            }
+            logger::error("Material " + config_.name + " not built, cannot bind");
+            return;
         }
 
         // Bind pipeline
-        cmd.bind_graphics_pipeline(*it->second);
+        cmd.bind_graphics_pipeline(*pipeline_);
 
         // Bind descriptor set
         if (descriptor_set_ != VK_NULL_HANDLE)

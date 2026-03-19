@@ -100,6 +100,14 @@ namespace vulkan_engine::rendering
             RenderGraph();
             ~RenderGraph();
 
+            // Non-copyable
+            RenderGraph(const RenderGraph&)            = delete;
+            RenderGraph& operator=(const RenderGraph&) = delete;
+
+            // Movable
+            RenderGraph(RenderGraph&& other) noexcept;
+            RenderGraph& operator=(RenderGraph&& other) noexcept;
+
             // Initialize with device
             void initialize(std::shared_ptr<vulkan::DeviceManager> device);
 
