@@ -321,102 +321,65 @@ namespace vulkan_engine::vulkan
             frame_fences_.push_back(std::make_unique<Fence>(device_, true));
         }
 
-                // Per-frame: acquire semaphore for vkAcquireNextImageKHR
+        // Per-frame: acquire semaphore for vkAcquireNextImageKHR
 
-                acquire_semaphores_.reserve(max_frames_in_flight_);
+        acquire_semaphores_.reserve(max_frames_in_flight_);
 
-                for (uint32_t i = 0; i < max_frames_in_flight_; ++i)
+        for (uint32_t i = 0; i < max_frames_in_flight_; ++i)
 
-                {
+        {
+            acquire_semaphores_.push_back(std::make_unique<Semaphore>(device_));
+        }
 
-                    acquire_semaphores_.push_back(std::make_unique<Semaphore>(device_));
 
-                }
+        // Per-frame: scene finished semaphore (Scene -> ImGui dependency)
 
-        
+        scene_finished_semaphores_.reserve(max_frames_in_flight_);
 
-                // Per-frame: scene finished semaphore (Scene -> ImGui dependency)
+        for (uint32_t i = 0; i < max_frames_in_flight_; ++i)
 
-                scene_finished_semaphores_.reserve(max_frames_in_flight_);
+        {
+            scene_finished_semaphores_.push_back(std::make_unique<Semaphore>(device_));
+        }
 
-                for (uint32_t i = 0; i < max_frames_in_flight_; ++i)
 
-                {
+        // Per-image render finished semaphores will be created on demand
 
-                    scene_finished_semaphores_.push_back(std::make_unique<Semaphore>(device_));
 
-                }
+        // via resize_render_finished_semaphores()
+    }
 
-        
 
-                        // Per-image render finished semaphores will be created on demand
+    void FrameSyncManager::resize_render_finished_semaphores(uint32_t image_count)
 
-        
 
-                        // via resize_render_finished_semaphores()
-
-        
-
-                    }
-
-        
-
-                
-
-        
-
-                    void FrameSyncManager::resize_render_finished_semaphores(uint32_t image_count)
-
-        
-
-                    {
+    {
 
         
 
                         // Ensure we have enough semaphores for all swapchain images
 
-        
 
                         if (render_finished_semaphores_.size() < image_count)
 
-        
 
                         {
-
-        
-
                             uint32_t old_size = static_cast<uint32_t>(render_finished_semaphores_.size());
 
-        
 
                             render_finished_semaphores_.reserve(image_count);
 
-        
 
                             for (uint32_t i = old_size; i < image_count; ++i)
 
-        
 
                             {
-
-        
-
                                 render_finished_semaphores_.push_back(std::make_unique<Semaphore>(device_));
-
-        
-
                             }
-
-        
-
                         }
 
-        
 
                         // If swapchain has fewer images, we keep the extra semaphores (no harm)
-
-        
-
                     }
 
     void FrameSyncManager::wait_and_reset_frame_fence(uint32_t frame, uint64_t timeout)

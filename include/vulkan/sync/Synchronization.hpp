@@ -170,11 +170,11 @@ namespace vulkan_engine::vulkan
             // Per-frame: acquire semaphore for vkAcquireNextImageKHR
             // (must be per-frame because we don't know image index until after acquire)
             Semaphore& get_current_acquire_semaphore() { return *acquire_semaphores_[current_frame_]; }
-            
+
             // Per-image: render finished semaphore for vkQueuePresentKHR
             // (must be per-image because swapchain may present images out of order)
             Semaphore& get_render_finished_semaphore(uint32_t image_index) { return *render_finished_semaphores_[image_index]; }
-            
+
             // Resize per-image semaphores when swapchain is recreated
             void resize_render_finished_semaphores(uint32_t image_count);
 
