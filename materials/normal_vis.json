@@ -1,0 +1,34 @@
+{
+  "name": "NormalVis",
+  "shader": {
+    "vertex": "shaders/normal_vis.vert.spv",
+    "fragment": "shaders/normal_vis.frag.spv"
+  },
+  "parameters": {
+    "color": {
+      "type": "vec3",
+      "value": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    "roughness": {
+      "type": "float",
+      "value": 0.5
+    },
+    "metallic": {
+      "type": "float",
+      "value": 0.0
+    },
+    "emissive": {
+      "type": "float",
+      "value": 0.0
+    }
+  },
+  "render_states": {
+    "depth_test": true,
+    "depth_write": true,
+    "cull_mode": "none"
+  }
+}

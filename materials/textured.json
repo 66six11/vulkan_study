@@ -1,0 +1,39 @@
+{
+  "name": "Textured",
+  "shader": {
+    "vertex": "shaders/pbr.vert.spv",
+    "fragment": "shaders/pbr.frag.spv"
+  },
+  "parameters": {
+    "color": {
+      "type": "vec3",
+      "value": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    "roughness": {
+      "type": "float",
+      "value": 0.5
+    },
+    "metallic": {
+      "type": "float",
+      "value": 0.0
+    },
+    "emissive": {
+      "type": "float",
+      "value": 0.0
+    }
+  },
+  "textures": {
+    "albedo": {
+      "path": "CustomUVChecker_byValle_1K .png"
+    }
+  },
+  "render_states": {
+    "depth_test": true,
+    "depth_write": true,
+    "cull_mode": "back"
+  }
+}
