@@ -17,11 +17,12 @@ namespace vulkan_engine::editor
         public:
             struct StatsData
             {
-                float       fps              = 0.0f;
-                float       frame_time       = 0.0f;
-                uint32_t    triangle_count   = 0;
-                uint32_t    draw_calls       = 0;
-                std::string current_material = "None";
+                float       fps                = 0.0f;
+                float       frame_time         = 0.0f;
+                float       gpu_render_time_ms = 0.0f; // GPU 实际渲染时间（不含等待）
+                uint32_t    triangle_count     = 0;
+                uint32_t    draw_calls         = 0;
+                std::string current_material   = "None";
             };
 
             ImGuiManager();

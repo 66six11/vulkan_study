@@ -215,6 +215,9 @@ class EditorApplication : public application::ApplicationBase
                 frame_sync_->resize_render_finished_semaphores(swap_chain->image_count());
             }
 
+            // Initialize GPU time query pools (per-frame)
+            initialize_query_pools(device);
+
             // Create framebuffer pool for swap chain images
             framebuffer_pool_ = std::make_unique<vulkan::FramebufferPool>(device);
             create_framebuffers();
@@ -226,6 +229,46 @@ class EditorApplication : public application::ApplicationBase
                                                                     0,
                                                                     VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
             cmd_buffers_ = cmd_pool_->allocate(2); // MAX_FRAMES_IN_FLIGHT
+
+            // Create command buffer to initialize query pools (must be after cmd_pool_ is created)
+            if (!query_pools_.empty())
+            {
+                VkCommandBufferAllocateInfo alloc_info{};
+                alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+                alloc_info.commandPool = cmd_pool_->handle();
+                alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+                alloc_info.commandBufferCount = 1;
+
+                VkCommandBuffer init_cmd = VK_NULL_HANDLE;
+                vkAllocateCommandBuffers(device->device(), &alloc_info, &init_cmd);
+
+                VkCommandBufferBeginInfo begin_info{};
+                begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+                begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+                vkBeginCommandBuffer(init_cmd, &begin_info);
+
+                for (size_t i = 0; i < query_pools_.size(); ++i)
+                {
+                    vkCmdResetQueryPool(init_cmd, query_pools_[i], 0, 2);
+                }
+
+                vkEndCommandBuffer(init_cmd);
+
+                VkSubmitInfo submit_info{};
+                submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+                submit_info.commandBufferCount = 1;
+                submit_info.pCommandBuffers = &init_cmd;
+
+                vkQueueSubmit(device->graphics_queue(), 1, &submit_info, VK_NULL_HANDLE);
+                vkQueueWaitIdle(device->graphics_queue());
+
+                vkFreeCommandBuffers(device->device(), cmd_pool_->handle(), 1, &init_cmd);
+
+                // Mark all as initialized
+                query_pools_initialized_.resize(query_pools_.size(), true);
+
+                LOG_INFO("GPU query pools initialized and reset");
+            }
 
             // Load mesh
             load_mesh();
@@ -314,11 +357,12 @@ class EditorApplication : public application::ApplicationBase
 
             // Update editor stats
             editor::ImGuiManager::StatsData stats;
-            stats.fps              = current_fps_;
-            stats.frame_time       = 1000.0f / current_fps_;
-            stats.triangle_count   = (mesh_ && mesh_->is_uploaded()) ? mesh_->index_count() / 3 : 12;
-            stats.draw_calls       = 1;
-            stats.current_material = current_material_ ? current_material_->name() : "None";
+            stats.fps                = current_fps_;
+            stats.frame_time         = 1000.0f / current_fps_;
+            stats.gpu_render_time_ms = gpu_render_time_ms_;  // GPU 实际渲染时间
+            stats.triangle_count     = (mesh_ && mesh_->is_uploaded()) ? mesh_->index_count() / 3 : 12;
+            stats.draw_calls         = draw_calls_per_frame_;  // 实际的 draw call 数量
+            stats.current_material   = current_material_ ? current_material_->name() : "None";
             editor_->update_stats(stats);
         }
 
@@ -355,6 +399,43 @@ class EditorApplication : public application::ApplicationBase
 
             // Render scene to viewport texture
             update_mvp_matrix();
+
+            // Read previous frame's GPU time (if available)
+            uint32_t prev_frame = (frame_index + 1) % 2; // Previous frame index
+            if (!query_pools_.empty() && prev_frame < query_pools_.size() && 
+                query_pools_[prev_frame] != VK_NULL_HANDLE && 
+                query_pools_initialized_[prev_frame])
+            {
+                uint64_t timestamps[2] = {0, 0};
+                VkResult result = vkGetQueryPoolResults(
+                    device->device(),
+                    query_pools_[prev_frame],
+                    0, 2,
+                    sizeof(timestamps), timestamps,
+                    sizeof(uint64_t),
+                    VK_QUERY_RESULT_64_BIT);
+
+                if (result == VK_SUCCESS && timestamps[1] > timestamps[0])
+                {
+                    // Get timestamp period (nanoseconds per tick)
+                    VkPhysicalDeviceProperties props;
+                    vkGetPhysicalDeviceProperties(device->physical_device().handle(), &props);
+                    float timestamp_period = props.limits.timestampPeriod; // in nanoseconds
+
+                    // Calculate GPU time in microseconds
+                    uint64_t gpu_time_ns = (timestamps[1] - timestamps[0]) * static_cast<uint64_t>(timestamp_period);
+                    float gpu_time_us = static_cast<float>(gpu_time_ns) / 1000.0f;
+
+                    // Store in ring buffer
+                    gpu_frame_times_[gpu_time_write_index_] = gpu_time_us;
+                    gpu_time_write_index_ = (gpu_time_write_index_ + 1) % GPU_TIME_HISTORY_SIZE;
+
+                    // Calculate smoothed average
+                    float sum = 0.0f;
+                    for (float t : gpu_frame_times_) sum += t;
+                    gpu_render_time_ms_ = (sum / GPU_TIME_HISTORY_SIZE) / 1000.0f; // Convert to ms for display
+                }
+            }
 
             // Record scene command buffer
             VkCommandBuffer scene_cmd = record_scene_command_buffer(frame_index);
@@ -511,13 +592,202 @@ class EditorApplication : public application::ApplicationBase
             cmd_buffers_imgui_.clear();
 
 
-            logger::info("Window resized to " + std::to_string(swap_chain->width()) + "x" +
+                        logger::info("Window resized to " + std::to_string(swap_chain->width()) + "x" +
 
-                         std::to_string(swap_chain->height()) + ", images=" + std::to_string(swap_chain->image_count()));
-        }
 
-    private:
-        void load_mesh()
+                                     std::to_string(swap_chain->height()) + ", images=" + std::to_string(swap_chain->image_count()));
+
+
+                    }
+
+
+            
+
+
+                private:
+
+
+                    // GPU time query initialization
+
+
+                    void initialize_query_pools(std::shared_ptr<vulkan::DeviceManager> device)
+
+
+                    {
+
+
+                        // Check if device supports timestamp queries
+
+
+                        VkPhysicalDeviceProperties props;
+
+
+                        vkGetPhysicalDeviceProperties(device->physical_device().handle(), &props);
+
+
+                        if (props.limits.timestampComputeAndGraphics == VK_FALSE)
+
+
+                        {
+
+
+                            logger::warn("GPU timestamp queries not supported");
+
+
+                            return;
+
+
+                        }
+
+
+            
+
+
+                        uint32_t frame_count = 2; // MAX_FRAMES_IN_FLIGHT
+
+
+                        query_pools_.resize(frame_count);
+
+
+            
+
+
+                        for (uint32_t i = 0; i < frame_count; ++i)
+
+
+                        {
+
+
+                            VkQueryPoolCreateInfo pool_info{};
+
+
+                            pool_info.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+
+
+                            pool_info.queryType = VK_QUERY_TYPE_TIMESTAMP;
+
+
+                            pool_info.queryCount = 2; // Start and end timestamps
+
+
+            
+
+
+                            if (vkCreateQueryPool(device->device(), &pool_info, nullptr, &query_pools_[i]) != VK_SUCCESS)
+
+
+                            {
+
+
+                                logger::error("Failed to create query pool for frame " + std::to_string(i));
+
+
+                            }
+
+
+                        }
+
+
+            
+
+
+                        // Initialize GPU time history buffer
+
+
+                        gpu_frame_times_.resize(GPU_TIME_HISTORY_SIZE, 0.0f);
+
+
+            
+
+
+                        logger::info("GPU timestamp query pools created: " + std::to_string(frame_count));
+
+
+                    }
+
+
+            
+
+
+                            void destroy_query_pools(std::shared_ptr<vulkan::DeviceManager> device)
+
+
+            
+
+
+                            {
+
+
+            
+
+
+                                for (auto& pool : query_pools_)
+
+
+            
+
+
+                                {
+
+
+            
+
+
+                                    if (pool != VK_NULL_HANDLE)
+
+
+            
+
+
+                                    {
+
+
+            
+
+
+                                        vkDestroyQueryPool(device->device(), pool, nullptr);
+
+
+            
+
+
+                                        pool = VK_NULL_HANDLE;
+
+
+            
+
+
+                                    }
+
+
+            
+
+
+                                }
+
+
+            
+
+
+                                query_pools_.clear();
+
+
+            
+
+
+                                query_pools_initialized_.clear();
+
+
+            
+
+
+                            }
+
+
+            
+
+
+                    void load_mesh()
         {
             auto                 device = device_manager();
             rendering::ObjLoader obj_loader;
@@ -686,6 +956,13 @@ class EditorApplication : public application::ApplicationBase
             vkResetCommandBuffer(cmd_handle, 0);
             cmd.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
+            // Reset and write start timestamp
+            if (!query_pools_.empty() && query_pools_[frame_index] != VK_NULL_HANDLE)
+            {
+                vkCmdResetQueryPool(cmd_handle, query_pools_[frame_index], 0, 2);
+                vkCmdWriteTimestamp(cmd_handle, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, query_pools_[frame_index], 0);
+            }
+
             // Execute render graph using RenderTarget
             rendering::RenderContext ctx;
             ctx.frame_index = frame_index;
@@ -697,6 +974,17 @@ class EditorApplication : public application::ApplicationBase
             ctx.device      = device_manager();
 
             render_graph_.execute(cmd, ctx);
+
+            // 统计 draw calls
+            // 目前场景只有一个 CubeRenderPass，它调用 1 次 draw_indexed
+            // 未来可以在这里遍历 render graph 的所有 passes 来统计
+            draw_calls_per_frame_ = 1;  // CubeRenderPass 的 draw call
+
+            // Write end timestamp
+            if (!query_pools_.empty() && query_pools_[frame_index] != VK_NULL_HANDLE)
+            {
+                vkCmdWriteTimestamp(cmd_handle, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, query_pools_[frame_index], 1);
+            }
 
             cmd.end();
             return cmd.handle();
@@ -886,7 +1174,10 @@ class EditorApplication : public application::ApplicationBase
             // 等待设备空闲，确保所有正在执行的命令完成
             vkDeviceWaitIdle(vk_device);
 
-            // 1. 首先清理渲染图系统
+            // 0. 首先销毁 query pools（在 command pool 之前）
+            destroy_query_pools(device_manager_ptr);
+
+            // 1. 清理渲染图系统
             render_graph_.reset();
             cube_pass_ = nullptr;
 
@@ -982,6 +1273,17 @@ class EditorApplication : public application::ApplicationBase
         std::chrono::high_resolution_clock::time_point last_time_;
         uint32_t                                       frame_count_ = 0;
         float                                          current_fps_ = 0.0f;
+
+        // Draw call 统计
+        uint32_t                                       draw_calls_per_frame_ = 0; // 每帧的实际 draw call 数量
+
+        // GPU 时间查询 - 使用 VkQueryPool timestamp queries（准确测量 GPU 执行时间）
+        std::vector<VkQueryPool>                       query_pools_;               // per-frame query pools
+        std::vector<float>                             gpu_frame_times_;           // 每帧的 GPU 时间缓存（用于计算平均）
+        uint32_t                                       gpu_time_write_index_ = 0;  // 环形缓冲区写入位置
+        static constexpr uint32_t GPU_TIME_HISTORY_SIZE = 60;                      // 保存最近60帧的 GPU 时间
+        float                                          gpu_render_time_ms_ = 0.0f; // 平滑后的 GPU 渲染时间
+        std::vector<bool>                              query_pools_initialized_;   // 标记每个 query pool 是否已初始化
 
         // Camera controller
         std::unique_ptr<rendering::OrbitCameraController> camera_controller_;

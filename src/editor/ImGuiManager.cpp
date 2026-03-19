@@ -474,7 +474,7 @@ namespace vulkan_engine::editor
         ImGui::Separator();
         ImGui::Text("FPS: %.1f", stats_data_.fps);
         ImGui::Text("Frame Time: %.2f ms", stats_data_.frame_time);
-
+        ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "GPU Render: %.2f ms", stats_data_.gpu_render_time_ms);
         ImGui::Spacing();
         ImGui::Text("Scene");
         ImGui::Separator();
