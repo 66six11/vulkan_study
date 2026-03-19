@@ -265,18 +265,18 @@ namespace vulkan_engine::vulkan::memory
         return image;
     }
 
-    VmaStats ResourceManager::getStats() const
-    {
-        return allocator_->getStats();
-    }
-
     void ResourceManager::printStats() const
     {
         allocator_->printStats();
         poolManager_->printStats();
     }
 
-    std::vector<VmaAllocator::Budget> ResourceManager::getHeapBudgets() const
+    std::string ResourceManager::buildStatsString(bool detailed) const
+    {
+        return allocator_->buildStatsString(detailed);
+    }
+
+    std::vector<VmaBudget> ResourceManager::getHeapBudgets() const
     {
         return allocator_->getHeapBudgets();
     }
@@ -286,7 +286,7 @@ namespace vulkan_engine::vulkan::memory
         auto budgets = getHeapBudgets();
         for (const auto& budget : budgets)
         {
-            if (budget.budgetBytes - budget.usageBytes >= requiredBytes)
+            if (budget.budget - budget.usage >= requiredBytes)
             {
                 return true;
             }

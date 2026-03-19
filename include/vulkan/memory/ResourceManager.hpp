@@ -66,12 +66,14 @@ namespace vulkan_engine::vulkan::memory
             const MemoryPoolManager& poolManager() const { return *poolManager_; }
 
             // 统计信息
-            VmaStats getStats() const;
-            void     printStats() const;
+            void printStats() const;
+
+            // 获取 JSON 格式的详细统计
+            std::string buildStatsString(bool detailed = true) const;
 
             // 预算查询
-            std::vector<VmaAllocator::Budget> getHeapBudgets() const;
-            bool                              isMemoryAvailable(VkDeviceSize requiredBytes) const;
+            std::vector<VmaBudget> getHeapBudgets() const;
+            bool                   isMemoryAvailable(VkDeviceSize requiredBytes) const;
 
             // 显式资源销毁（通常不需要，RAII 会自动处理）
             void destroyBuffer(VmaBufferPtr buffer);

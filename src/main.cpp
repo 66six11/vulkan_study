@@ -6,6 +6,7 @@
 #include "vulkan/device/SwapChain.hpp"
 #include "vulkan/resources/Buffer.hpp"
 #include "vulkan/resources/DepthBuffer.hpp"
+#include "vulkan/memory/VmaAllocator.hpp"
 #include "vulkan/resources/Framebuffer.hpp"
 #include "vulkan/command/CommandBuffer.hpp"
 #include "vulkan/sync/Synchronization.hpp"
@@ -797,6 +798,15 @@ class EditorApplication : public application::ApplicationBase
         {
             auto device = device_manager();
 
+            // Create VMA Allocator for RenderTarget memory management
+            if (!vma_allocator_)
+            {
+                vulkan::memory::VmaAllocator::CreateInfo allocator_info;
+                allocator_info.enableBudget = true;
+                vma_allocator_              = std::make_shared<vulkan::memory::VmaAllocator>(device, allocator_info);
+                logger::info("VMA Allocator created for RenderTarget");
+            }
+
             // Create RenderTarget
             rendering::RenderTarget::CreateInfo rt_info;
             rt_info.width        = width_;
@@ -807,7 +817,7 @@ class EditorApplication : public application::ApplicationBase
             rt_info.create_depth = true;
 
             render_target_ = std::make_shared<rendering::RenderTarget>();
-            render_target_->initialize(device, rt_info);
+            render_target_->initialize(vma_allocator_, rt_info);
             logger::info("RenderTarget initialized: " + std::to_string(width_) + "x" + std::to_string(height_));
 
             // Create Viewport
@@ -974,6 +984,9 @@ class EditorApplication : public application::ApplicationBase
 
         // RenderPass manager
         std::unique_ptr<vulkan::RenderPassManager> render_pass_manager_;
+
+        // VMA Allocator for memory management
+        std::shared_ptr<vulkan::memory::VmaAllocator> vma_allocator_;
 
         // Viewport and RenderTarget
         std::shared_ptr<rendering::RenderTarget> render_target_;

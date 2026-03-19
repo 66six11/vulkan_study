@@ -151,41 +151,16 @@ namespace vulkan_engine::vulkan::memory
         }
     }
 
-    VmaStats VmaAllocator::getStats() const
-    {
-        VmaStats result = {};
-
-        VmaBudget budgets[VK_MAX_MEMORY_HEAPS];
-        vmaGetHeapBudgets(allocator_, budgets);
-
-        for (uint32_t i = 0; i < deviceManager_->memory_properties().memoryHeapCount; ++i)
-        {
-            result.totalBytesAllocated += budgets[i].statistics.allocationBytes;
-            result.totalBytesUsed += budgets[i].statistics.blockBytes;
-            result.allocationCount += static_cast<uint32_t>(budgets[i].statistics.allocationCount);
-            result.blockCount += static_cast<uint32_t>(budgets[i].statistics.blockCount);
-        }
-
-        return result;
-    }
-
     void VmaAllocator::printStats() const
     {
-        VmaStats stats = getStats();
+        // 使用 VMA 原生预算查询获取统计信息
+        std::vector<VmaBudget> budgets = getHeapBudgets();
 
         std::ostringstream oss;
-        oss << "=== VMA Statistics ===\n";
-        oss << "  Total Allocated: " << stats.totalBytesAllocated / (1024.0 * 1024.0) << " MB\n";
-        oss << "  Total Used: " << stats.totalBytesUsed / (1024.0 * 1024.0) << " MB\n";
-        oss << "  Allocation Count: " << stats.allocationCount << "\n";
-        oss << "  Block Count: " << stats.blockCount;
+        oss << "=== VMA Memory Budgets ===";
         LOG_INFO(oss.str());
 
-        // 打印各堆预算
-        VmaBudget budgets[VK_MAX_MEMORY_HEAPS];
-        vmaGetHeapBudgets(allocator_, budgets);
-
-        for (uint32_t i = 0; i < deviceManager_->memory_properties().memoryHeapCount; ++i)
+        for (uint32_t i = 0; i < budgets.size(); ++i)
         {
             std::ostringstream heapOss;
             heapOss << "  Heap " << i << ": "
@@ -194,20 +169,32 @@ namespace vulkan_engine::vulkan::memory
                     << ((budgets[i].budget > 0) ? (budgets[i].usage * 100 / budgets[i].budget) : 0) << "%)";
             LOG_INFO(heapOss.str());
         }
+
+        // 使用 JSON 字符串获取详细统计
+        std::string detailedStats = buildStatsString(true);
+        LOG_INFO("Detailed VMA Statistics:\n" + detailedStats);
     }
 
-    std::vector<VmaAllocator::Budget> VmaAllocator::getHeapBudgets() const
+    std::string VmaAllocator::buildStatsString(bool detailed) const
     {
-        std::vector<Budget> result;
-        VmaBudget           budgets[VK_MAX_MEMORY_HEAPS];
-        vmaGetHeapBudgets(allocator_, budgets);
+        char* statsString = nullptr;
+        vmaBuildStatsString(allocator_, &statsString, detailed ? VK_TRUE : VK_FALSE);
+        std::string result(statsString);
+        vmaFreeStatsString(allocator_, statsString);
+        return result;
+    }
 
-        result.reserve(deviceManager_->memory_properties().memoryHeapCount);
-        for (uint32_t i = 0; i < deviceManager_->memory_properties().memoryHeapCount; ++i)
-        {
-            result.push_back({budgets[i].budget, budgets[i].usage});
-        }
+    void VmaAllocator::dumpAllocations() const
+    {
+        std::string statsJson = buildStatsString(true);
+        LOG_INFO("=== VMA Detailed Statistics ===\n" + statsJson);
+    }
 
+    std::vector<VmaBudget> VmaAllocator::getHeapBudgets() const
+    {
+        std::vector<VmaBudget> result;
+        result.resize(deviceManager_->memory_properties().memoryHeapCount);
+        vmaGetHeapBudgets(allocator_, result.data());
         return result;
     }
 

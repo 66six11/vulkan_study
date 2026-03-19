@@ -6,6 +6,7 @@ create_vulkan_module(Rendering STATIC)
 
 # 链接依赖
 target_link_libraries(VulkanEngineRendering PUBLIC
+        VulkanEngineVulkan
         VulkanEnginePlatform
         VulkanEngineCore
 )

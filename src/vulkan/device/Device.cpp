@@ -3,7 +3,7 @@
 #endif
 
 #include "vulkan/device/Device.hpp"
-#include <iostream>
+#include "core/utils/Logger.hpp"
 #include <set>
 #include <string>
 #include <vector>
@@ -24,19 +24,19 @@ namespace vulkan_engine::vulkan
     {
         if (!create_instance())
         {
-            std::cerr << "Failed to create Vulkan instance\n";
+            LOG_ERROR("Failed to create Vulkan instance");
             return false;
         }
 
         if (!select_physical_device())
         {
-            std::cerr << "Failed to select physical device\n";
+            LOG_ERROR("Failed to select physical device");
             return false;
         }
 
         if (!create_logical_device())
         {
-            std::cerr << "Failed to create logical device\n";
+            LOG_ERROR("Failed to create logical device");
             return false;
         }
 
@@ -45,6 +45,7 @@ namespace vulkan_engine::vulkan
             setup_debug_messenger();
         }
 
+        LOG_INFO("DeviceManager initialized successfully");
         return true;
     }
 
@@ -340,9 +341,13 @@ namespace vulkan_engine::vulkan
         const VkDebugUtilsMessengerCallbackDataEXT* callback_data,
         void* /*user_data*/)
     {
-        if (message_severity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+        if (message_severity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
         {
-            std::cerr << "Validation layer: " << callback_data->pMessage << std::endl;
+            LOG_ERROR("Vulkan Validation: " << callback_data->pMessage);
+        }
+        else if (message_severity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+        {
+            LOG_WARN("Vulkan Validation: " << callback_data->pMessage);
         }
         return VK_FALSE;
     }

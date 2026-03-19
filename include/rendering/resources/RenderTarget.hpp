@@ -10,6 +10,13 @@ namespace vulkan_engine::vulkan
     class Framebuffer;
 }
 
+namespace vulkan_engine::vulkan::memory
+{
+    // Forward declarations
+    class VmaAllocator;
+    class VmaImage;
+}
+
 namespace vulkan_engine::rendering
 {
     /**
@@ -17,9 +24,11 @@ namespace vulkan_engine::rendering
      * 封装颜色附件和深度附件，用于离屏渲染
      *
      * 职责：
-     * - 管理颜色/深度 Image 和 ImageView
+     * - 管理颜色/深度 Image 和 ImageView（使用 VMA）
      * - 管理自己的 Framebuffer（RAII）
      * - 提供尺寸信息
+     * 
+     * 注意：不直接暴露 Vulkan 原始句柄，通过 VmaImage 访问底层资源
      */
     class RenderTarget
     {
@@ -47,7 +56,7 @@ namespace vulkan_engine::rendering
             RenderTarget& operator=(RenderTarget&& other) noexcept;
 
             // 初始化
-            void initialize(std::shared_ptr<vulkan::DeviceManager> device, const CreateInfo& info);
+            void initialize(std::shared_ptr<vulkan::memory::VmaAllocator> allocator, const CreateInfo& info);
 
             // 清理资源
             void cleanup();
@@ -55,11 +64,7 @@ namespace vulkan_engine::rendering
             // 重新创建（尺寸变化时）
             void resize(uint32_t width, uint32_t height);
 
-            // Getters
-            VkImageView           color_image_view() const { return color_image_view_; }
-            VkImageView           depth_image_view() const { return depth_image_view_; }
-            VkImage               color_image() const { return color_image_; }
-            VkImage               depth_image() const { return depth_image_; }
+            // Getters - 返回格式/尺寸信息
             VkFormat              color_format() const { return color_format_; }
             VkFormat              depth_format() const { return depth_format_; }
             VkExtent2D            extent() const { return {width_, height_}; }
@@ -67,11 +72,20 @@ namespace vulkan_engine::rendering
             uint32_t              height() const { return height_; }
             VkSampleCountFlagBits samples() const { return samples_; }
 
-            bool has_color() const { return color_image_ != VK_NULL_HANDLE; }
-            bool has_depth() const { return depth_image_ != VK_NULL_HANDLE; }
+            // 检查是否有颜色/深度附件
+            bool has_color() const { return color_image_ != nullptr; }
+            bool has_depth() const { return depth_image_ != nullptr; }
 
-            // 获取设备
-            std::shared_ptr<vulkan::DeviceManager> device() const { return device_; }
+            // 获取图像资源（RAII 封装，不暴露原始句柄）
+            std::shared_ptr<vulkan::memory::VmaImage> color_image() const { return color_image_; }
+            std::shared_ptr<vulkan::memory::VmaImage> depth_image() const { return depth_image_; }
+
+            // 获取 ImageView（用于渲染）
+            VkImageView color_image_view() const;
+            VkImageView depth_image_view() const;
+
+            // 获取分配器
+            std::shared_ptr<vulkan::memory::VmaAllocator> allocator() const { return allocator_; }
 
             // Framebuffer 管理
             void          create_framebuffer(VkRenderPass render_pass);
@@ -80,7 +94,7 @@ namespace vulkan_engine::rendering
             VkFramebuffer framebuffer_handle() const;
 
         private:
-            std::shared_ptr<vulkan::DeviceManager> device_;
+            std::shared_ptr<vulkan::memory::VmaAllocator> allocator_;
 
             // 配置
             uint32_t              width_        = 0;
@@ -91,15 +105,13 @@ namespace vulkan_engine::rendering
             bool                  create_color_ = true;
             bool                  create_depth_ = true;
 
-            // 颜色附件
-            VkImage        color_image_      = VK_NULL_HANDLE;
-            VkDeviceMemory color_memory_     = VK_NULL_HANDLE;
-            VkImageView    color_image_view_ = VK_NULL_HANDLE;
+            // 颜色附件（使用 VMA 管理）
+            std::shared_ptr<vulkan::memory::VmaImage> color_image_;
+            VkImageView                               color_image_view_ = VK_NULL_HANDLE;
 
-            // 深度附件
-            VkImage        depth_image_      = VK_NULL_HANDLE;
-            VkDeviceMemory depth_memory_     = VK_NULL_HANDLE;
-            VkImageView    depth_image_view_ = VK_NULL_HANDLE;
+            // 深度附件（使用 VMA 管理）
+            std::shared_ptr<vulkan::memory::VmaImage> depth_image_;
+            VkImageView                               depth_image_view_ = VK_NULL_HANDLE;
 
             // Framebuffer（RAII 管理）
             std::unique_ptr<vulkan::Framebuffer> framebuffer_;

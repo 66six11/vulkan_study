@@ -10,15 +10,7 @@
 
 namespace vulkan_engine::vulkan::memory
 {
-    // VMA 统计信息
-    struct VmaStats
-    {
-        uint64_t totalBytesAllocated = 0;
-        uint64_t totalBytesUsed      = 0;
-        uint32_t allocationCount     = 0;
-        uint32_t poolCount           = 0;
-        uint32_t blockCount          = 0;
-    };
+    // 使用 VMA 原生的 VmaBudget 和 VmaStats
 
     // VMA 池创建信息
     struct PoolCreateInfo
@@ -64,18 +56,18 @@ namespace vulkan_engine::vulkan::memory
             VmaPool createPool(const PoolCreateInfo& info);
             void    destroyPool(VmaPool pool);
 
-            // 统计信息
-            VmaStats getStats() const;
-            void     printStats() const;
+            // 统计信息 - 直接使用 VMA 原生功能
+            // 打印统计信息到日志
+            void printStats() const;
 
-            // 预算查询（GPU 内存预算）
-            struct Budget
-            {
-                VkDeviceSize budgetBytes = 0;
-                VkDeviceSize usageBytes  = 0;
-            };
+            // 获取 JSON 格式的详细统计（适合调试）
+            std::string buildStatsString(bool detailed = true) const;
 
-            std::vector<Budget> getHeapBudgets() const;
+            // 预算查询（GPU 内存预算）- 返回堆预算数组
+            std::vector<VmaBudget> getHeapBudgets() const;
+
+            // 导出详细分配信息到日志
+            void dumpAllocations() const;
 
             // 检查是否支持特定内存类型
             bool supportsMemoryType(uint32_t memoryTypeIndex, VkMemoryPropertyFlags requiredFlags) const;
