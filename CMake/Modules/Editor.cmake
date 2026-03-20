@@ -4,13 +4,13 @@
 
 cmake_minimum_required(VERSION 3.25)
 
-# 收集源文件
+# 收集源文件（新目录结构）
 file(GLOB_RECURSE EDITOR_SOURCES CONFIGURE_DEPENDS
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/editor/*.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/engine/editor/src/*.cpp
 )
 
 file(GLOB_RECURSE EDITOR_HEADERS CONFIGURE_DEPENDS
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/editor/*.hpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/engine/editor/include/*.hpp
 )
 
 # ImGui backend implementation files (from Conan package)
@@ -30,14 +30,13 @@ add_library(VulkanEngineEditor STATIC
 add_library(VulkanEngine::Editor ALIAS VulkanEngineEditor)
 
 # 强封口配置：
-# PUBLIC  - 其他模块只能通过 editor/xxx.hpp 访问本模块公共接口
-# PRIVATE - 内部实现需要访问完整 include/ 目录（兼容现有代码的包含方式）
+# PUBLIC  - 其他模块只能通过 engine/editor/xxx.hpp 访问本模块公共接口
+# PRIVATE - 内部实现需要访问 engine/editor/src/ 目录
 target_include_directories(VulkanEngineEditor
         PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/editor>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/engine/editor/include>
         PRIVATE
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/editor>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/engine/editor/src>
 )
 
 # 链接依赖 - Editor 只依赖上层 Rendering 模块

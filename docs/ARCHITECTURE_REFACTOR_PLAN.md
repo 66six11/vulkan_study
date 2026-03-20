@@ -108,23 +108,23 @@ e                        # 运行时引擎代码
 
 ## 4. 执行计划
 
-### Phase 1: 创建目录结构 ✅
-**状态**: 已完成 (2026-03-20 17:06)  
+### Phase 1: 创建目录结构 
+**状态**:  待开始
 **任务**: 创建所有新的 engine/ 子目录
-- ✅ engine/core/
-- ✅ engine/platform/
-- ✅ engine/rhi/
-- ✅ engine/rendering/
-- ✅ engine/editor/
+-  engine/core/
+-  engine/platform/
+-  engine/rhi/
+-  engine/rendering/
+-  engine/editor/
 
-### Phase 2: 迁移 Core 模块 ✅
-**状态**: 已完成 (2026-03-20 17:10)  
+### Phase 2: 迁移 Core 模块 
+**状态**:  待开始
 **任务**:
-- [x] 移动 include/core → engine/core/include/engine/core
-  - ✅ Logger.hpp (utils/) - 命名空间: engine::logger
-  - ✅ Vector.hpp (math/) - 命名空间: engine::math
-  - ✅ Camera.hpp (math/) - 命名空间: engine::core
-- [x] 更新命名空间 vulkan_engine::* → engine::*
+- [ ] 移动 include/core → engine/core/include/engine/core
+  -  Logger.hpp (utils/) - 命名空间: engine::logger
+  -  Vector.hpp (math/) - 命名空间: engine::math
+  -  Camera.hpp (math/) - 命名空间: engine::core
+- [ ] 更新命名空间 vulkan_engine::* → engine::*
 - [ ] 更新 CMakeLists.txt (Phase 7 统一处理)
 
 ### Phase 3: 迁移 Platform 模块 ⏳

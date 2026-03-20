@@ -12,10 +12,12 @@ set(VULKAN_ENGINE_MODULES
 )
 
 # 创建Vulkan模块的通用函数
+# 支持新的 engine/ 目录结构：
+#   - engine/<module>/include/engine/<module>/  (公共头文件)
+#   - engine/<module>/src/                      (私有实现)
 # 强封口设计：
-#   - PUBLIC:  只暴露 include/<module>/ 目录（模块公共接口）
-#   - PRIVATE: 只暴露 src/<module>/ 目录（模块私有实现）
-#   - 禁止直接暴露整个 include/ 和 src/ 目录
+#   - PUBLIC:  只暴露 engine/<module>/include/engine/<module>/ 目录
+#   - PRIVATE: 暴露 engine/<module>/src/ 目录和内部包含路径
 function(create_vulkan_module MODULE_NAME MODULE_TYPE)
     # MODULE_TYPE可以是:
     #   INTERFACE - 头文件模块
@@ -25,19 +27,26 @@ function(create_vulkan_module MODULE_NAME MODULE_TYPE)
     # 将模块名转换为小写用于目录匹配
     string(TOLOWER ${MODULE_NAME} MODULE_NAME_LOWER)
 
-    # 确定源目录和头目录（严格按模块隔离）
-    set(MODULE_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/${MODULE_NAME_LOWER}")
-    set(MODULE_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include/${MODULE_NAME_LOWER}")
+    # 确定新的 engine/ 目录结构路径
+    set(ENGINE_MODULE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/engine/${MODULE_NAME_LOWER}")
+    set(ENGINE_SRC_DIR "${ENGINE_MODULE_DIR}/src")
+    set(ENGINE_INCLUDE_DIR "${ENGINE_MODULE_DIR}/include")
 
-    # 自动发现源文件
+    # Vulkan模块特殊处理：现在位于 engine/rhi/vulkan/
+    if (MODULE_NAME STREQUAL "Vulkan")
+        set(ENGINE_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/engine/rhi/src/vulkan")
+        set(ENGINE_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/engine/rhi/include")
+    endif ()
+
+    # 自动发现源文件（新结构）
     file(GLOB_RECURSE module_sources
-            "${MODULE_SRC_DIR}/*.cpp"
+            "${ENGINE_SRC_DIR}/*.cpp"
     )
 
-    # 自动发现头文件
+    # 自动发现头文件（新结构）
     file(GLOB_RECURSE module_headers
-            "${MODULE_INCLUDE_DIR}/*.hpp"
-            "${MODULE_INCLUDE_DIR}/*.h"
+            "${ENGINE_INCLUDE_DIR}/*.hpp"
+            "${ENGINE_INCLUDE_DIR}/*.h"
     )
 
     # 打印发现的文件信息（仅在有文件时）
@@ -58,7 +67,7 @@ function(create_vulkan_module MODULE_NAME MODULE_TYPE)
 
         # INTERFACE 模块：只暴露公共头文件目录
         target_include_directories(VulkanEngine${MODULE_NAME} INTERFACE
-                $<BUILD_INTERFACE:${MODULE_INCLUDE_DIR}>
+                $<BUILD_INTERFACE:${ENGINE_INCLUDE_DIR}>
         )
     else ()
         if ("${module_sources}" STREQUAL "")
@@ -70,17 +79,15 @@ function(create_vulkan_module MODULE_NAME MODULE_TYPE)
         )
 
         # 强封口配置：
-        # PUBLIC  - 模块公共接口（其他模块可见）：只暴露本模块的 include/<module>/
-        # PRIVATE - 模块内部使用（仅本模块可见）：暴露整个 include/ 和 src/<module>/
+        # PUBLIC  - 模块公共接口（其他模块可见）：暴露 engine/<module>/include/
+        # PRIVATE - 模块内部使用（仅本模块可见）：暴露 engine/<module>/src/
         target_include_directories(VulkanEngine${MODULE_NAME}
                 PUBLIC
-                # 强封口：其他模块只能通过 <module>/xxx.hpp 访问本模块公共接口
-                $<BUILD_INTERFACE:${MODULE_INCLUDE_DIR}>
+                # 公共接口：其他模块可以通过 <engine/module>/xxx.hpp 访问
+                $<BUILD_INTERFACE:${ENGINE_INCLUDE_DIR}>
                 PRIVATE
-                # 内部实现需要访问完整 include/ 目录（兼容现有代码的包含方式）
-                $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-                # 本模块的 src 目录
-                $<BUILD_INTERFACE:${MODULE_SRC_DIR}>
+                # 内部实现使用本模块的 src 目录
+                $<BUILD_INTERFACE:${ENGINE_SRC_DIR}>
         )
     endif ()
 
