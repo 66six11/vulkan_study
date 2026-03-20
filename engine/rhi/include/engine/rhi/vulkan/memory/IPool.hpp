@@ -1,6 +1,6 @@
 /**
  * @file IPool.hpp
- * @brief 内存池接口
+ * @brief 鍐呭瓨姹犳帴鍙?
  */
 
 #pragma once
@@ -12,88 +12,88 @@
 namespace vulkan_engine::vulkan::memory
 {
     /**
-     * @brief 内存池统计
+     * @brief 鍐呭瓨姹犵粺璁?
      */
     struct PoolStats
     {
-        uint64_t size            = 0; // 总大小
-        uint64_t usedSize        = 0; // 已使用大小
-        uint32_t allocationCount = 0; // 分配数量
-        uint32_t blockCount      = 0; // 内存块数量
-        uint32_t freeCount       = 0; // 空闲分配数量
+        uint64_t size            = 0; // 鎬诲ぇ灏?
+        uint64_t usedSize        = 0; // 宸蹭娇鐢ㄥぇ灏?
+        uint32_t allocationCount = 0; // 鍒嗛厤鏁伴噺
+        uint32_t blockCount      = 0; // 鍐呭瓨鍧楁暟閲?
+        uint32_t freeCount       = 0; // 绌洪棽鍒嗛厤鏁伴噺
     };
 
     /**
-     * @brief 内存池接口
+     * @brief 鍐呭瓨姹犳帴鍙?
      * 
-     * 提供预分配内存块的管理
+     * 鎻愪緵棰勫垎閰嶅唴瀛樺潡鐨勭鐞?
      */
     class IPool
     {
         public:
             virtual ~IPool() = default;
 
-            // 禁止拷贝
+            // 绂佹鎷疯礉
             IPool(const IPool&)            = delete;
             IPool& operator=(const IPool&) = delete;
 
-            // 有效性检查
+            // 鏈夋晥鎬ф鏌?
             [[nodiscard]] virtual bool isValid() const noexcept = 0;
 
-            // 名称访问
+            // 鍚嶇О璁块棶
             [[nodiscard]] virtual const std::string& name() const noexcept = 0;
 
-            // 统计信息
+            // 缁熻淇℃伅
             [[nodiscard]] virtual PoolStats getStats() const = 0;
 
-            // 重置池（释放所有分配但保留内存块）
+            // 閲嶇疆姹狅紙閲婃斁鎵€鏈夊垎閰嶄絾淇濈暀鍐呭瓨鍧楋級
             virtual void reset() = 0;
 
-            // 紧缩（释放未使用的内存块）
+            // 绱х缉锛堥噴鏀炬湭浣跨敤鐨勫唴瀛樺潡锛?
             virtual void trim() = 0;
     };
 
     using IPoolPtr = std::shared_ptr<IPool>;
 
     /**
-     * @brief 内存池管理器接口
+     * @brief 鍐呭瓨姹犵鐞嗗櫒鎺ュ彛
      */
     class IPoolManager
     {
         public:
             virtual ~IPoolManager() = default;
 
-            // 预定义池类型
+            // 棰勫畾涔夋睜绫诲瀷
             enum class PoolType
             {
-                Staging,      // 上传数据
-                Vertex,       // 静态几何
-                Index,        // 索引数据
-                Uniform,      // Uniform 数据
-                Texture,      // 纹理
-                RenderTarget, // 渲染目标
-                Dynamic,      // 动态更新
-                Readback,     // GPU 回读
-                Custom        // 自定义
+                Staging,      // 涓婁紶鏁版嵁
+                Vertex,       // 闈欐€佸嚑浣?
+                Index,        // 绱㈠紩鏁版嵁
+                Uniform,      // Uniform 鏁版嵁
+                Texture,      // 绾圭悊
+                RenderTarget, // 娓叉煋鐩爣
+                Dynamic,      // 鍔ㄦ€佹洿鏂?
+                Readback,     // GPU 鍥炶
+                Custom        // 鑷畾涔?
             };
 
-            // 获取池
+            // 鑾峰彇姹?
             [[nodiscard]] virtual IPool*       getPool(PoolType type) = 0;
             [[nodiscard]] virtual const IPool* getPool(PoolType type) const = 0;
 
-            // 创建自定义池
-            [[nodiscard]] virtual IPoolPtr createPool(const void* createInfo) = 0; // 实现特定的创建信息
+            // 鍒涘缓鑷畾涔夋睜
+            [[nodiscard]] virtual IPoolPtr createPool(const void* createInfo) = 0; // 瀹炵幇鐗瑰畾鐨勫垱寤轰俊鎭?
 
-            // 销毁池
+            // 閿€姣佹睜
             virtual void destroyPool(IPoolPtr pool) = 0;
 
-            // 获取所有池的统计
+            // 鑾峰彇鎵€鏈夋睜鐨勭粺璁?
             virtual void printStats() const = 0;
 
-            // 重置所有池
+            // 閲嶇疆鎵€鏈夋睜
             virtual void resetAll() = 0;
 
-            // 紧缩所有池
+            // 绱х缉鎵€鏈夋睜
             virtual void trimAll() = 0;
     };
 

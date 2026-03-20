@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vulkan/device/Device.hpp"
+#include "engine/rhi/vulkan/device/Device.hpp"
 #include <vulkan/vulkan.h>
 #include <memory>
 #include <unordered_map>
@@ -9,8 +9,8 @@
 namespace vulkan_engine::vulkan
 {
     /**
-     * @brief RenderPass 配置键
-     * 用于缓存和查找 RenderPass
+     * @brief RenderPass 閰嶇疆閿?
+     * 鐢ㄤ簬缂撳瓨鍜屾煡鎵?RenderPass
      */
     struct RenderPassKey
     {
@@ -18,7 +18,7 @@ namespace vulkan_engine::vulkan
         VkFormat              depth_format  = VK_FORMAT_UNDEFINED;
         VkSampleCountFlagBits samples       = VK_SAMPLE_COUNT_1_BIT;
         uint32_t              subpass_count = 1;
-        bool                  offscreen     = false; // 最终布局不同
+        bool                  offscreen     = false; // 鏈€缁堝竷灞€涓嶅悓
 
         bool operator==(const RenderPassKey& other) const
         {
@@ -51,8 +51,8 @@ namespace vulkan_engine::vulkan
     };
 
     /**
-     * @brief RenderPass 管理器
-     * 集中创建和管理 RenderPass，提供缓存机制避免重复创建
+     * @brief RenderPass 绠＄悊鍣?
+     * 闆嗕腑鍒涘缓鍜岀鐞?RenderPass锛屾彁渚涚紦瀛樻満鍒堕伩鍏嶉噸澶嶅垱寤?
      */
     class RenderPassManager
     {
@@ -60,60 +60,60 @@ namespace vulkan_engine::vulkan
             explicit RenderPassManager(std::shared_ptr<DeviceManager> device);
             ~RenderPassManager();
 
-            // 禁止拷贝
+            // 绂佹鎷疯礉
             RenderPassManager(const RenderPassManager&)            = delete;
             RenderPassManager& operator=(const RenderPassManager&) = delete;
 
-            // 允许移动
+            // 鍏佽绉诲姩
             RenderPassManager(RenderPassManager&& other) noexcept;
             RenderPassManager& operator=(RenderPassManager&& other) noexcept;
 
             /**
-         * @brief 获取或创建 Present RenderPass（无深度）
-         * @param color_format 颜色附件格式
-         * @return RenderPass 句柄
+         * @brief 鑾峰彇鎴栧垱寤?Present RenderPass锛堟棤娣卞害锛?
+         * @param color_format 棰滆壊闄勪欢鏍煎紡
+         * @return RenderPass 鍙ユ焺
          */
             VkRenderPass get_present_render_pass(VkFormat color_format);
 
             /**
-         * @brief 获取或创建 Present RenderPass（带深度）
-         * @param color_format 颜色附件格式
-         * @param depth_format 深度附件格式
-         * @return RenderPass 句柄
+         * @brief 鑾峰彇鎴栧垱寤?Present RenderPass锛堝甫娣卞害锛?
+         * @param color_format 棰滆壊闄勪欢鏍煎紡
+         * @param depth_format 娣卞害闄勪欢鏍煎紡
+         * @return RenderPass 鍙ユ焺
          */
             VkRenderPass get_present_render_pass_with_depth(VkFormat color_format, VkFormat depth_format);
 
             /**
-         * @brief 获取或创建 Off-screen RenderPass
-         * 最终布局为 SHADER_READ_ONLY_OPTIMAL，用于渲染到纹理
-         * @param color_format 颜色附件格式
-         * @param depth_format 深度附件格式
-         * @return RenderPass 句柄
+         * @brief 鑾峰彇鎴栧垱寤?Off-screen RenderPass
+         * 鏈€缁堝竷灞€涓?SHADER_READ_ONLY_OPTIMAL锛岀敤浜庢覆鏌撳埌绾圭悊
+         * @param color_format 棰滆壊闄勪欢鏍煎紡
+         * @param depth_format 娣卞害闄勪欢鏍煎紡
+         * @return RenderPass 鍙ユ焺
          */
             VkRenderPass get_offscreen_render_pass(VkFormat color_format, VkFormat depth_format);
 
             /**
-         * @brief 获取或创建 Shadow Map RenderPass
-         * @param depth_format 深度附件格式
-         * @return RenderPass 句柄
+         * @brief 鑾峰彇鎴栧垱寤?Shadow Map RenderPass
+         * @param depth_format 娣卞害闄勪欢鏍煎紡
+         * @return RenderPass 鍙ユ焺
          */
             VkRenderPass get_shadow_render_pass(VkFormat depth_format);
 
             /**
-         * @brief 使用自定义配置获取或创建 RenderPass
-         * @param key RenderPass 配置键
-         * @return RenderPass 句柄
+         * @brief 浣跨敤鑷畾涔夐厤缃幏鍙栨垨鍒涘缓 RenderPass
+         * @param key RenderPass 閰嶇疆閿?
+         * @return RenderPass 鍙ユ焺
          */
             VkRenderPass get_or_create(const RenderPassKey& key);
 
             /**
-         * @brief 清理未使用的 RenderPass
-         * 应在适当时机调用以释放资源
+         * @brief 娓呯悊鏈娇鐢ㄧ殑 RenderPass
+         * 搴斿湪閫傚綋鏃舵満璋冪敤浠ラ噴鏀捐祫婧?
          */
             void cleanup_unused();
 
             /**
-         * @brief 清理所有 RenderPass
+         * @brief 娓呯悊鎵€鏈?RenderPass
          */
             void clear();
 
@@ -121,13 +121,13 @@ namespace vulkan_engine::vulkan
             std::shared_ptr<DeviceManager>                                     device_;
             std::unordered_map<RenderPassKey, VkRenderPass, RenderPassKeyHash> cache_;
 
-            // 创建具体的 RenderPass
+            // 鍒涘缓鍏蜂綋鐨?RenderPass
             VkRenderPass create_present_render_pass(VkFormat color_format);
             VkRenderPass create_present_render_pass_with_depth(VkFormat color_format, VkFormat depth_format);
             VkRenderPass create_offscreen_render_pass(VkFormat color_format, VkFormat depth_format);
             VkRenderPass create_shadow_render_pass(VkFormat depth_format);
 
-            // 通用的 RenderPass 创建辅助函数
+            // 閫氱敤鐨?RenderPass 鍒涘缓杈呭姪鍑芥暟
             VkRenderPass create_render_pass(
                 const std::vector<VkAttachmentDescription>& attachments,
                 const std::vector<VkSubpassDescription>&    subpasses,

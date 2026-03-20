@@ -1,8 +1,8 @@
 #pragma once
 
-#include "vulkan/device/Device.hpp"
-#include "platform/windowing/Window.hpp"
-#include "rendering/Viewport.hpp"
+#include "engine/rhi/vulkan/device/Device.hpp"
+#include "engine/platform/windowing/Window.hpp"
+#include "engine/rendering/Viewport.hpp"
 
 #include <imgui.h>
 #include <memory>
@@ -19,7 +19,7 @@ namespace vulkan_engine::editor
             {
                 float       fps                = 0.0f;
                 float       frame_time         = 0.0f;
-                float       gpu_render_time_ms = 0.0f; // GPU 实际渲染时间（不含等待）
+                float       gpu_render_time_ms = 0.0f; // GPU 瀹為檯娓叉煋鏃堕棿锛堜笉鍚瓑寰咃級
                 uint32_t    triangle_count     = 0;
                 uint32_t    draw_calls         = 0;
                 std::string current_material   = "None";

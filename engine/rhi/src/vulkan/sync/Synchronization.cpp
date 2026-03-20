@@ -1,5 +1,5 @@
-﻿#include "vulkan/sync/Synchronization.hpp"
-#include "vulkan/utils/VulkanError.hpp"
+#include "engine/rhi/vulkan/sync/Synchronization.hpp"
+#include "engine/rhi/vulkan/utils/VulkanError.hpp"
 #include <stdexcept>
 
 namespace vulkan_engine::vulkan

@@ -1,7 +1,7 @@
-#include "vulkan/command/CommandBuffer.hpp"
-#include "vulkan/pipelines/Pipeline.hpp"
-#include "vulkan/resources/Framebuffer.hpp"
-#include "vulkan/utils/VulkanError.hpp"
+#include "engine/rhi/vulkan/command/CommandBuffer.hpp"
+#include "engine/rhi/vulkan/pipelines/Pipeline.hpp"
+#include "engine/rhi/vulkan/resources/Framebuffer.hpp"
+#include "engine/rhi/vulkan/utils/VulkanError.hpp"
 #include <cstring>
 
 namespace vulkan_engine::vulkan

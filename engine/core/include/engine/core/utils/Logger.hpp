@@ -15,7 +15,7 @@
 
 namespace vulkan_engine::logger
 {
-    // 日志级别
+    // 鏃ュ織绾у埆
     enum class Level
     {
         Debug = 0,
@@ -25,7 +25,7 @@ namespace vulkan_engine::logger
         Fatal = 4
     };
 
-    // 日志输出目标
+    // 鏃ュ織杈撳嚭鐩爣
     enum class OutputTarget
     {
         Console = 1 << 0,
@@ -33,7 +33,7 @@ namespace vulkan_engine::logger
         All     = Console | File
     };
 
-    // 日志配置
+    // 鏃ュ織閰嶇疆
     struct Config
     {
         Level        min_level = Level::Debug;
@@ -45,91 +45,91 @@ namespace vulkan_engine::logger
         bool         include_thread_id  = false;
     };
 
-    // 内部实现前向声明
+    // 鍐呴儴瀹炵幇鍓嶅悜澹版槑
     class LoggerImpl;
 
     /**
-     * @brief 线程安全的日志系统
+     * @brief 绾跨▼瀹夊叏鐨勬棩蹇楃郴缁?
      *
-     * 特性：
-     * - 单例模式，全局唯一实例
-     * - 线程安全，支持多线程并发写入
-     * - 支持控制台和文件双输出
-     * - 支持日志级别过滤
-     * - Windows 下正确处理 Unicode 和控制台编码
-     * - 任何情况下都能输出（即使文件打开失败，也会尝试控制台）
+     * 鐗规€э細
+     * - 鍗曚緥妯″紡锛屽叏灞€鍞竴瀹炰緥
+     * - 绾跨▼瀹夊叏锛屾敮鎸佸绾跨▼骞跺彂鍐欏叆
+     * - 鏀寔鎺у埗鍙板拰鏂囦欢鍙岃緭鍑?
+     * - 鏀寔鏃ュ織绾у埆杩囨护
+     * - Windows 涓嬫纭鐞?Unicode 鍜屾帶鍒跺彴缂栫爜
+     * - 浠讳綍鎯呭喌涓嬮兘鑳借緭鍑猴紙鍗充娇鏂囦欢鎵撳紑澶辫触锛屼篃浼氬皾璇曟帶鍒跺彴锛?
      */
     class Logger
     {
         public:
-            // 获取单例实例
+            // 鑾峰彇鍗曚緥瀹炰緥
             static Logger& instance();
 
-            // 初始化（可选，如果不调用会使用默认配置）
+            // 鍒濆鍖栵紙鍙€夛紝濡傛灉涓嶈皟鐢ㄤ細浣跨敤榛樿閰嶇疆锛?
             void initialize(const Config& config);
 
-            // 关闭日志系统（刷新缓冲区，关闭文件）
+            // 鍏抽棴鏃ュ織绯荤粺锛堝埛鏂扮紦鍐插尯锛屽叧闂枃浠讹級
             void shutdown();
 
-            // 检查是否已初始化
+            // 妫€鏌ユ槸鍚﹀凡鍒濆鍖?
             bool is_initialized() const;
 
-            // 设置最小日志级别
+            // 璁剧疆鏈€灏忔棩蹇楃骇鍒?
             void set_level(Level level);
 
-            // 获取当前日志级别
+            // 鑾峰彇褰撳墠鏃ュ織绾у埆
             Level get_level() const;
 
-            // 启用/禁用文件日志
+            // 鍚敤/绂佺敤鏂囦欢鏃ュ織
             void set_file_logging(bool enable, const std::string& file_path = "");
 
-            // 核心日志函数
+            // 鏍稿績鏃ュ織鍑芥暟
             void log(Level level, const std::string& message);
 
-            // 便捷函数
+            // 渚挎嵎鍑芥暟
             void debug(const std::string& message);
             void info(const std::string& message);
             void warn(const std::string& message);
             void error(const std::string& message);
             void fatal(const std::string& message);
 
-            // 刷新缓冲区
+            // 鍒锋柊缂撳啿鍖?
             void flush();
 
-            // 获取当前时间字符串
+            // 鑾峰彇褰撳墠鏃堕棿瀛楃涓?
             static std::string get_timestamp();
 
-            // 获取线程ID字符串
+            // 鑾峰彇绾跨▼ID瀛楃涓?
             static std::string get_thread_id();
 
         private:
             Logger();
             ~Logger();
 
-            // 禁止拷贝和移动
+            // 绂佹鎷疯礉鍜岀Щ鍔?
             Logger(const Logger&)            = delete;
             Logger& operator=(const Logger&) = delete;
             Logger(Logger&&)                 = delete;
             Logger& operator=(Logger&&)      = delete;
 
-            // 内部实现
+            // 鍐呴儴瀹炵幇
             std::unique_ptr<LoggerImpl> impl_;
     };
 
-    // 全局便捷函数（保持向后兼容）
+    // 鍏ㄥ眬渚挎嵎鍑芥暟锛堜繚鎸佸悜鍚庡吋瀹癸級
     inline void debug(const std::string& message) { Logger::instance().debug(message); }
     inline void info(const std::string& message) { Logger::instance().info(message); }
     inline void warn(const std::string& message) { Logger::instance().warn(message); }
     inline void error(const std::string& message) { Logger::instance().error(message); }
     inline void fatal(const std::string& message) { Logger::instance().fatal(message); }
 
-    // 配置函数
+    // 閰嶇疆鍑芥暟
     inline void initialize(const Config& config) { Logger::instance().initialize(config); }
     inline void shutdown() { Logger::instance().shutdown(); }
     inline void set_level(Level level) { Logger::instance().set_level(level); }
     inline void flush() { Logger::instance().flush(); }
 
-    // 宏定义（支持文件名和行号）
+    // 瀹忓畾涔夛紙鏀寔鏂囦欢鍚嶅拰琛屽彿锛?
     #define LOG_DEBUG(msg) \
         do { \
             std::ostringstream _oss; \

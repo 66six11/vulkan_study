@@ -1,6 +1,6 @@
-﻿#pragma once
+#pragma once
 
-#include "application/app/Application.hpp"
+#include "engine/application/app/Application.hpp"
 #include <filesystem>
 #include <string>
 #include <vector>

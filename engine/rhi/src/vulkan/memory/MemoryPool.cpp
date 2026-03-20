@@ -1,5 +1,5 @@
-#include "vulkan/memory/MemoryPool.hpp"
-#include "core/utils/Logger.hpp"
+#include "engine/rhi/vulkan/memory/MemoryPool.hpp"
+#include "engine/core/utils/Logger.hpp"
 #include <sstream>
 
 namespace vulkan_engine::vulkan::memory
@@ -15,7 +15,7 @@ namespace vulkan_engine::vulkan::memory
 
         uint32_t memoryTypeIndex = createInfo.memoryTypeIndex;
 
-        // 如果指定了内存属性但没有指定 memoryTypeIndex，查找合适的类型
+        // 濡傛灉鎸囧畾浜嗗唴瀛樺睘鎬т絾娌℃湁鎸囧畾 memoryTypeIndex锛屾煡鎵惧悎閫傜殑绫诲瀷
         if (createInfo.memoryProperties.has_value() && memoryTypeIndex == UINT32_MAX)
         {
             const auto&           memProps = allocator_->device()->memory_properties();
@@ -112,7 +112,7 @@ namespace vulkan_engine::vulkan::memory
         return stats;
     }
 
-    // MemoryPoolManager 实现
+    // MemoryPoolManager 瀹炵幇
     MemoryPoolManager::MemoryPoolManager(std::shared_ptr<VmaAllocator> allocator)
         : allocator_(std::move(allocator))
     {
@@ -125,7 +125,7 @@ namespace vulkan_engine::vulkan::memory
             return;
         }
 
-        // 创建 Staging Pool (Host Visible)
+        // 鍒涘缓 Staging Pool (Host Visible)
         {
             MemoryPool::CreateInfo info;
             info.memoryProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
@@ -137,7 +137,7 @@ namespace vulkan_engine::vulkan::memory
             pools_[PoolType::Staging] = std::make_shared < MemoryPool > (allocator_, info);
         }
 
-        // 创建 Vertex Pool (Device Local)
+        // 鍒涘缓 Vertex Pool (Device Local)
         {
             MemoryPool::CreateInfo info;
             info.memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
@@ -149,7 +149,7 @@ namespace vulkan_engine::vulkan::memory
             pools_[PoolType::Vertex] = std::make_shared < MemoryPool > (allocator_, info);
         }
 
-        // 创建 Index Pool (Device Local)
+        // 鍒涘缓 Index Pool (Device Local)
         {
             MemoryPool::CreateInfo info;
             info.memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
@@ -161,7 +161,7 @@ namespace vulkan_engine::vulkan::memory
             pools_[PoolType::Index] = std::make_shared < MemoryPool > (allocator_, info);
         }
 
-        // 创建 Uniform Pool (Host Visible)
+        // 鍒涘缓 Uniform Pool (Host Visible)
         {
             MemoryPool::CreateInfo info;
             info.memoryProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
@@ -173,7 +173,7 @@ namespace vulkan_engine::vulkan::memory
             pools_[PoolType::Uniform] = std::make_shared < MemoryPool > (allocator_, info);
         }
 
-        // 创建 Texture Pool (Device Local)
+        // 鍒涘缓 Texture Pool (Device Local)
         {
             MemoryPool::CreateInfo info;
             info.memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
@@ -185,7 +185,7 @@ namespace vulkan_engine::vulkan::memory
             pools_[PoolType::Texture] = std::make_shared < MemoryPool > (allocator_, info);
         }
 
-        // 创建 RenderTarget Pool (Device Local)
+        // 鍒涘缓 RenderTarget Pool (Device Local)
         {
             MemoryPool::CreateInfo info;
             info.memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
@@ -197,7 +197,7 @@ namespace vulkan_engine::vulkan::memory
             pools_[PoolType::RenderTarget] = std::make_shared < MemoryPool > (allocator_, info);
         }
 
-        // 创建 Dynamic Pool (Host Visible, 频繁更新)
+        // 鍒涘缓 Dynamic Pool (Host Visible, 棰戠箒鏇存柊)
         {
             MemoryPool::CreateInfo info;
             info.memoryProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
@@ -209,7 +209,7 @@ namespace vulkan_engine::vulkan::memory
             pools_[PoolType::Dynamic] = std::make_shared < MemoryPool > (allocator_, info);
         }
 
-        // 创建 Readback Pool (Host Visible + Cached)
+        // 鍒涘缓 Readback Pool (Host Visible + Cached)
         {
             MemoryPool::CreateInfo info;
             info.memoryProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT;

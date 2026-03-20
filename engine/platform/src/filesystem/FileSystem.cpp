@@ -1,4 +1,4 @@
-﻿#include "platform/filesystem/FileSystem.hpp"
+#include "engine/platform/filesystem/FileSystem.hpp"
 #include <fstream>
 #include <sstream>
 #include <stdexcept>

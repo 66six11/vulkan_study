@@ -1,5 +1,5 @@
-#include "rendering/render_graph/CubeRenderPass.hpp"
-#include "core/utils/Logger.hpp"
+#include "engine/rendering/render_graph/CubeRenderPass.hpp"
+#include "engine/core/utils/Logger.hpp"
 #include <glm/gtc/matrix_transform.hpp>
 
 namespace vulkan_engine::rendering

@@ -1,7 +1,7 @@
-#include "rendering/render_graph/ViewportRenderPass.hpp"
-#include "rendering/resources/RenderTarget.hpp"
-#include "vulkan/utils/VulkanError.hpp"
-#include "core/utils/Logger.hpp"
+#include "engine/rendering/render_graph/ViewportRenderPass.hpp"
+#include "engine/rendering/resources/RenderTarget.hpp"
+#include "engine/rhi/vulkan/utils/VulkanError.hpp"
+#include "engine/core/utils/Logger.hpp"
 
 namespace vulkan_engine::rendering
 {
@@ -27,12 +27,12 @@ namespace vulkan_engine::rendering
 
     void ViewportRenderPass::setup(RenderGraphBuilder& builder)
     {
-        // 声明资源依赖
+        // 澹版槑璧勬簮渚濊禆
         if (render_target_)
         {
-            // 输出颜色附件
-            // 注意：实际 handle 需要在 RenderGraph 中管理
-            (void)builder; // 暂时不使用
+            // 杈撳嚭棰滆壊闄勪欢
+            // 娉ㄦ剰锛氬疄闄?handle 闇€瑕佸湪 RenderGraph 涓鐞?
+            (void)builder; // 鏆傛椂涓嶄娇鐢?
         }
     }
 
@@ -52,7 +52,7 @@ namespace vulkan_engine::rendering
             return;
         }
 
-        // 准备 clear values
+        // 鍑嗗 clear values
         std::vector<VkClearValue> clear_values;
         if (config_.clear_color && render_target_->has_color())
         {
@@ -79,7 +79,7 @@ namespace vulkan_engine::rendering
                               clear_values
                              );
 
-        // 设置 viewport 和 scissor
+        // 璁剧疆 viewport 鍜?scissor
         cmd.set_viewport(
                          0.0f,
                          0.0f,
@@ -96,7 +96,7 @@ namespace vulkan_engine::rendering
                         render_target_->height()
                        );
 
-        // 执行子通道
+        // 鎵ц瀛愰€氶亾
         for (auto& pass : sub_passes_)
         {
             if (pass)
@@ -111,8 +111,8 @@ namespace vulkan_engine::rendering
 
     std::vector<ImageHandle> ViewportRenderPass::get_image_outputs() const
     {
-        // 返回渲染目标的图像句柄
-        // 注意：这里需要与 RenderGraph 的资源系统整合
+        // 杩斿洖娓叉煋鐩爣鐨勫浘鍍忓彞鏌?
+        // 娉ㄦ剰锛氳繖閲岄渶瑕佷笌 RenderGraph 鐨勮祫婧愮郴缁熸暣鍚?
         return {};
     }
 

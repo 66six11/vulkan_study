@@ -6,27 +6,27 @@
 namespace vulkan_engine::vulkan
 {
     /**
-     * @brief Vulkan 坐标系转换工具
-     * 处理 OpenGL 与 Vulkan 坐标系差异
+     * @brief Vulkan 鍧愭爣绯昏浆鎹㈠伐鍏?
+     * 澶勭悊 OpenGL 涓?Vulkan 鍧愭爣绯诲樊寮?
      */
     class CoordinateTransform
     {
         public:
             /**
-         * @brief 将 OpenGL 投影矩阵转换为 Vulkan 投影矩阵
-         * Vulkan 的 Y 轴指向屏幕下方，与 OpenGL 相反
-         * @param proj OpenGL 风格的投影矩阵
-         * @return Vulkan 风格的投影矩阵
+         * @brief 灏?OpenGL 鎶曞奖鐭╅樀杞崲涓?Vulkan 鎶曞奖鐭╅樀
+         * Vulkan 鐨?Y 杞存寚鍚戝睆骞曚笅鏂癸紝涓?OpenGL 鐩稿弽
+         * @param proj OpenGL 椋庢牸鐨勬姇褰辩煩闃?
+         * @return Vulkan 椋庢牸鐨勬姇褰辩煩闃?
          */
             static glm::mat4 opengl_to_vulkan_projection(const glm::mat4& proj)
             {
                 glm::mat4 result = proj;
-                result[1][1] *= -1.0f; // 翻转 Y 轴
+                result[1][1] *= -1.0f; // 缈昏浆 Y 杞?
                 return result;
             }
 
             /**
-         * @brief 创建 Vulkan 兼容的正交投影矩阵
+         * @brief 鍒涘缓 Vulkan 鍏煎鐨勬浜ゆ姇褰辩煩闃?
          */
             static glm::mat4 ortho(
                 float left,
@@ -41,7 +41,7 @@ namespace vulkan_engine::vulkan
             }
 
             /**
-         * @brief 创建 Vulkan 兼容的透视投影矩阵
+         * @brief 鍒涘缓 Vulkan 鍏煎鐨勯€忚鎶曞奖鐭╅樀
          */
             static glm::mat4 perspective(
                 float fov_y_degrees,
@@ -59,7 +59,7 @@ namespace vulkan_engine::vulkan
             }
 
             /**
-         * @brief 获取 Y 轴翻转矩阵（用于手动处理）
+         * @brief 鑾峰彇 Y 杞寸炕杞煩闃碉紙鐢ㄤ簬鎵嬪姩澶勭悊锛?
          */
             static glm::mat4 get_y_flip_matrix()
             {

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "rendering/render_graph/RenderGraph.hpp"
-#include "rendering/resources/RenderTarget.hpp"
-#include "vulkan/command/CommandBuffer.hpp"
-#include "vulkan/sync/Synchronization.hpp"
+#include "engine/rendering/render_graph/RenderGraph.hpp"
+#include "engine/rendering/resources/RenderTarget.hpp"
+#include "engine/rhi/vulkan/command/CommandBuffer.hpp"
+#include "engine/rhi/vulkan/sync/Synchronization.hpp"
 
 #include <memory>
 #include <functional>
@@ -33,16 +33,16 @@ namespace vulkan_engine::rendering
     class RenderPassBase;
 
     /**
-     * @brief 渲染器类 - Rendering Layer 的核心接口
+     * @brief 娓叉煋鍣ㄧ被 - Rendering Layer 鐨勬牳蹇冩帴鍙?
      * 
-     * 职责：
-     * - 封装所有 Vulkan 渲染细节，向 Application 层提供高层接口
-     * - 管理 RenderGraph、同步、命令缓冲、渲染目标
-     * - 处理窗口大小调整、资源重建
+     * 鑱岃矗锛?
+     * - 灏佽鎵€鏈?Vulkan 娓叉煋缁嗚妭锛屽悜 Application 灞傛彁渚涢珮灞傛帴鍙?
+     * - 绠＄悊 RenderGraph銆佸悓姝ャ€佸懡浠ょ紦鍐层€佹覆鏌撶洰鏍?
+     * - 澶勭悊绐楀彛澶у皬璋冩暣銆佽祫婧愰噸寤?
      * 
-     * 设计原则：
-     * - Application 层只能通过此类进行渲染，不直接接触 Vulkan API
-     * - 所有 Vulkan 裸对象都在内部管理，不暴露给外部
+     * 璁捐鍘熷垯锛?
+     * - Application 灞傚彧鑳介€氳繃姝ょ被杩涜娓叉煋锛屼笉鐩存帴鎺ヨЕ Vulkan API
+     * - 鎵€鏈?Vulkan 瑁稿璞￠兘鍦ㄥ唴閮ㄧ鐞嗭紝涓嶆毚闇茬粰澶栭儴
      */
     class Renderer
     {
@@ -51,22 +51,22 @@ namespace vulkan_engine::rendering
             {
                 uint32_t width                = 1280;
                 uint32_t height               = 720;
-                bool     enable_gpu_timing    = true; // 是否启用 GPU 计时
-                uint32_t max_frames_in_flight = 2;    // 最大并发帧数
+                bool     enable_gpu_timing    = true; // 鏄惁鍚敤 GPU 璁℃椂
+                uint32_t max_frames_in_flight = 2;    // 鏈€澶у苟鍙戝抚鏁?
             };
 
-            // 渲染帧上下文
+            // 娓叉煋甯т笂涓嬫枃
             struct FrameContext
             {
-                uint32_t frame_index;  // 当前帧索引 (0..max_frames_in_flight-1)
-                uint32_t image_index;  // Swap chain image 索引
-                uint32_t width;        // 渲染目标宽度
-                uint32_t height;       // 渲染目标高度
-                float    delta_time;   // 帧时间
-                float    elapsed_time; // 累计时间
+                uint32_t frame_index;  // 褰撳墠甯х储寮?(0..max_frames_in_flight-1)
+                uint32_t image_index;  // Swap chain image 绱㈠紩
+                uint32_t width;        // 娓叉煋鐩爣瀹藉害
+                uint32_t height;       // 娓叉煋鐩爣楂樺害
+                float    delta_time;   // 甯ф椂闂?
+                float    elapsed_time; // 绱鏃堕棿
             };
 
-            // 渲染阶段回调
+            // 娓叉煋闃舵鍥炶皟
             using SceneRenderCallback = std::function<void(vulkan::RenderCommandBuffer & cmd, const FrameContext & ctx)>;
             using UIRenderCallback    = std::function<void()>;
 
@@ -82,14 +82,14 @@ namespace vulkan_engine::rendering
             Renderer(Renderer&& other) noexcept;
             Renderer& operator=(Renderer&& other) noexcept;
 
-            // ========== 生命周期 ==========
+            // ========== 鐢熷懡鍛ㄦ湡 ==========
 
             /**
-         * @brief 初始化渲染器
-         * @param device Vulkan 设备管理器
-         * @param swap_chain 交换链
-         * @param config 渲染器配置
-         * @return 是否初始化成功
+         * @brief 鍒濆鍖栨覆鏌撳櫒
+         * @param device Vulkan 璁惧绠＄悊鍣?
+         * @param swap_chain 浜ゆ崲閾?
+         * @param config 娓叉煋鍣ㄩ厤缃?
+         * @return 鏄惁鍒濆鍖栨垚鍔?
          */
             bool initialize(
                 std::shared_ptr<vulkan::DeviceManager> device,
@@ -97,143 +97,143 @@ namespace vulkan_engine::rendering
                 const Config&                          config = {});
 
             /**
-         * @brief 关闭渲染器并清理资源
+         * @brief 鍏抽棴娓叉煋鍣ㄥ苟娓呯悊璧勬簮
          */
             void shutdown();
 
-            // ========== 渲染循环 ==========
+            // ========== 娓叉煋寰幆 ==========
 
             /**
-         * @brief 开始一帧渲染
-         * @return 是否成功获取 swap chain image
+         * @brief 寮€濮嬩竴甯ф覆鏌?
+         * @return 鏄惁鎴愬姛鑾峰彇 swap chain image
          */
             bool begin_frame();
 
             /**
-         * @brief 渲染场景到 RenderTarget
-         * @param callback 场景渲染回调，在此回调中执行 RenderGraph
+         * @brief 娓叉煋鍦烘櫙鍒?RenderTarget
+         * @param callback 鍦烘櫙娓叉煋鍥炶皟锛屽湪姝ゅ洖璋冧腑鎵ц RenderGraph
          */
             void render_scene(SceneRenderCallback callback);
 
             /**
-         * @brief 渲染 UI 到 SwapChain
-         * @param editor Editor 实例，用于渲染 ImGui
+         * @brief 娓叉煋 UI 鍒?SwapChain
+         * @param editor Editor 瀹炰緥锛岀敤浜庢覆鏌?ImGui
          */
             void render_ui(editor::Editor& editor);
 
             /**
-         * @brief 结束一帧渲染并提交到 GPU
+         * @brief 缁撴潫涓€甯ф覆鏌撳苟鎻愪氦鍒?GPU
          */
             void end_frame();
 
-            // ========== 渲染图管理 ==========
+            // ========== 娓叉煋鍥剧鐞?==========
 
             /**
-         * @brief 获取 RenderGraph 构建器
+         * @brief 鑾峰彇 RenderGraph 鏋勫缓鍣?
          */
             RenderGraphBuilder& render_graph_builder() { return render_graph_.builder(); }
 
             /**
-         * @brief 获取 RenderGraph
+         * @brief 鑾峰彇 RenderGraph
          */
             RenderGraph& render_graph() { return render_graph_; }
 
             /**
-         * @brief 编译 RenderGraph（在添加所有 Pass 后调用）
+         * @brief 缂栬瘧 RenderGraph锛堝湪娣诲姞鎵€鏈?Pass 鍚庤皟鐢級
          */
             void compile_render_graph();
 
             /**
-         * @brief 重置 RenderGraph
+         * @brief 閲嶇疆 RenderGraph
          */
             void reset_render_graph();
 
-            // ========== 渲染目标 ==========
+            // ========== 娓叉煋鐩爣 ==========
 
             /**
-         * @brief 获取场景渲染目标（用于离屏渲染）
+         * @brief 鑾峰彇鍦烘櫙娓叉煋鐩爣锛堢敤浜庣灞忔覆鏌擄級
          */
             std::shared_ptr<RenderTarget> render_target() const { return render_target_; }
 
             /**
-         * @brief 获取视口
+         * @brief 鑾峰彇瑙嗗彛
          */
             std::shared_ptr<Viewport> viewport() const { return viewport_; }
 
             /**
-         * @brief 获取离屏渲染的 RenderPass（用于材质初始化）
-         * @return VkRenderPass 离屏渲染的 RenderPass 句柄
+         * @brief 鑾峰彇绂诲睆娓叉煋鐨?RenderPass锛堢敤浜庢潗璐ㄥ垵濮嬪寲锛?
+         * @return VkRenderPass 绂诲睆娓叉煋鐨?RenderPass 鍙ユ焺
          */
             VkRenderPass get_offscreen_render_pass() const;
 
             /**
-         * @brief 获取交换链渲染的 RenderPass（带深度）
-         * @return VkRenderPass 交换链渲染的 RenderPass 句柄
+         * @brief 鑾峰彇浜ゆ崲閾炬覆鏌撶殑 RenderPass锛堝甫娣卞害锛?
+         * @return VkRenderPass 浜ゆ崲閾炬覆鏌撶殑 RenderPass 鍙ユ焺
          */
             VkRenderPass get_present_render_pass() const;
 
             /**
-         * @brief 调整渲染目标尺寸
+         * @brief 璋冩暣娓叉煋鐩爣灏哄
          */
             void resize(uint32_t width, uint32_t height);
 
             /**
-         * @brief 检查是否有待处理的尺寸调整
+         * @brief 妫€鏌ユ槸鍚︽湁寰呭鐞嗙殑灏哄璋冩暣
          */
             bool is_resize_pending() const { return resize_pending_; }
 
             /**
-         * @brief 应用待处理的尺寸调整（应在帧边界调用）
+         * @brief 搴旂敤寰呭鐞嗙殑灏哄璋冩暣锛堝簲鍦ㄥ抚杈圭晫璋冪敤锛?
          */
             void apply_pending_resize();
 
-            // ========== GPU 计时 ==========
+            // ========== GPU 璁℃椂 ==========
 
             /**
-         * @brief 获取上一帧的 GPU 渲染时间（毫秒）
-         * @return GPU 时间，如果未启用则返回 0
+         * @brief 鑾峰彇涓婁竴甯х殑 GPU 娓叉煋鏃堕棿锛堟绉掞級
+         * @return GPU 鏃堕棿锛屽鏋滄湭鍚敤鍒欒繑鍥?0
          */
             float get_gpu_render_time_ms() const { return gpu_render_time_ms_; }
 
             /**
-         * @brief 是否启用 GPU 计时
+         * @brief 鏄惁鍚敤 GPU 璁℃椂
          */
             bool is_gpu_timing_enabled() const { return !query_pools_.empty(); }
 
-            // ========== 状态查询 ==========
+            // ========== 鐘舵€佹煡璇?==========
 
             /**
-         * @brief 检查是否已初始化
+         * @brief 妫€鏌ユ槸鍚﹀凡鍒濆鍖?
          */
             bool is_initialized() const { return initialized_; }
 
             /**
-         * @brief 获取当前帧索引
+         * @brief 鑾峰彇褰撳墠甯х储寮?
          */
             uint32_t current_frame() const { return current_frame_; }
 
             /**
-         * @brief 获取当前 swap chain image 索引
+         * @brief 鑾峰彇褰撳墠 swap chain image 绱㈠紩
          */
             uint32_t current_image() const { return current_image_; }
 
             /**
-         * @brief 获取配置
+         * @brief 鑾峰彇閰嶇疆
          */
             const Config& config() const { return config_; }
 
             /**
-         * @brief 获取设备
+         * @brief 鑾峰彇璁惧
          */
             std::shared_ptr<vulkan::DeviceManager> device() const { return device_; }
 
             /**
-         * @brief 获取交换链
+         * @brief 鑾峰彇浜ゆ崲閾?
          */
             std::shared_ptr<vulkan::SwapChain> swap_chain() const { return swap_chain_; }
 
         private:
-            // 初始化子系统
+            // 鍒濆鍖栧瓙绯荤粺
             bool initialize_vma_allocator();
             bool initialize_depth_buffer();
             bool initialize_render_pass_manager();
@@ -244,74 +244,74 @@ namespace vulkan_engine::rendering
             bool initialize_render_target();
             bool initialize_viewport();
 
-            // 渲染子步骤
+            // 娓叉煋瀛愭楠?
             void record_scene_commands(SceneRenderCallback callback);
             void record_ui_commands_dynamic(editor::Editor& editor);
             void submit_scene_commands();
             void submit_ui_commands_dynamic();
 
-            // GPU 计时
+            // GPU 璁℃椂
             void update_gpu_timing();
             void destroy_query_pools();
 
-            // 重建资源
+            // 閲嶅缓璧勬簮
             void recreate_swap_chain_resources();
             void recreate_render_target();
 
-            // 清理
+            // 娓呯悊
             void cleanup_resources();
 
         private:
-            // 配置
+            // 閰嶇疆
             Config config_;
             bool   initialized_ = false;
 
-            // 设备 & 交换链
+            // 璁惧 & 浜ゆ崲閾?
             std::shared_ptr<vulkan::DeviceManager> device_;
             std::shared_ptr<vulkan::SwapChain>     swap_chain_;
 
-            // VMA 分配器
+            // VMA 鍒嗛厤鍣?
             std::shared_ptr<vulkan::memory::VmaAllocator> vma_allocator_;
 
-            // 渲染图
+            // 娓叉煋鍥?
             RenderGraph render_graph_;
 
-            // 渲染目标 & 视口
+            // 娓叉煋鐩爣 & 瑙嗗彛
             std::shared_ptr<RenderTarget> render_target_;
             std::shared_ptr<Viewport>     viewport_;
 
-            // 深度缓冲
+            // 娣卞害缂撳啿
             std::unique_ptr<vulkan::DepthBuffer> depth_buffer_;
 
-            // RenderPass 管理
+            // RenderPass 绠＄悊
             std::unique_ptr<vulkan::RenderPassManager> render_pass_manager_;
 
-            // 同步
+            // 鍚屾
             std::unique_ptr<vulkan::FrameSyncManager> frame_sync_;
 
-            // 命令缓冲
+            // 鍛戒护缂撳啿
             std::unique_ptr<vulkan::RenderCommandPool> scene_cmd_pool_;
             std::unique_ptr<vulkan::RenderCommandPool> ui_cmd_pool_;
             std::vector<vulkan::RenderCommandBuffer>   scene_cmd_buffers_;
             std::vector<vulkan::RenderCommandBuffer>   ui_cmd_buffers_;
 
-            // Framebuffer 池
+            // Framebuffer 姹?
             std::unique_ptr<vulkan::FramebufferPool> framebuffer_pool_;
 
-            // GPU 计时
+            // GPU 璁℃椂
             std::vector<VkQueryPool>  query_pools_;     // per-frame query pools
-            std::vector<float>        gpu_frame_times_; // 历史记录
+            std::vector<float>        gpu_frame_times_; // 鍘嗗彶璁板綍
             uint32_t                  gpu_time_write_index_ = 0;
             float                     gpu_render_time_ms_   = 0.0f;
             static constexpr uint32_t GPU_TIME_HISTORY_SIZE = 60;
             std::vector<bool>         query_pools_initialized_;
 
-            // 帧状态
+            // 甯х姸鎬?
             uint32_t current_frame_ = 0;
             uint32_t current_image_ = 0;
             bool     frame_started_ = false;
 
-            // 尺寸调整
+            // 灏哄璋冩暣
             bool     resize_pending_ = false;
             uint32_t pending_width_  = 0;
             uint32_t pending_height_ = 0;

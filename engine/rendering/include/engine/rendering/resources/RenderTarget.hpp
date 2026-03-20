@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vulkan/device/Device.hpp"
+#include "engine/rhi/vulkan/device/Device.hpp"
 #include <vulkan/vulkan.h>
 #include <memory>
 
@@ -20,15 +20,15 @@ namespace vulkan_engine::vulkan::memory
 namespace vulkan_engine::rendering
 {
     /**
-     * @brief 渲染目标
-     * 封装颜色附件和深度附件，用于离屏渲染
+     * @brief 娓叉煋鐩爣
+     * 灏佽棰滆壊闄勪欢鍜屾繁搴﹂檮浠讹紝鐢ㄤ簬绂诲睆娓叉煋
      *
-     * 职责：
-     * - 管理颜色/深度 Image 和 ImageView（使用 VMA）
-     * - 管理自己的 Framebuffer（RAII）
-     * - 提供尺寸信息
+     * 鑱岃矗锛?
+     * - 绠＄悊棰滆壊/娣卞害 Image 鍜?ImageView锛堜娇鐢?VMA锛?
+     * - 绠＄悊鑷繁鐨?Framebuffer锛圧AII锛?
+     * - 鎻愪緵灏哄淇℃伅
      * 
-     * 注意：不直接暴露 Vulkan 原始句柄，通过 VmaImage 访问底层资源
+     * 娉ㄦ剰锛氫笉鐩存帴鏆撮湶 Vulkan 鍘熷鍙ユ焺锛岄€氳繃 VmaImage 璁块棶搴曞眰璧勬簮
      */
     class RenderTarget
     {
@@ -40,31 +40,31 @@ namespace vulkan_engine::rendering
                 VkFormat              color_format = VK_FORMAT_B8G8R8A8_UNORM;
                 VkFormat              depth_format = VK_FORMAT_D32_SFLOAT;
                 VkSampleCountFlagBits samples      = VK_SAMPLE_COUNT_1_BIT;
-                bool                  create_color = true; // 是否创建颜色附件
-                bool                  create_depth = true; // 是否创建深度附件
+                bool                  create_color = true; // 鏄惁鍒涘缓棰滆壊闄勪欢
+                bool                  create_depth = true; // 鏄惁鍒涘缓娣卞害闄勪欢
             };
 
             RenderTarget();
             ~RenderTarget();
 
-            // 禁止拷贝
+            // 绂佹鎷疯礉
             RenderTarget(const RenderTarget&)            = delete;
             RenderTarget& operator=(const RenderTarget&) = delete;
 
-            // 允许移动
+            // 鍏佽绉诲姩
             RenderTarget(RenderTarget&& other) noexcept;
             RenderTarget& operator=(RenderTarget&& other) noexcept;
 
-            // 初始化
+            // 鍒濆鍖?
             void initialize(std::shared_ptr<vulkan::memory::VmaAllocator> allocator, const CreateInfo& info);
 
-            // 清理资源
+            // 娓呯悊璧勬簮
             void cleanup();
 
-            // 重新创建（尺寸变化时）
+            // 閲嶆柊鍒涘缓锛堝昂瀵稿彉鍖栨椂锛?
             void resize(uint32_t width, uint32_t height);
 
-            // Getters - 返回格式/尺寸信息
+            // Getters - 杩斿洖鏍煎紡/灏哄淇℃伅
             VkFormat              color_format() const { return color_format_; }
             VkFormat              depth_format() const { return depth_format_; }
             VkExtent2D            extent() const { return {width_, height_}; }
@@ -72,22 +72,22 @@ namespace vulkan_engine::rendering
             uint32_t              height() const { return height_; }
             VkSampleCountFlagBits samples() const { return samples_; }
 
-            // 检查是否有颜色/深度附件
+            // 妫€鏌ユ槸鍚︽湁棰滆壊/娣卞害闄勪欢
             bool has_color() const { return color_image_ != nullptr; }
             bool has_depth() const { return depth_image_ != nullptr; }
 
-            // 获取图像资源（RAII 封装，不暴露原始句柄）
+            // 鑾峰彇鍥惧儚璧勬簮锛圧AII 灏佽锛屼笉鏆撮湶鍘熷鍙ユ焺锛?
             std::shared_ptr<vulkan::memory::VmaImage> color_image() const { return color_image_; }
             std::shared_ptr<vulkan::memory::VmaImage> depth_image() const { return depth_image_; }
 
-            // 获取 ImageView（用于渲染）
+            // 鑾峰彇 ImageView锛堢敤浜庢覆鏌擄級
             VkImageView color_image_view() const;
             VkImageView depth_image_view() const;
 
-            // 获取分配器
+            // 鑾峰彇鍒嗛厤鍣?
             std::shared_ptr<vulkan::memory::VmaAllocator> allocator() const { return allocator_; }
 
-            // Framebuffer 管理
+            // Framebuffer 绠＄悊
             void          create_framebuffer(VkRenderPass render_pass);
             void          destroy_framebuffer();
             bool          has_framebuffer() const;
@@ -96,7 +96,7 @@ namespace vulkan_engine::rendering
         private:
             std::shared_ptr<vulkan::memory::VmaAllocator> allocator_;
 
-            // 配置
+            // 閰嶇疆
             uint32_t              width_        = 0;
             uint32_t              height_       = 0;
             VkFormat              color_format_ = VK_FORMAT_UNDEFINED;
@@ -105,15 +105,15 @@ namespace vulkan_engine::rendering
             bool                  create_color_ = true;
             bool                  create_depth_ = true;
 
-            // 颜色附件（使用 VMA 管理）
+            // 棰滆壊闄勪欢锛堜娇鐢?VMA 绠＄悊锛?
             std::shared_ptr<vulkan::memory::VmaImage> color_image_;
             VkImageView                               color_image_view_ = VK_NULL_HANDLE;
 
-            // 深度附件（使用 VMA 管理）
+            // 娣卞害闄勪欢锛堜娇鐢?VMA 绠＄悊锛?
             std::shared_ptr<vulkan::memory::VmaImage> depth_image_;
             VkImageView                               depth_image_view_ = VK_NULL_HANDLE;
 
-            // Framebuffer（RAII 管理）
+            // Framebuffer锛圧AII 绠＄悊锛?
             std::unique_ptr<vulkan::Framebuffer> framebuffer_;
 
             void create_images();

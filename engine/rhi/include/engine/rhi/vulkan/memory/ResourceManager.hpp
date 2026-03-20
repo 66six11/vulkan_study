@@ -1,16 +1,16 @@
 #pragma once
 
-#include "vulkan/memory/VmaAllocator.hpp"
-#include "vulkan/memory/VmaBuffer.hpp"
-#include "vulkan/memory/VmaImage.hpp"
-#include "vulkan/memory/MemoryPool.hpp"
+#include "engine/rhi/vulkan/memory/VmaAllocator.hpp"
+#include "engine/rhi/vulkan/memory/VmaBuffer.hpp"
+#include "engine/rhi/vulkan/memory/VmaImage.hpp"
+#include "engine/rhi/vulkan/memory/MemoryPool.hpp"
 #include <memory>
 #include <unordered_map>
 #include <string>
 
 namespace vulkan_engine::vulkan::memory
 {
-    // 资源管理器 - 统一管理所有 VMA 资源
+    // 璧勬簮绠＄悊鍣?- 缁熶竴绠＄悊鎵€鏈?VMA 璧勬簮
     class ResourceManager
     {
         public:
@@ -28,11 +28,11 @@ namespace vulkan_engine::vulkan::memory
             ResourceManager(const ResourceManager&)            = delete;
             ResourceManager& operator=(const ResourceManager&) = delete;
 
-            // 获取 VMA 分配器
+            // 鑾峰彇 VMA 鍒嗛厤鍣?
             std::shared_ptr<VmaAllocator>  allocator() const { return allocator_; }
             std::shared_ptr<DeviceManager> device() const { return device_; }
 
-            // Buffer 创建便捷方法
+            // Buffer 鍒涘缓渚挎嵎鏂规硶
             VmaBufferPtr createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, const VmaAllocationCreateInfo& allocInfo);
             VmaBufferPtr createStagingBuffer(VkDeviceSize size);
             VmaBufferPtr createVertexBuffer(VkDeviceSize size);
@@ -40,7 +40,7 @@ namespace vulkan_engine::vulkan::memory
             VmaBufferPtr createUniformBuffer(VkDeviceSize size, bool persistentMap = true);
             VmaBufferPtr createStorageBuffer(VkDeviceSize size, bool hostVisible = false);
 
-            // Image 创建便捷方法
+            // Image 鍒涘缓渚挎嵎鏂规硶
             VmaImagePtr createImage(const VkImageCreateInfo& imageInfo, const VmaAllocationCreateInfo& allocInfo);
             VmaImagePtr createColorAttachment(
                 uint32_t              width,
@@ -61,25 +61,25 @@ namespace vulkan_engine::vulkan::memory
                 uint32_t arrayLayers = 1);
             VmaImagePtr createCubemap(uint32_t size, VkFormat format, uint32_t mipLevels = 1);
 
-            // 内存池访问
+            // 鍐呭瓨姹犺闂?
             MemoryPoolManager&       poolManager() { return *poolManager_; }
             const MemoryPoolManager& poolManager() const { return *poolManager_; }
 
-            // 统计信息
+            // 缁熻淇℃伅
             void printStats() const;
 
-            // 获取 JSON 格式的详细统计
+            // 鑾峰彇 JSON 鏍煎紡鐨勮缁嗙粺璁?
             std::string buildStatsString(bool detailed = true) const;
 
-            // 预算查询
+            // 棰勭畻鏌ヨ
             std::vector<VmaBudget> getHeapBudgets() const;
             bool                   isMemoryAvailable(VkDeviceSize requiredBytes) const;
 
-            // 显式资源销毁（通常不需要，RAII 会自动处理）
+            // 鏄惧紡璧勬簮閿€姣侊紙閫氬父涓嶉渶瑕侊紝RAII 浼氳嚜鍔ㄥ鐞嗭級
             void destroyBuffer(VmaBufferPtr buffer);
             void destroyImage(VmaImagePtr image);
 
-            // 强制垃圾回收（释放未使用的内存块）
+            // 寮哄埗鍨冨溇鍥炴敹锛堥噴鏀炬湭浣跨敤鐨勫唴瀛樺潡锛?
             void defragment();
             void flush();
 
@@ -88,7 +88,7 @@ namespace vulkan_engine::vulkan::memory
             std::shared_ptr<VmaAllocator>      allocator_;
             std::unique_ptr<MemoryPoolManager> poolManager_;
 
-            // 追踪所有资源（用于调试和统计）
+            // 杩借釜鎵€鏈夎祫婧愶紙鐢ㄤ簬璋冭瘯鍜岀粺璁★級
             std::unordered_map<VmaBuffer*, VmaBufferPtr> buffers_;
             std::unordered_map<VmaImage*, VmaImagePtr>   images_;
     };

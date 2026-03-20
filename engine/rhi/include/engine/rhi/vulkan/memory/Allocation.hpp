@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vulkan/memory/VmaAllocator.hpp"
+#include "engine/rhi/vulkan/memory/VmaAllocator.hpp"
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
 #include <memory>
@@ -8,21 +8,21 @@
 
 namespace vulkan_engine::vulkan::memory
 {
-    // 前向声明
+    // 鍓嶅悜澹版槑
     class VmaBuffer;
     class VmaImage;
 
-    // VMA 分配信息
+    // VMA 鍒嗛厤淇℃伅
     struct AllocationInfo
     {
         VkDeviceSize size               = 0;
         VkDeviceSize alignment          = 0;
         uint32_t     memoryTypeIndex    = 0;
-        void*        mappedData         = nullptr; // 如果已映射
+        void*        mappedData         = nullptr; // 濡傛灉宸叉槧灏?
         bool         isPersistentMapped = false;
     };
 
-    // VMA 分配的 RAII 包装器
+    // VMA 鍒嗛厤鐨?RAII 鍖呰鍣?
     class Allocation
     {
         public:
@@ -38,58 +38,58 @@ namespace vulkan_engine::vulkan::memory
             Allocation(Allocation&& other) noexcept;
             Allocation& operator=(Allocation&& other) noexcept;
 
-            // 获取分配信息
+            // 鑾峰彇鍒嗛厤淇℃伅
             AllocationInfo getInfo() const;
             VkDeviceSize   size() const;
             bool           isValid() const noexcept { return allocation_ != VK_NULL_HANDLE; }
 
-            // 内存映射（仅对 host-visible 内存）
+            // 鍐呭瓨鏄犲皠锛堜粎瀵?host-visible 鍐呭瓨锛?
             void* map();
             void  unmap();
             bool  isMapped() const noexcept { return mappedData_ != nullptr; }
 
-            // 刷新/使非相干内存
+            // 鍒锋柊/浣块潪鐩稿共鍐呭瓨
             void flush(VkDeviceSize offset = 0, VkDeviceSize size = VK_WHOLE_SIZE);
             void invalidate(VkDeviceSize offset = 0, VkDeviceSize size = VK_WHOLE_SIZE);
 
-            // 获取原生分配句柄
+            // 鑾峰彇鍘熺敓鍒嗛厤鍙ユ焺
             VmaAllocation handle() const noexcept { return allocation_; }
 
-            // 获取分配器
+            // 鑾峰彇鍒嗛厤鍣?
             std::shared_ptr<VmaAllocator> allocator() const { return allocator_.lock(); }
 
         private:
             std::weak_ptr<VmaAllocator> allocator_;
             VmaAllocation               allocation_       = VK_NULL_HANDLE;
             void*                       mappedData_       = nullptr;
-            bool                        explicitlyMapped_ = false; // 区分显式映射和持久映射
+            bool                        explicitlyMapped_ = false; // 鍖哄垎鏄惧紡鏄犲皠鍜屾寔涔呮槧灏?
 
             void cleanup() noexcept;
     };
 
     using AllocationPtr = std::shared_ptr<Allocation>;
 
-    // 分配创建标志辅助类
+    // 鍒嗛厤鍒涘缓鏍囧織杈呭姪绫?
     class AllocationBuilder
     {
         public:
             AllocationBuilder() = default;
 
-            // 使用模式
+            // 浣跨敤妯″紡
             AllocationBuilder& hostVisible(bool persistentMap = false);
             AllocationBuilder& deviceLocal();
             AllocationBuilder& hostCached();
-            AllocationBuilder& sequentialWrite(); // 优化顺序写入
+            AllocationBuilder& sequentialWrite(); // 浼樺寲椤哄簭鍐欏叆
             AllocationBuilder& strategyMinMemory();
             AllocationBuilder& strategyMinTime();
             AllocationBuilder& mapped();
 
-            // 高级选项
+            // 楂樼骇閫夐」
             AllocationBuilder& pool(VmaPool pool);
             AllocationBuilder& userData(void* data);
             AllocationBuilder& priority(float priority); // 0.0 - 1.0
 
-            // 构建
+            // 鏋勫缓
             VmaAllocationCreateInfo build() const noexcept { return info_; }
 
         private:

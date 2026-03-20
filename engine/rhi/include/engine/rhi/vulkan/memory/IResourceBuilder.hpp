@@ -1,42 +1,42 @@
 /**
  * @file IResourceBuilder.hpp
- * @brief 资源构建器接口
+ * @brief 璧勬簮鏋勫缓鍣ㄦ帴鍙?
  */
 
 #pragma once
 
-#include "vulkan/memory/IBuffer.hpp"
-#include "vulkan/memory/IImage.hpp"
+#include "engine/rhi/vulkan/memory/IBuffer.hpp"
+#include "engine/rhi/vulkan/memory/IImage.hpp"
 #include <memory>
 
 namespace vulkan_engine::vulkan::memory
 {
-    // 前向声明
+    // 鍓嶅悜澹版槑
     class IAllocator;
 
     /**
-     * @brief Buffer 构建器接口
+     * @brief Buffer 鏋勫缓鍣ㄦ帴鍙?
      * 
-     * 使用 Builder 模式创建 Buffer
+     * 浣跨敤 Builder 妯″紡鍒涘缓 Buffer
      */
     class IBufferBuilder
     {
         public:
             virtual ~IBufferBuilder() = default;
 
-            // 基本配置
+            // 鍩烘湰閰嶇疆
             virtual IBufferBuilder& size(uint64_t size) = 0;
             virtual IBufferBuilder& usage(uint32_t usage) = 0; // VkBufferUsageFlags
 
-            // 内存属性配置
+            // 鍐呭瓨灞炴€ч厤缃?
             virtual IBufferBuilder& hostVisible(bool persistentMap = false) = 0;
             virtual IBufferBuilder& hostCached() = 0;
             virtual IBufferBuilder& deviceLocal() = 0;
 
-            // 构建
+            // 鏋勫缓
             [[nodiscard]] virtual IBufferPtr build() = 0;
 
-            // 预设配置
+            // 棰勮閰嶇疆
             [[nodiscard]] virtual IBufferPtr createStagingBuffer(uint64_t size) = 0;
             [[nodiscard]] virtual IBufferPtr createVertexBuffer(uint64_t size) = 0;
             [[nodiscard]] virtual IBufferPtr createIndexBuffer(uint64_t size) = 0;
@@ -47,35 +47,35 @@ namespace vulkan_engine::vulkan::memory
     using IBufferBuilderPtr = std::unique_ptr<IBufferBuilder>;
 
     /**
-     * @brief Image 构建器接口
+     * @brief Image 鏋勫缓鍣ㄦ帴鍙?
      */
     class IImageBuilder
     {
         public:
             virtual ~IImageBuilder() = default;
 
-            // 尺寸配置
+            // 灏哄閰嶇疆
             virtual IImageBuilder& width(uint32_t width) = 0;
             virtual IImageBuilder& height(uint32_t height) = 0;
             virtual IImageBuilder& depth(uint32_t depth) = 0;
 
-            // 格式和用途
+            // 鏍煎紡鍜岀敤閫?
             virtual IImageBuilder& format(int format) = 0;        // VkFormat
             virtual IImageBuilder& usage(uint32_t usage) = 0;     // VkImageUsageFlags
             virtual IImageBuilder& samples(uint32_t samples) = 0; // VkSampleCountFlagBits
 
-            // Mipmap 和数组
+            // Mipmap 鍜屾暟缁?
             virtual IImageBuilder& mipLevels(uint32_t levels) = 0;
             virtual IImageBuilder& arrayLayers(uint32_t layers) = 0;
 
-            // 内存属性
+            // 鍐呭瓨灞炴€?
             virtual IImageBuilder& deviceLocal() = 0;
             virtual IImageBuilder& hostVisible() = 0;
 
-            // 构建
+            // 鏋勫缓
             [[nodiscard]] virtual IImagePtr build() = 0;
 
-            // 预设配置
+            // 棰勮閰嶇疆
             [[nodiscard]] virtual IImagePtr createColorAttachment(
                 uint32_t width,
                 uint32_t height,
@@ -109,7 +109,7 @@ namespace vulkan_engine::vulkan::memory
     using IImageBuilderPtr = std::unique_ptr<IImageBuilder>;
 
     /**
-     * @brief 资源构建器工厂
+     * @brief 璧勬簮鏋勫缓鍣ㄥ伐鍘?
      */
     class IResourceBuilderFactory
     {

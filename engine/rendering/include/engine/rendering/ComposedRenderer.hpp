@@ -1,7 +1,7 @@
 #pragma once
 
-#include "rendering/SceneRenderer.hpp"
-#include "rendering/UIRenderer.hpp"
+#include "engine/rendering/SceneRenderer.hpp"
+#include "engine/rendering/UIRenderer.hpp"
 
 #include <memory>
 
@@ -24,18 +24,18 @@ namespace vulkan_engine::editor
 namespace vulkan_engine::rendering
 {
     /**
-     * @brief 组合渲染器 - 整合场景渲染和UI渲染
+     * @brief 缁勫悎娓叉煋鍣?- 鏁村悎鍦烘櫙娓叉煋鍜孶I娓叉煋
      *
-     * 职责：
-     * - 管理 SceneRenderer 和 UIRenderer 的生命周期
-     * - 协调两个管线的渲染流程
-     * - 提供统一的渲染接口给应用程序
+     * 鑱岃矗锛?
+     * - 绠＄悊 SceneRenderer 鍜?UIRenderer 鐨勭敓鍛藉懆鏈?
+     * - 鍗忚皟涓や釜绠＄嚎鐨勬覆鏌撴祦绋?
+     * - 鎻愪緵缁熶竴鐨勬覆鏌撴帴鍙ｇ粰搴旂敤绋嬪簭
      *
-     * 渲染流程：
-     * 1. begin_frame() - 获取 swap chain image，等待上一帧
-     * 2. render_scene() - 渲染场景到 RenderTarget
-     * 3. render_ui() - 渲染UI到 SwapChain（等待场景完成）
-     * 4. end_frame() - 呈现到屏幕
+     * 娓叉煋娴佺▼锛?
+     * 1. begin_frame() - 鑾峰彇 swap chain image锛岀瓑寰呬笂涓€甯?
+     * 2. render_scene() - 娓叉煋鍦烘櫙鍒?RenderTarget
+     * 3. render_ui() - 娓叉煋UI鍒?SwapChain锛堢瓑寰呭満鏅畬鎴愶級
+     * 4. end_frame() - 鍛堢幇鍒板睆骞?
      */
     class ComposedRenderer
     {
@@ -49,7 +49,7 @@ namespace vulkan_engine::rendering
                 uint32_t max_frames_in_flight = 2;
             };
 
-            // 渲染回调
+            // 娓叉煋鍥炶皟
             using SceneRenderCallback = SceneRenderer::SceneRenderCallback;
 
         public:
@@ -64,7 +64,7 @@ namespace vulkan_engine::rendering
             ComposedRenderer(ComposedRenderer&& other) noexcept;
             ComposedRenderer& operator=(ComposedRenderer&& other) noexcept;
 
-            // ========== 生命周期 ==========
+            // ========== 鐢熷懡鍛ㄦ湡 ==========
 
             bool initialize(
                 std::shared_ptr<platform::Window>      window,
@@ -74,76 +74,76 @@ namespace vulkan_engine::rendering
 
             void shutdown();
 
-            // ========== 渲染循环 ==========
+            // ========== 娓叉煋寰幆 ==========
 
             /**
-         * @brief 开始一帧渲染
-         * @return 是否成功
+         * @brief 寮€濮嬩竴甯ф覆鏌?
+         * @return 鏄惁鎴愬姛
          */
             bool begin_frame();
 
             /**
-         * @brief 渲染场景
-         * @param callback 场景渲染回调
+         * @brief 娓叉煋鍦烘櫙
+         * @param callback 鍦烘櫙娓叉煋鍥炶皟
          */
             void render_scene(SceneRenderCallback callback);
 
             /**
-         * @brief 渲染UI
-         * @param editor Editor 实例
+         * @brief 娓叉煋UI
+         * @param editor Editor 瀹炰緥
          */
             void render_ui(editor::Editor& editor);
 
             /**
-         * @brief 结束一帧并呈现
+         * @brief 缁撴潫涓€甯у苟鍛堢幇
          */
             void end_frame();
 
-            // ========== 场景控制 ==========
+            // ========== 鍦烘櫙鎺у埗 ==========
 
             /**
-         * @brief 暂停场景渲染
+         * @brief 鏆傚仠鍦烘櫙娓叉煋
          */
             void pause_scene() { scene_renderer_.pause(); }
 
             /**
-         * @brief 恢复场景渲染
+         * @brief 鎭㈠鍦烘櫙娓叉煋
          */
             void resume_scene() { scene_renderer_.resume(); }
 
             /**
-         * @brief 检查场景是否暂停
+         * @brief 妫€鏌ュ満鏅槸鍚︽殏鍋?
          */
             bool is_scene_paused() const { return scene_renderer_.is_paused(); }
 
-            // ========== 渲染图管理 ==========
+            // ========== 娓叉煋鍥剧鐞?==========
 
             RenderGraphBuilder& scene_render_graph_builder() { return scene_renderer_.render_graph_builder(); }
             RenderGraph&        scene_render_graph() { return scene_renderer_.render_graph(); }
             void                compile_scene_render_graph() { scene_renderer_.compile_render_graph(); }
             void                reset_scene_render_graph() { scene_renderer_.reset_render_graph(); }
 
-            // ========== 访问子渲染器 ==========
+            // ========== 璁块棶瀛愭覆鏌撳櫒 ==========
 
             SceneRenderer& scene_renderer() { return scene_renderer_; }
             UIRenderer&    ui_renderer() { return ui_renderer_; }
 
-            // ========== 渲染目标 ==========
+            // ========== 娓叉煋鐩爣 ==========
 
             std::shared_ptr<RenderTarget> scene_render_target() const { return scene_renderer_.render_target(); }
             std::shared_ptr<Viewport>     scene_viewport() const { return scene_renderer_.viewport(); }
 
-            // ========== 尺寸调整 ==========
+            // ========== 灏哄璋冩暣 ==========
 
             void resize(uint32_t width, uint32_t height);
             void resize_scene(uint32_t width, uint32_t height);
             void resize_ui(uint32_t width, uint32_t height);
 
-            // ========== GPU 计时 ==========
+            // ========== GPU 璁℃椂 ==========
 
             float get_scene_gpu_time_ms() const { return scene_renderer_.get_gpu_render_time_ms(); }
 
-            // ========== 状态查询 ==========
+            // ========== 鐘舵€佹煡璇?==========
 
             bool     is_initialized() const { return initialized_; }
             uint32_t current_frame() const { return current_frame_; }

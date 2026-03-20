@@ -12,6 +12,13 @@ target_link_libraries(VulkanEngineRendering PUBLIC
         VulkanEngineCore
 )
 
+# TODO: Rendering 不应该依赖 Editor，这是架构设计问题
+# 当前为了兼容现有代码，暂时添加此依赖
+# 后续重构需要消除 Rendering -> Editor 的依赖
+target_link_libraries(VulkanEngineRendering PUBLIC
+        VulkanEngineEditor
+)
+
 # STB for texture loading
 if (stb_FOUND)
     target_link_libraries(VulkanEngineRendering PUBLIC VulkanEngine::STB)

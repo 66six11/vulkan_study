@@ -1,7 +1,7 @@
 #pragma once
 
-#include "vulkan/memory/VmaAllocator.hpp"
-#include "vulkan/memory/Allocation.hpp"
+#include "engine/rhi/vulkan/memory/VmaAllocator.hpp"
+#include "engine/rhi/vulkan/memory/Allocation.hpp"
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
 #include <memory>
@@ -11,7 +11,7 @@
 
 namespace vulkan_engine::vulkan::memory
 {
-    // VMA Buffer 类
+    // VMA Buffer 绫?
     class VmaBuffer
     {
         public:
@@ -30,12 +30,12 @@ namespace vulkan_engine::vulkan::memory
             VmaBuffer(VmaBuffer&& other) noexcept;
             VmaBuffer& operator=(VmaBuffer&& other) noexcept;
 
-            // 数据访问
+            // 鏁版嵁璁块棶
             void* map();
             void  unmap();
             bool  isMapped() const noexcept { return mappedData_ != nullptr || allocationInfo_.isPersistentMapped; }
 
-            // 便捷写入方法
+            // 渚挎嵎鍐欏叆鏂规硶
             void write(const void* data, VkDeviceSize size, VkDeviceSize offset = 0);
             void write(const std::span<const std::byte>& data, VkDeviceSize offset = 0);
 
@@ -44,7 +44,7 @@ namespace vulkan_engine::vulkan::memory
                 write(&data, sizeof(T), offset);
             }
 
-            // 读取数据
+            // 璇诲彇鏁版嵁
             void read(void* data, VkDeviceSize size, VkDeviceSize offset = 0);
 
             template <typename T> T readT(VkDeviceSize offset = 0)
@@ -54,27 +54,27 @@ namespace vulkan_engine::vulkan::memory
                 return data;
             }
 
-            // 拷贝数据
+            // 鎷疯礉鏁版嵁
             void copyFrom(const VmaBuffer& source, VkDeviceSize size, VkDeviceSize srcOffset = 0, VkDeviceSize dstOffset = 0);
 
-            // 刷新/使无效（非相干内存）
+            // 鍒锋柊/浣挎棤鏁堬紙闈炵浉骞插唴瀛橈級
             void flush(VkDeviceSize offset = 0, VkDeviceSize size = VK_WHOLE_SIZE);
             void invalidate(VkDeviceSize offset = 0, VkDeviceSize size = VK_WHOLE_SIZE);
 
-            // 访问器
+            // 璁块棶鍣?
             VkBuffer           handle() const noexcept { return buffer_; }
             VkDeviceSize       size() const noexcept { return size_; }
             VkBufferUsageFlags usage() const noexcept { return usage_; }
             AllocationInfo     allocationInfo() const { return allocationInfo_; }
             bool               isValid() const noexcept { return buffer_ != VK_NULL_HANDLE && allocation_.isValid(); }
 
-            // 获取分配
+            // 鑾峰彇鍒嗛厤
             const Allocation& allocation() const { return allocation_; }
 
-            // 获取设备地址（用于光线追踪/着色器访问）
+            // 鑾峰彇璁惧鍦板潃锛堢敤浜庡厜绾胯拷韪?鐫€鑹插櫒璁块棶锛?
             VkDeviceAddress deviceAddress() const;
 
-            // 获取对齐要求
+            // 鑾峰彇瀵归綈瑕佹眰
             static VkDeviceSize getAlignmentRequirements(std::shared_ptr<VmaAllocator> allocator, VkDeviceSize size, VkBufferUsageFlags usage);
 
         private:
@@ -91,35 +91,35 @@ namespace vulkan_engine::vulkan::memory
 
     using VmaBufferPtr = std::shared_ptr<VmaBuffer>;
 
-    // Buffer 构建器
+    // Buffer 鏋勫缓鍣?
     class VmaBufferBuilder
     {
         public:
             explicit VmaBufferBuilder(std::shared_ptr<VmaAllocator> allocator);
 
-            // 基本配置
+            // 鍩烘湰閰嶇疆
             VmaBufferBuilder& size(VkDeviceSize size);
             VmaBufferBuilder& usage(VkBufferUsageFlags usage);
 
-            // 内存属性配置
+            // 鍐呭瓨灞炴€ч厤缃?
             VmaBufferBuilder& hostVisible(bool persistentMap = false);
             VmaBufferBuilder& hostCached();
             VmaBufferBuilder& deviceLocal();
             VmaBufferBuilder& sequentialWrite();
             VmaBufferBuilder& createMapped();
 
-            // 高级选项
+            // 楂樼骇閫夐」
             VmaBufferBuilder& pool(VmaPool pool);
             VmaBufferBuilder& priority(float priority);
             VmaBufferBuilder& allocationFlags(VmaAllocationCreateFlags flags);
             VmaBufferBuilder& requiredFlags(VkMemoryPropertyFlags flags);
             VmaBufferBuilder& preferredFlags(VkMemoryPropertyFlags flags);
 
-            // 构建
+            // 鏋勫缓
             std::unique_ptr<VmaBuffer> build();
             VmaBufferPtr               buildShared();
 
-            // 预设配置
+            // 棰勮閰嶇疆
             static std::unique_ptr<VmaBuffer> createStagingBuffer(std::shared_ptr<VmaAllocator> allocator, VkDeviceSize size);
             static std::unique_ptr<VmaBuffer> createVertexBuffer(std::shared_ptr<VmaAllocator> allocator, VkDeviceSize size);
             static std::unique_ptr<VmaBuffer> createIndexBuffer(std::shared_ptr<VmaAllocator> allocator, VkDeviceSize size);
@@ -141,7 +141,7 @@ namespace vulkan_engine::vulkan::memory
             float                         priority_ = 0.5f;
     };
 
-    // 每帧 Buffer 管理（用于 uniform buffer 等）
+    // 姣忓抚 Buffer 绠＄悊锛堢敤浜?uniform buffer 绛夛級
     template <typename T> class PerFrameBuffer
     {
         public:
@@ -157,7 +157,7 @@ namespace vulkan_engine::vulkan::memory
                 }
             }
 
-            // 更新当前帧的数据
+            // 鏇存柊褰撳墠甯х殑鏁版嵁
             void update(const T& data)
             {
                 buffers_[currentFrame_]->writeT(data);
@@ -168,14 +168,14 @@ namespace vulkan_engine::vulkan::memory
                 buffers_[frameIndex % frameCount_]->writeT(data);
             }
 
-            // 获取当前帧的 buffer
+            // 鑾峰彇褰撳墠甯х殑 buffer
             VmaBuffer* currentBuffer() const { return buffers_[currentFrame_].get(); }
             VkBuffer   currentHandle() const { return buffers_[currentFrame_]->handle(); }
 
             VmaBuffer* buffer(uint32_t frame) const { return buffers_[frame % frameCount_].get(); }
             VkBuffer   handle(uint32_t frame) const { return buffers_[frame % frameCount_]->handle(); }
 
-            // 设置当前帧
+            // 璁剧疆褰撳墠甯?
             void     setFrame(uint32_t frame) { currentFrame_ = frame % frameCount_; }
             uint32_t currentFrame() const { return currentFrame_; }
             uint32_t frameCount() const { return frameCount_; }

@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 #include <vulkan/vulkan.h>
-#include "vulkan/device/Device.hpp"
+#include "engine/rhi/vulkan/device/Device.hpp"
 
 namespace vulkan_engine::vulkan
 {

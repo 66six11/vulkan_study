@@ -1,5 +1,5 @@
-#include "rendering/resources/Mesh.hpp"
-#include "core/utils/Logger.hpp"
+#include "engine/rendering/resources/Mesh.hpp"
+#include "engine/core/utils/Logger.hpp"
 #include <cstring>
 
 namespace vulkan_engine::rendering

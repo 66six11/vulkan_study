@@ -1,8 +1,8 @@
-#include "rendering/render_graph/RenderGraph.hpp"
-#include "rendering/render_graph/RenderGraphPass.hpp"
-#include "rendering/render_graph/RenderGraphResource.hpp"
-#include "vulkan/command/CommandBuffer.hpp"
-#include "core/utils/Logger.hpp"
+#include "engine/rendering/render_graph/RenderGraph.hpp"
+#include "engine/rendering/render_graph/RenderGraphPass.hpp"
+#include "engine/rendering/render_graph/RenderGraphResource.hpp"
+#include "engine/rhi/vulkan/command/CommandBuffer.hpp"
+#include "engine/core/utils/Logger.hpp"
 #include <algorithm>
 #include <stdexcept>
 

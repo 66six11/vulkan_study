@@ -1,7 +1,7 @@
-﻿#pragma once
+#pragma once
 
-#include "rendering/render_graph/RenderGraphTypes.hpp"
-#include "vulkan/device/Device.hpp"
+#include "engine/rendering/render_graph/RenderGraphTypes.hpp"
+#include "engine/rhi/vulkan/device/Device.hpp"
 
 #include <vulkan/vulkan.h>
 #include <memory>

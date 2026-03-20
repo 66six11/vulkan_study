@@ -1,5 +1,5 @@
-﻿#include "platform/input/InputManager.hpp"
-#include "platform/windowing/Window.hpp"
+#include "engine/platform/input/InputManager.hpp"
+#include "engine/platform/windowing/Window.hpp"
 #include <GLFW/glfw3.h>
 #include <array>
 

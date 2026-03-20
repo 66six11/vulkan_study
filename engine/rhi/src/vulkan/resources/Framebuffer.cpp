@@ -1,6 +1,6 @@
-#include "vulkan/resources/Framebuffer.hpp"
-#include "vulkan/utils/VulkanError.hpp"
-#include "core/utils/Logger.hpp"
+#include "engine/rhi/vulkan/resources/Framebuffer.hpp"
+#include "engine/rhi/vulkan/utils/VulkanError.hpp"
+#include "engine/core/utils/Logger.hpp"
 
 namespace vulkan_engine::vulkan
 {

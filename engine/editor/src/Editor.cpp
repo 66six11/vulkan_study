@@ -1,8 +1,8 @@
-#include "editor/Editor.hpp"
-#include "core/utils/Logger.hpp"
-#include "rendering/resources/RenderTarget.hpp"
-#include "rendering/Viewport.hpp"
-#include "vulkan/utils/VulkanError.hpp"
+#include "engine/editor/Editor.hpp"
+#include "engine/core/utils/Logger.hpp"
+#include "engine/rendering/resources/RenderTarget.hpp"
+#include "engine/rendering/Viewport.hpp"
+#include "engine/rhi/vulkan/utils/VulkanError.hpp"
 
 #include <imgui_impl_vulkan.h>
 
@@ -76,21 +76,21 @@ namespace vulkan_engine::editor
             return;
         }
 
-        // 应用 viewport 的延迟 resize（在 ImGui 开始帧之前）
-        // 注意：如果 deferred_resize_enabled_ 为 true，则跳过 resize 处理
-        // 由调用者在帧边界统一处理，以避免资源竞争
+        // 搴旂敤 viewport 鐨勫欢杩?resize锛堝湪 ImGui 寮€濮嬪抚涔嬪墠锛?
+        // 娉ㄦ剰锛氬鏋?deferred_resize_enabled_ 涓?true锛屽垯璺宠繃 resize 澶勭悊
+        // 鐢辫皟鐢ㄨ€呭湪甯ц竟鐣岀粺涓€澶勭悊锛屼互閬垮厤璧勬簮绔炰簤
         if (viewport_ && !deferred_resize_enabled_)
         {
-            // 检查是否有待处理的 resize
+            // 妫€鏌ユ槸鍚︽湁寰呭鐞嗙殑 resize
             if (viewport_->is_resize_pending())
             {
-                // 获取新的尺寸（request_resize中设置的pending尺寸）
+                // 鑾峰彇鏂扮殑灏哄锛坮equest_resize涓缃殑pending灏哄锛?
                 VkExtent2D new_extent = viewport_->pending_extent();
 
-                // 1. 先让 RenderTarget resize（这会重建 Image/ImageView）
+                // 1. 鍏堣 RenderTarget resize锛堣繖浼氶噸寤?Image/ImageView锛?
                 viewport_->apply_pending_resize();
 
-                // 2. 然后创建新的 Framebuffer（使用新的 ImageView）
+                // 2. 鐒跺悗鍒涘缓鏂扮殑 Framebuffer锛堜娇鐢ㄦ柊鐨?ImageView锛?
                 if (viewport_resize_callback_)
                 {
                     viewport_resize_callback_(new_extent.width, new_extent.height);

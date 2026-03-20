@@ -1,7 +1,7 @@
 #pragma once
 
-#include "vulkan/device/Device.hpp"
-#include "vulkan/utils/VulkanError.hpp"
+#include "engine/rhi/vulkan/device/Device.hpp"
+#include "engine/rhi/vulkan/utils/VulkanError.hpp"
 #include <vulkan/vulkan.h>
 #include <memory>
 #include <cstring>

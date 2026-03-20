@@ -1,5 +1,5 @@
-#include "vulkan/memory/VmaBuffer.hpp"
-#include "core/utils/Logger.hpp"
+#include "engine/rhi/vulkan/memory/VmaBuffer.hpp"
+#include "engine/core/utils/Logger.hpp"
 #include <cstring>
 #include <sstream>
 
@@ -36,13 +36,13 @@ namespace vulkan_engine::vulkan::memory
 
         allocation_ = Allocation(allocator_, allocation);
 
-        // 存储分配信息
+        // 瀛樺偍鍒嗛厤淇℃伅
         allocationInfo_.size               = allocationInfo.size;
         allocationInfo_.memoryTypeIndex    = allocationInfo.memoryType;
         allocationInfo_.mappedData         = allocationInfo.pMappedData;
         allocationInfo_.isPersistentMapped = (allocInfo.flags & VMA_ALLOCATION_CREATE_MAPPED_BIT) != 0;
 
-        // 如果已经持久映射，保存映射指针
+        // 濡傛灉宸茬粡鎸佷箙鏄犲皠锛屼繚瀛樻槧灏勬寚閽?
         if (allocationInfo_.isPersistentMapped && allocationInfo.pMappedData != nullptr)
         {
             mappedData_ = allocationInfo.pMappedData;
@@ -97,8 +97,8 @@ namespace vulkan_engine::vulkan::memory
     {
         if (buffer_ != VK_NULL_HANDLE)
         {
-            // Allocation 析构时会自动释放内存
-            // 只需要销毁 buffer 对象
+            // Allocation 鏋愭瀯鏃朵細鑷姩閲婃斁鍐呭瓨
+            // 鍙渶瑕侀攢姣?buffer 瀵硅薄
             if (auto allocator = allocator_)
             {
                 vmaDestroyBuffer(allocator->handle(), buffer_, VK_NULL_HANDLE);
@@ -140,7 +140,7 @@ namespace vulkan_engine::vulkan::memory
 
         std::memcpy(static_cast<char*>(mapped) + offset, data, static_cast<size_t>(size));
 
-        // 如果不是 coherent 内存，需要刷新
+        // 濡傛灉涓嶆槸 coherent 鍐呭瓨锛岄渶瑕佸埛鏂?
         if (!allocationInfo_.isPersistentMapped || (allocationInfo_.memoryTypeIndex & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) == 0)
         {
             flush(offset, size);
@@ -165,7 +165,7 @@ namespace vulkan_engine::vulkan::memory
             throw std::runtime_error("VmaBuffer::read: failed to map buffer");
         }
 
-        // 如果不是 coherent 内存，需要使无效
+        // 濡傛灉涓嶆槸 coherent 鍐呭瓨锛岄渶瑕佷娇鏃犳晥
         if (!allocationInfo_.isPersistentMapped || (allocationInfo_.memoryTypeIndex & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) == 0)
         {
             invalidate(offset, size);
@@ -181,7 +181,7 @@ namespace vulkan_engine::vulkan::memory
             throw std::runtime_error("VmaBuffer::copyFrom: out of bounds");
         }
 
-        // 如果两个 buffer 都是 host-visible，可以直接拷贝
+        // 濡傛灉涓や釜 buffer 閮芥槸 host-visible锛屽彲浠ョ洿鎺ユ嫹璐?
         if (isMapped() && source.isMapped())
         {
             void* srcData = const_cast<VmaBuffer&>(source).map();
@@ -249,7 +249,7 @@ namespace vulkan_engine::vulkan::memory
         return memReqs.alignment;
     }
 
-    // VmaBufferBuilder 实现
+    // VmaBufferBuilder 瀹炵幇
     VmaBufferBuilder::VmaBufferBuilder(std::shared_ptr<VmaAllocator> allocator)
         : allocator_(std::move(allocator))
     {
@@ -276,7 +276,7 @@ namespace vulkan_engine::vulkan::memory
         if (persistentMap)
         {
             allocInfo_.flags |= VMA_ALLOCATION_CREATE_MAPPED_BIT;
-            // VMA 要求：使用 MAPPED_BIT 时必须指定 HOST_ACCESS 标志
+            // VMA 瑕佹眰锛氫娇鐢?MAPPED_BIT 鏃跺繀椤绘寚瀹?HOST_ACCESS 鏍囧織
             allocInfo_.flags |= VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
         }
         return *this;

@@ -1,10 +1,10 @@
 #pragma once
 
-#include "rendering/render_graph/RenderGraphTypes.hpp"
-#include "vulkan/resources/Image.hpp"
-#include "vulkan/resources/Buffer.hpp"
-#include "vulkan/device/Device.hpp"
-#include "vulkan/command/CommandBuffer.hpp"
+#include "engine/rendering/render_graph/RenderGraphTypes.hpp"
+#include "engine/rhi/vulkan/resources/Image.hpp"
+#include "engine/rhi/vulkan/resources/Buffer.hpp"
+#include "engine/rhi/vulkan/device/Device.hpp"
+#include "engine/rhi/vulkan/command/CommandBuffer.hpp"
 
 #include <vulkan/vulkan.h>
 #include <memory>

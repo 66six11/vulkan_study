@@ -1,9 +1,9 @@
-﻿#ifdef _WIN32
+#ifdef _WIN32
 #define VK_USE_PLATFORM_WIN32_KHR
 #endif
 
-#include "vulkan/device/Device.hpp"
-#include "core/utils/Logger.hpp"
+#include "engine/rhi/vulkan/device/Device.hpp"
+#include "engine/core/utils/Logger.hpp"
 #include <set>
 #include <string>
 #include <vector>

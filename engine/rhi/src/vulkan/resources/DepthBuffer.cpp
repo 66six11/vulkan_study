@@ -1,5 +1,5 @@
-#include "vulkan/resources/DepthBuffer.hpp"
-#include "vulkan/utils/VulkanError.hpp"
+#include "engine/rhi/vulkan/resources/DepthBuffer.hpp"
+#include "engine/rhi/vulkan/utils/VulkanError.hpp"
 #include <algorithm>
 
 namespace vulkan_engine::vulkan

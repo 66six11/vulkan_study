@@ -1,5 +1,5 @@
-#include "vulkan/memory/Allocation.hpp"
-#include "core/utils/Logger.hpp"
+#include "engine/rhi/vulkan/memory/Allocation.hpp"
+#include "engine/core/utils/Logger.hpp"
 #include <sstream>
 
 namespace vulkan_engine::vulkan::memory
@@ -13,7 +13,7 @@ namespace vulkan_engine::vulkan::memory
             VmaAllocationInfo info;
             vmaGetAllocationInfo(allocator->handle(), allocation_, &info);
             mappedData_ = info.pMappedData;
-            // 注意：持久映射不设置 explicitlyMapped_，因为不需要 vmaUnmapMemory
+            // 娉ㄦ剰锛氭寔涔呮槧灏勪笉璁剧疆 explicitlyMapped_锛屽洜涓轰笉闇€瑕?vmaUnmapMemory
         }
     }
 
@@ -55,7 +55,7 @@ namespace vulkan_engine::vulkan::memory
         {
             if (auto allocator = allocator_.lock())
             {
-                // 只有显式映射的才需要 vmaUnmapMemory，持久映射不需要
+                // 鍙湁鏄惧紡鏄犲皠鐨勬墠闇€瑕?vmaUnmapMemory锛屾寔涔呮槧灏勪笉闇€瑕?
                 if (explicitlyMapped_ && mappedData_ != nullptr)
                 {
                     vmaUnmapMemory(allocator->handle(), allocation_);
@@ -121,7 +121,7 @@ namespace vulkan_engine::vulkan::memory
                 LOG_ERROR(oss.str());
                 return nullptr;
             }
-            // 标记为显式映射，析构时需要 vmaUnmapMemory
+            // 鏍囪涓烘樉寮忔槧灏勶紝鏋愭瀯鏃堕渶瑕?vmaUnmapMemory
             explicitlyMapped_ = true;
         }
         return mappedData_;
@@ -161,7 +161,7 @@ namespace vulkan_engine::vulkan::memory
         }
     }
 
-    // AllocationBuilder 实现
+    // AllocationBuilder 瀹炵幇
     AllocationBuilder& AllocationBuilder::hostVisible(bool persistentMap)
     {
         info_.usage = VMA_MEMORY_USAGE_AUTO;
@@ -225,7 +225,7 @@ namespace vulkan_engine::vulkan::memory
 
     AllocationBuilder& AllocationBuilder::priority(float priority)
     {
-        // VMA 3.3.0+ 支持内存优先级
+        // VMA 3.3.0+ 鏀寔鍐呭瓨浼樺厛绾?
         info_.priority = priority;
         return *this;
     }

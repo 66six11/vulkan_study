@@ -1,6 +1,6 @@
-#include "rendering/material/Material.hpp"
-#include "core/utils/Logger.hpp"
-#include "vulkan/utils/VulkanError.hpp"
+#include "engine/rendering/material/Material.hpp"
+#include "engine/core/utils/Logger.hpp"
+#include "engine/rhi/vulkan/utils/VulkanError.hpp"
 
 #include <glm/glm.hpp>
 

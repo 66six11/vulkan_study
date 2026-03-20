@@ -1,5 +1,5 @@
-#include "rendering/render_graph/RenderGraphResource.hpp"
-#include "vulkan/utils/VulkanError.hpp"
+#include "engine/rendering/render_graph/RenderGraphResource.hpp"
+#include "engine/rhi/vulkan/utils/VulkanError.hpp"
 #include <algorithm>
 
 namespace vulkan_engine::rendering

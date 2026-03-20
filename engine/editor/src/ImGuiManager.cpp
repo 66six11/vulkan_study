@@ -1,6 +1,6 @@
-#include "editor/ImGuiManager.hpp"
-#include "core/utils/Logger.hpp"
-#include "vulkan/utils/VulkanError.hpp"
+#include "engine/editor/ImGuiManager.hpp"
+#include "engine/core/utils/Logger.hpp"
+#include "engine/rhi/vulkan/utils/VulkanError.hpp"
 
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_vulkan.h>
@@ -200,8 +200,8 @@ namespace vulkan_engine::editor
         // Display scene texture
         if (viewport && viewport_size.x > 0 && viewport_size.y > 0)
         {
-            // 请求 viewport resize（延迟到下一帧开始时才应用）
-            // 这避免了在 ImGui 绘制过程中重建 Vulkan 资源
+            // 璇锋眰 viewport resize锛堝欢杩熷埌涓嬩竴甯у紑濮嬫椂鎵嶅簲鐢級
+            // 杩欓伩鍏嶄簡鍦?ImGui 缁樺埗杩囩▼涓噸寤?Vulkan 璧勬簮
             VkExtent2D current_extent = viewport->extent();
             uint32_t   new_width      = static_cast<uint32_t>(viewport_size.x);
             uint32_t   new_height     = static_cast<uint32_t>(viewport_size.y);
@@ -218,18 +218,18 @@ namespace vulkan_engine::editor
             // logger::info("ImGuiManager: texture_id = " + std::to_string(reinterpret_cast<uint64_t>(texture_id)));
             if (texture_id)
             {
-                // 使用 display_extent（目标显示尺寸）计算宽高比
-                // 这与投影矩阵使用的宽高比一致，确保物体形状正确
+                // 浣跨敤 display_extent锛堢洰鏍囨樉绀哄昂瀵革級璁＄畻瀹介珮姣?
+                // 杩欎笌鎶曞奖鐭╅樀浣跨敤鐨勫楂樻瘮涓€鑷达紝纭繚鐗╀綋褰㈢姸姝ｇ‘
                 VkExtent2D display_extent  = viewport->display_extent();
                 float      display_aspect  = static_cast<float>(display_extent.width) / display_extent.height;
                 float      viewport_aspect = viewport_size.x / viewport_size.y;
 
-                // Cover 模式：保持比例，裁剪超出部分
+                // Cover 妯″紡锛氫繚鎸佹瘮渚嬶紝瑁佸壀瓒呭嚭閮ㄥ垎
                 float u0 = 0.0f, v0 = 0.0f, u1 = 1.0f, v1 = 1.0f;
 
                 if (display_aspect > viewport_aspect)
                 {
-                    // 显示区域更宽，裁剪左右
+                    // 鏄剧ず鍖哄煙鏇村锛岃鍓乏鍙?
                     float visible_width = viewport_aspect / display_aspect;
                     float offset        = (1.0f - visible_width) * 0.5f;
                     u0                  = offset;
@@ -237,26 +237,26 @@ namespace vulkan_engine::editor
                 }
                 else if (display_aspect < viewport_aspect)
                 {
-                    // 显示区域更高，裁剪上下
+                    // 鏄剧ず鍖哄煙鏇撮珮锛岃鍓笂涓?
                     float visible_height = display_aspect / viewport_aspect;
                     float offset         = (1.0f - visible_height) * 0.5f;
                     v0                   = offset;
                     v1                   = 1.0f - offset;
                 }
-                // 否则比例相同，使用全纹理
+                // 鍚﹀垯姣斾緥鐩稿悓锛屼娇鐢ㄥ叏绾圭悊
 
-                // 获取当前光标位置（图像区域的左上角）
+                // 鑾峰彇褰撳墠鍏夋爣浣嶇疆锛堝浘鍍忓尯鍩熺殑宸︿笂瑙掞級
                 ImVec2 cursor_pos = ImGui::GetCursorScreenPos();
 
-                // ===== 修复：正确的绘制顺序 =====
-                // 1. 首先绘制 Image（只显示，不捕获输入）
+                // ===== 淇锛氭纭殑缁樺埗椤哄簭 =====
+                // 1. 棣栧厛缁樺埗 Image锛堝彧鏄剧ず锛屼笉鎹曡幏杈撳叆锛?
                 ImGui::Image(texture_id, viewport_size, ImVec2(u0, v0), ImVec2(u1, v1));
 
-                // 2. 重置光标位置回图像左上角
+                // 2. 閲嶇疆鍏夋爣浣嶇疆鍥炲浘鍍忓乏涓婅
                 ImGui::SetCursorScreenPos(cursor_pos);
 
-                // 3. 绘制 InvisibleButton 覆盖在 Image 上方（用于捕获输入）
-                // 使用 PushID 确保 ID 唯一
+                // 3. 缁樺埗 InvisibleButton 瑕嗙洊鍦?Image 涓婃柟锛堢敤浜庢崟鑾疯緭鍏ワ級
+                // 浣跨敤 PushID 纭繚 ID 鍞竴
                 ImGui::PushID("scene_viewport");
                 ImGui::InvisibleButton("content",
                                        viewport_size,
@@ -265,12 +265,12 @@ namespace vulkan_engine::editor
                                        ImGuiButtonFlags_MouseButtonMiddle);
                 ImGui::PopID();
 
-                // 4. 检测鼠标是否悬停或正在操作按钮
-                // IsItemHovered: 鼠标在区域内
-                // IsItemActive: 鼠标正在拖拽该按钮（即使移出区域也保持）
+                // 4. 妫€娴嬮紶鏍囨槸鍚︽偓鍋滄垨姝ｅ湪鎿嶄綔鎸夐挳
+                // IsItemHovered: 榧犳爣鍦ㄥ尯鍩熷唴
+                // IsItemActive: 榧犳爣姝ｅ湪鎷栨嫿璇ユ寜閽紙鍗充娇绉诲嚭鍖哄煙涔熶繚鎸侊級
                 viewport_content_hovered_ = ImGui::IsItemHovered() || ImGui::IsItemActive();
 
-                // 5. 悬停或拖拽时显示抓手光标
+                // 5. 鎮仠鎴栨嫋鎷芥椂鏄剧ず鎶撴墜鍏夋爣
                 if (viewport_content_hovered_)
                 {
                     ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);

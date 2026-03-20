@@ -1,6 +1,6 @@
-#include "vulkan/memory/VmaImage.hpp"
-#include "vulkan/memory/VmaBuffer.hpp"
-#include "core/utils/Logger.hpp"
+#include "engine/rhi/vulkan/memory/VmaImage.hpp"
+#include "engine/rhi/vulkan/memory/VmaBuffer.hpp"
+#include "engine/core/utils/Logger.hpp"
 #include <cstring>
 #include <sstream>
 #include <algorithm>
@@ -37,7 +37,7 @@ namespace vulkan_engine::vulkan::memory
 
         allocation_ = Allocation(allocator_, allocation);
 
-        // 存储分配信息
+        // 瀛樺偍鍒嗛厤淇℃伅
         allocationInfo_.size            = allocationInfo.size;
         allocationInfo_.memoryTypeIndex = allocationInfo.memoryType;
         allocationInfo_.mappedData      = allocationInfo.pMappedData;
@@ -99,7 +99,7 @@ namespace vulkan_engine::vulkan::memory
 
     void VmaImage::cleanup() noexcept
     {
-        // 销毁所有 view
+        // 閿€姣佹墍鏈?view
         for (VkImageView view : views_)
         {
             if (view != VK_NULL_HANDLE && allocator_)
@@ -109,7 +109,7 @@ namespace vulkan_engine::vulkan::memory
         }
         views_.clear();
 
-        // 销毁 image（allocation 会自动释放）
+        // 閿€姣?image锛坅llocation 浼氳嚜鍔ㄩ噴鏀撅級
         if (image_ != VK_NULL_HANDLE)
         {
             if (auto allocator = allocator_)
@@ -218,7 +218,7 @@ namespace vulkan_engine::vulkan::memory
             return;
         }
 
-        // 确保 image 有 TRANSFER_SRC 和 TRANSFER_DST 用法
+        // 纭繚 image 鏈?TRANSFER_SRC 鍜?TRANSFER_DST 鐢ㄦ硶
         if ((usage_ & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) == 0 || (usage_ & VK_IMAGE_USAGE_TRANSFER_DST_BIT) == 0)
         {
             LOG_WARN("VmaImage::generateMipmaps: image must have TRANSFER_SRC and TRANSFER_DST usage");
@@ -235,11 +235,11 @@ namespace vulkan_engine::vulkan::memory
 
         for (uint32_t i = 1; i < mipLevels_; ++i)
         {
-            // 转换前一 mip 到 SRC_OPTIMAL
+            // 杞崲鍓嶄竴 mip 鍒?SRC_OPTIMAL
             range.baseMipLevel = i - 1;
             transitionLayout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, range);
 
-            // 转换当前 mip 到 DST_OPTIMAL
+            // 杞崲褰撳墠 mip 鍒?DST_OPTIMAL
             range.baseMipLevel = i;
             transitionLayout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, range);
 
@@ -277,12 +277,12 @@ namespace vulkan_engine::vulkan::memory
         (void)mipLevel;
         (void)arrayLayer;
 
-        // 创建 staging buffer
+        // 鍒涘缓 staging buffer
         auto stagingBuffer = VmaBufferBuilder::createStagingBuffer(allocator_, size);
         stagingBuffer->write(data, size);
 
-        // 注意：实际的上传需要 command buffer，这里只是一个占位符
-        // 完整的实现应该在 CommandBuffer 类中
+        // 娉ㄦ剰锛氬疄闄呯殑涓婁紶闇€瑕?command buffer锛岃繖閲屽彧鏄竴涓崰浣嶇
+        // 瀹屾暣鐨勫疄鐜板簲璇ュ湪 CommandBuffer 绫讳腑
         std::ostringstream oss;
         oss << "VmaImage::uploadData: staging buffer created, size=" << size;
         LOG_DEBUG(oss.str());
@@ -295,19 +295,19 @@ namespace vulkan_engine::vulkan::memory
         (void)mipLevel;
         (void)arrayLayer;
 
-        // 类似 upload，需要 staging buffer 和 command buffer
+        // 绫讳技 upload锛岄渶瑕?staging buffer 鍜?command buffer
         LOG_DEBUG("VmaImage::downloadData: not implemented yet");
     }
 
     VkDeviceSize VmaImage::getSubresourceSize(uint32_t mipLevel) const
     {
-        // 使用括号避免 Windows 宏冲突
+        // 浣跨敤鎷彿閬垮厤 Windows 瀹忓啿绐?
         uint32_t width  = (std::max)(1u, extent_.width >> mipLevel);
         uint32_t height = (std::max)(1u, extent_.height >> mipLevel);
         uint32_t depth  = (std::max)(1u, extent_.depth >> mipLevel);
 
-        // 粗略估计（实际需要根据格式计算）
-        uint32_t bytesPerPixel = 4; // 假设 4 bytes per pixel
+        // 绮楃暐浼拌锛堝疄闄呴渶瑕佹牴鎹牸寮忚绠楋級
+        uint32_t bytesPerPixel = 4; // 鍋囪 4 bytes per pixel
         return static_cast<VkDeviceSize>(width * height * depth * bytesPerPixel);
     }
 
@@ -356,7 +356,7 @@ namespace vulkan_engine::vulkan::memory
         }
     }
 
-    // VmaImageBuilder 实现
+    // VmaImageBuilder 瀹炵幇
     VmaImageBuilder::VmaImageBuilder(std::shared_ptr<VmaAllocator> allocator)
         : allocator_(std::move(allocator))
     {

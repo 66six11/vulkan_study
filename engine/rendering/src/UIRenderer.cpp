@@ -1,12 +1,12 @@
-#include "rendering/UIRenderer.hpp"
-#include "rendering/resources/RenderTarget.hpp"
-#include "editor/Editor.hpp"
-#include "vulkan/device/Device.hpp"
-#include "vulkan/device/SwapChain.hpp"
-#include "vulkan/pipelines/RenderPassManager.hpp"
-#include "vulkan/resources/Framebuffer.hpp"
-#include "platform/windowing/Window.hpp"
-#include "core/utils/Logger.hpp"
+#include "engine/rendering/UIRenderer.hpp"
+#include "engine/rendering/resources/RenderTarget.hpp"
+#include "engine/editor/Editor.hpp"
+#include "engine/rhi/vulkan/device/Device.hpp"
+#include "engine/rhi/vulkan/device/SwapChain.hpp"
+#include "engine/rhi/vulkan/pipelines/RenderPassManager.hpp"
+#include "engine/rhi/vulkan/resources/Framebuffer.hpp"
+#include "engine/platform/windowing/Window.hpp"
+#include "engine/core/utils/Logger.hpp"
 
 #include <imgui_impl_vulkan.h>
 
@@ -130,7 +130,7 @@ namespace vulkan_engine::rendering
     {
         render_pass_manager_ = std::make_unique<vulkan::RenderPassManager>(device_);
 
-        // 创建用于呈现的 RenderPass（无深度，直接呈现到 SwapChain）
+        // 鍒涘缓鐢ㄤ簬鍛堢幇鐨?RenderPass锛堟棤娣卞害锛岀洿鎺ュ憟鐜板埌 SwapChain锛?
         present_render_pass_ = render_pass_manager_->get_present_render_pass(swap_chain_->format());
 
         logger::info("UI RenderPass initialized");
@@ -141,7 +141,7 @@ namespace vulkan_engine::rendering
     {
         framebuffer_pool_ = std::make_unique<vulkan::FramebufferPool>(device_);
 
-        // 为 SwapChain images 创建 Framebuffer
+        // 涓?SwapChain images 鍒涘缓 Framebuffer
         std::vector<VkImageView> image_views;
         image_views.reserve(swap_chain_->image_count());
         for (uint32_t i = 0; i < swap_chain_->image_count(); ++i)
@@ -249,7 +249,7 @@ namespace vulkan_engine::rendering
             return false;
         }
 
-        // 在 fence wait 之前应用 resize，确保上一帧已完成
+        // 鍦?fence wait 涔嬪墠搴旂敤 resize锛岀‘淇濅笂涓€甯у凡瀹屾垚
         if (resize_pending_)
         {
             apply_pending_resize();
@@ -259,7 +259,7 @@ namespace vulkan_engine::rendering
 
         auto& sync = frame_syncs_[current_frame_];
 
-        // 等待上一帧完成
+        // 绛夊緟涓婁竴甯у畬鎴?
         sync.in_flight_fence->wait();
         sync.in_flight_fence->reset();
 
@@ -270,7 +270,7 @@ namespace vulkan_engine::rendering
             vkResetCommandBuffer(command_buffers_[current_frame_].handle(), 0);
         }
 
-        // 获取下一帧 image
+        // 鑾峰彇涓嬩竴甯?image
         bool acquired = swap_chain_->acquire_next_image(
                                                         sync.image_available_semaphore->handle(),
                                                         VK_NULL_HANDLE,
@@ -296,7 +296,7 @@ namespace vulkan_engine::rendering
 
         record_commands(editor, scene_render_target);
 
-        // 等待 image available 和场景完成（如果有）
+        // 绛夊緟 image available 鍜屽満鏅畬鎴愶紙濡傛灉鏈夛級
         submit_commands(frame_syncs_[current_frame_].image_available_semaphore->handle(), scene_finished_semaphore);
     }
 
@@ -310,7 +310,7 @@ namespace vulkan_engine::rendering
         vkResetCommandBuffer(cmd_handle, 0);
         cmd.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
-        // 使用传统 RenderPass + Framebuffer（ImGui 需要）
+        // 浣跨敤浼犵粺 RenderPass + Framebuffer锛圛mGui 闇€瑕侊級
         vulkan::Framebuffer* framebuffer = framebuffer_pool_->get_framebuffer(current_image_);
         if (!framebuffer)
         {
@@ -319,7 +319,7 @@ namespace vulkan_engine::rendering
         }
         VkFramebuffer vk_framebuffer = framebuffer->handle();
 
-        // 使用 framebuffer 的尺寸（与创建时一致）
+        // 浣跨敤 framebuffer 鐨勫昂瀵革紙涓庡垱寤烘椂涓€鑷达級
         uint32_t fb_width  = framebuffer->width();
         uint32_t fb_height = framebuffer->height();
 
@@ -337,7 +337,7 @@ namespace vulkan_engine::rendering
 
         vkCmdBeginRenderPass(cmd_handle, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
 
-        // 渲染 ImGui
+        // 娓叉煋 ImGui
         editor.render_to_command_buffer(cmd_handle);
 
         vkCmdEndRenderPass(cmd_handle);
@@ -350,17 +350,17 @@ namespace vulkan_engine::rendering
         auto& cmd  = command_buffers_[current_frame_];
         auto& sync = frame_syncs_[current_frame_];
 
-        // 构建等待信号量列表
+        // 鏋勫缓绛夊緟淇″彿閲忓垪琛?
         VkSemaphore          wait_semaphores[2];
         VkPipelineStageFlags wait_stages[2];
         uint32_t             wait_count = 0;
 
-        // 1. Swap chain image 可用
+        // 1. Swap chain image 鍙敤
         wait_semaphores[wait_count] = image_available_semaphore;
         wait_stages[wait_count]     = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         wait_count++;
 
-        // 2. 场景渲染完成（如果有）
+        // 2. 鍦烘櫙娓叉煋瀹屾垚锛堝鏋滄湁锛?
         if (scene_finished_semaphore != VK_NULL_HANDLE)
         {
             wait_semaphores[wait_count] = scene_finished_semaphore;
@@ -368,7 +368,7 @@ namespace vulkan_engine::rendering
             wait_count++;
         }
 
-        // 使用 per-image render_finished semaphore
+        // 浣跨敤 per-image render_finished semaphore
         VkSemaphore signal_semaphores[] = {render_finished_semaphores_[current_image_]->handle()};
 
         VkSubmitInfo submit_info{};
@@ -392,7 +392,7 @@ namespace vulkan_engine::rendering
             return;
         }
 
-        // 使用 per-image render_finished semaphore
+        // 浣跨敤 per-image render_finished semaphore
         VkSemaphore present_semaphore = render_finished_semaphores_[current_image_]->handle();
         swap_chain_->present(device_->graphics_queue().handle(), current_image_, present_semaphore);
 
@@ -465,7 +465,7 @@ namespace vulkan_engine::rendering
 
     void UIRenderer::recreate_swap_chain_resources()
     {
-        // 重新创建 per-image render_finished semaphores
+        // 閲嶆柊鍒涘缓 per-image render_finished semaphores
         uint32_t new_image_count = swap_chain_->image_count();
         render_finished_semaphores_.clear();
         render_finished_semaphores_.resize(new_image_count);

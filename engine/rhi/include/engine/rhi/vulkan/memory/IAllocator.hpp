@@ -1,6 +1,6 @@
 /**
  * @file IAllocator.hpp
- * @brief 内存分配器接口
+ * @brief 鍐呭瓨鍒嗛厤鍣ㄦ帴鍙?
  */
 
 #pragma once
@@ -11,61 +11,61 @@
 
 namespace vulkan_engine::vulkan::memory
 {
-    // 前向声明
+    // 鍓嶅悜澹版槑
     struct AllocationInfo;
     struct AllocatorStats;
     struct Budget;
 
     /**
-     * @brief 内存分配器接口
+     * @brief 鍐呭瓨鍒嗛厤鍣ㄦ帴鍙?
      * 
-     * 提供抽象的内存分配功能，支持不同的实现（VMA、自定义分配器等）
+     * 鎻愪緵鎶借薄鐨勫唴瀛樺垎閰嶅姛鑳斤紝鏀寔涓嶅悓鐨勫疄鐜帮紙VMA銆佽嚜瀹氫箟鍒嗛厤鍣ㄧ瓑锛?
      */
     class IAllocator
     {
         public:
             virtual ~IAllocator() = default;
 
-            // 禁止拷贝
+            // 绂佹鎷疯礉
             IAllocator(const IAllocator&)            = delete;
             IAllocator& operator=(const IAllocator&) = delete;
 
-            // 有效性检查
+            // 鏈夋晥鎬ф鏌?
             [[nodiscard]] virtual bool isValid() const noexcept = 0;
 
-            // 统计信息
+            // 缁熻淇℃伅
             [[nodiscard]] virtual AllocatorStats getStats() const = 0;
             virtual void                         printStats() const = 0;
 
-            // 预算查询
+            // 棰勭畻鏌ヨ
             [[nodiscard]] virtual std::vector<Budget> getHeapBudgets() const = 0;
 
-            // 内存可用性检查
+            // 鍐呭瓨鍙敤鎬ф鏌?
             [[nodiscard]] virtual bool isMemoryAvailable(uint64_t requiredBytes) const = 0;
     };
 
     using IAllocatorPtr = std::shared_ptr<IAllocator>;
 
     /**
-     * @brief Buffer 分配器接口
+     * @brief Buffer 鍒嗛厤鍣ㄦ帴鍙?
      */
     class IBufferAllocator
     {
         public:
             virtual ~IBufferAllocator() = default;
 
-            // 创建 Buffer
+            // 鍒涘缓 Buffer
             [[nodiscard]] virtual std::shared_ptr<class IBuffer> createBuffer(
                 uint64_t size,
                 uint32_t usage,
                 // VkBufferUsageFlags
-                const void* allocInfo // 实现特定的分配信息
+                const void* allocInfo // 瀹炵幇鐗瑰畾鐨勫垎閰嶄俊鎭?
             ) = 0;
 
-            // 销毁 Buffer（RAII 通常自动处理，但提供显式接口）
+            // 閿€姣?Buffer锛圧AII 閫氬父鑷姩澶勭悊锛屼絾鎻愪緵鏄惧紡鎺ュ彛锛?
             virtual void destroyBuffer(std::shared_ptr<class IBuffer> buffer) = 0;
 
-            // 创建特定类型的 Buffer
+            // 鍒涘缓鐗瑰畾绫诲瀷鐨?Buffer
             [[nodiscard]] virtual std::shared_ptr<class IBuffer> createStagingBuffer(uint64_t size) = 0;
             [[nodiscard]] virtual std::shared_ptr<class IBuffer> createVertexBuffer(uint64_t size) = 0;
             [[nodiscard]] virtual std::shared_ptr<class IBuffer> createIndexBuffer(uint64_t size) = 0;
@@ -74,24 +74,24 @@ namespace vulkan_engine::vulkan::memory
     };
 
     /**
-     * @brief Image 分配器接口
+     * @brief Image 鍒嗛厤鍣ㄦ帴鍙?
      */
     class IImageAllocator
     {
         public:
             virtual ~IImageAllocator() = default;
 
-            // 创建 Image
+            // 鍒涘缓 Image
             [[nodiscard]] virtual std::shared_ptr<class IImage> createImage(
                 const void* imageInfo,
-                // 实现特定的创建信息
-                const void* allocInfo // 实现特定的分配信息
+                // 瀹炵幇鐗瑰畾鐨勫垱寤轰俊鎭?
+                const void* allocInfo // 瀹炵幇鐗瑰畾鐨勫垎閰嶄俊鎭?
             ) = 0;
 
-            // 销毁 Image
+            // 閿€姣?Image
             virtual void destroyImage(std::shared_ptr<class IImage> image) = 0;
 
-            // 创建特定类型的 Image
+            // 鍒涘缓鐗瑰畾绫诲瀷鐨?Image
             [[nodiscard]] virtual std::shared_ptr<class IImage> createColorAttachment(
                 uint32_t width,
                 uint32_t height,
@@ -125,31 +125,31 @@ namespace vulkan_engine::vulkan::memory
     };
 
     /**
-     * @brief 通用资源管理器接口
+     * @brief 閫氱敤璧勬簮绠＄悊鍣ㄦ帴鍙?
      * 
-     * 组合 Buffer 和 Image 分配功能
+     * 缁勫悎 Buffer 鍜?Image 鍒嗛厤鍔熻兘
      */
     class IResourceManager : public IBufferAllocator, public IImageAllocator
     {
         public:
             ~IResourceManager() override = default;
 
-            // 获取底层分配器
+            // 鑾峰彇搴曞眰鍒嗛厤鍣?
             [[nodiscard]] virtual IAllocatorPtr getAllocator() const = 0;
 
-            // 统计信息
+            // 缁熻淇℃伅
             [[nodiscard]] virtual AllocatorStats getStats() const = 0;
 
-            // 预算查询
+            // 棰勭畻鏌ヨ
             [[nodiscard]] virtual std::vector<Budget> getHeapBudgets() const = 0;
 
-            // 内存可用性检查
+            // 鍐呭瓨鍙敤鎬ф鏌?
             [[nodiscard]] virtual bool isMemoryAvailable(uint64_t requiredBytes) const = 0;
 
-            // 强制释放未使用的内存
+            // 寮哄埗閲婃斁鏈娇鐢ㄧ殑鍐呭瓨
             virtual void collectGarbage() = 0;
 
-            // 碎片整理（如果支持）
+            // 纰庣墖鏁寸悊锛堝鏋滄敮鎸侊級
             virtual void defragment() = 0;
     };
 

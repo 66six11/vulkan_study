@@ -1,9 +1,9 @@
-#include "rendering/resources/RenderTarget.hpp"
-#include "vulkan/resources/Framebuffer.hpp"
-#include "vulkan/memory/VmaImage.hpp"
-#include "vulkan/memory/VmaAllocator.hpp"
-#include "vulkan/utils/VulkanError.hpp"
-#include "core/utils/Logger.hpp"
+#include "engine/rendering/resources/RenderTarget.hpp"
+#include "engine/rhi/vulkan/resources/Framebuffer.hpp"
+#include "engine/rhi/vulkan/memory/VmaImage.hpp"
+#include "engine/rhi/vulkan/memory/VmaAllocator.hpp"
+#include "engine/rhi/vulkan/utils/VulkanError.hpp"
+#include "engine/core/utils/Logger.hpp"
 
 namespace vulkan_engine::rendering
 {
@@ -84,10 +84,10 @@ namespace vulkan_engine::rendering
         VkDevice device = allocator_->device()->device().handle();
         vkDeviceWaitIdle(device);
 
-        // 首先销毁 Framebuffer（因为它依赖 ImageView）
+        // 棣栧厛閿€姣?Framebuffer锛堝洜涓哄畠渚濊禆 ImageView锛?
         destroy_framebuffer();
 
-        // 销毁 ImageView（由 VmaImage 管理）
+        // 閿€姣?ImageView锛堢敱 VmaImage 绠＄悊锛?
         if (color_image_view_ != VK_NULL_HANDLE && color_image_)
         {
             color_image_->destroyView(color_image_view_);
@@ -99,7 +99,7 @@ namespace vulkan_engine::rendering
             depth_image_view_ = VK_NULL_HANDLE;
         }
 
-        // VmaImage 会自动清理
+        // VmaImage 浼氳嚜鍔ㄦ竻鐞?
         color_image_.reset();
         depth_image_.reset();
     }
@@ -109,7 +109,7 @@ namespace vulkan_engine::rendering
         if (width == width_ && height == height_)
             return;
 
-        // 先销毁 Framebuffer（因为它依赖旧的 ImageView）
+        // 鍏堥攢姣?Framebuffer锛堝洜涓哄畠渚濊禆鏃х殑 ImageView锛?
         destroy_framebuffer();
 
         cleanup();
@@ -135,7 +135,7 @@ namespace vulkan_engine::rendering
 
     void RenderTarget::create_color_image()
     {
-        // 使用 VmaImageBuilder 创建颜色附件
+        // 浣跨敤 VmaImageBuilder 鍒涘缓棰滆壊闄勪欢
         color_image_ = vulkan::memory::VmaImageBuilder::createColorAttachment(
                                                                               allocator_,
                                                                               width_,
@@ -146,7 +146,7 @@ namespace vulkan_engine::rendering
                                                                               samples_
                                                                              );
 
-        // 创建默认 ImageView
+        // 鍒涘缓榛樿 ImageView
         color_image_view_ = color_image_->createView(
                                                      VK_IMAGE_VIEW_TYPE_2D,
                                                      color_format_,
@@ -156,7 +156,7 @@ namespace vulkan_engine::rendering
 
     void RenderTarget::create_depth_image()
     {
-        // 使用 VmaImageBuilder 创建深度附件
+        // 浣跨敤 VmaImageBuilder 鍒涘缓娣卞害闄勪欢
         depth_image_ = vulkan::memory::VmaImageBuilder::createDepthAttachment(
                                                                               allocator_,
                                                                               width_,
@@ -165,7 +165,7 @@ namespace vulkan_engine::rendering
                                                                               samples_
                                                                              );
 
-        // 创建默认 ImageView
+        // 鍒涘缓榛樿 ImageView
         depth_image_view_ = depth_image_->createView(
                                                      VK_IMAGE_VIEW_TYPE_2D,
                                                      depth_format_,
@@ -199,7 +199,7 @@ namespace vulkan_engine::rendering
         begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
         VK_CHECK(vkBeginCommandBuffer(cmd_buffer, &begin_info));
 
-        // 使用 VmaImage 的 transitionLayout 方法
+        // 浣跨敤 VmaImage 鐨?transitionLayout 鏂规硶
         if (color_image_)
         {
             color_image_->transitionLayout(
@@ -249,10 +249,10 @@ namespace vulkan_engine::rendering
             return;
         }
 
-        // 销毁旧的 Framebuffer（如果存在）
+        // 閿€姣佹棫鐨?Framebuffer锛堝鏋滃瓨鍦級
         destroy_framebuffer();
 
-        // 收集附件
+        // 鏀堕泦闄勪欢
         std::vector<VkImageView> attachments;
         if (has_color())
         {
@@ -263,7 +263,7 @@ namespace vulkan_engine::rendering
             attachments.push_back(depth_image_view_);
         }
 
-        // 创建新的 Framebuffer
+        // 鍒涘缓鏂扮殑 Framebuffer
         framebuffer_ = std::make_unique<vulkan::Framebuffer>(
                                                              allocator_->device(),
                                                              render_pass,
@@ -276,7 +276,7 @@ namespace vulkan_engine::rendering
 
     void RenderTarget::destroy_framebuffer()
     {
-        // Framebuffer 是 unique_ptr，reset 会自动销毁
+        // Framebuffer 鏄?unique_ptr锛宺eset 浼氳嚜鍔ㄩ攢姣?
         framebuffer_.reset();
     }
 

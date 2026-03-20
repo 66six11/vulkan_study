@@ -1,7 +1,7 @@
 #pragma once
 
-#include "vulkan/memory/VmaAllocator.hpp"
-#include "vulkan/memory/Allocation.hpp"
+#include "engine/rhi/vulkan/memory/VmaAllocator.hpp"
+#include "engine/rhi/vulkan/memory/Allocation.hpp"
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
 #include <memory>
@@ -10,7 +10,7 @@
 
 namespace vulkan_engine::vulkan::memory
 {
-    // Image 子资源范围
+    // Image 瀛愯祫婧愯寖鍥?
     struct ImageSubresourceRange
     {
         VkImageAspectFlags aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -40,7 +40,7 @@ namespace vulkan_engine::vulkan::memory
         }
     };
 
-    // VMA Image 类
+    // VMA Image 绫?
     class VmaImage
     {
         public:
@@ -58,28 +58,28 @@ namespace vulkan_engine::vulkan::memory
             VmaImage(VmaImage&& other) noexcept;
             VmaImage& operator=(VmaImage&& other) noexcept;
 
-            // Image View 管理
+            // Image View 绠＄悊
             VkImageView createView(VkImageViewType viewType, VkFormat format, const ImageSubresourceRange& range);
             VkImageView createView(VkImageViewType viewType, const ImageSubresourceRange& range) { return createView(viewType, format_, range); }
             void        destroyView(VkImageView view);
             void        destroyAllViews();
 
-            // 获取默认 view（创建的第一个 view）
+            // 鑾峰彇榛樿 view锛堝垱寤虹殑绗竴涓?view锛?
             VkImageView defaultView() const { return views_.empty() ? VK_NULL_HANDLE : views_[0]; }
 
-            // 布局转换
+            // 甯冨眬杞崲
             void          setLayout(VkImageLayout newLayout) { currentLayout_ = newLayout; }
             void          transitionLayout(VkCommandBuffer cmd, VkImageLayout newLayout, const ImageSubresourceRange& range = {});
             VkImageLayout currentLayout() const { return currentLayout_; }
 
-            // 生成 Mipmaps
+            // 鐢熸垚 Mipmaps
             void generateMipmaps(VkCommandBuffer cmd);
 
-            // 数据上传/下载
+            // 鏁版嵁涓婁紶/涓嬭浇
             void uploadData(const void* data, VkDeviceSize size, uint32_t mipLevel = 0, uint32_t arrayLayer = 0);
             void downloadData(void* data, VkDeviceSize size, uint32_t mipLevel = 0, uint32_t arrayLayer = 0);
 
-            // 访问器
+            // 璁块棶鍣?
             VkImage               handle() const noexcept { return image_; }
             VkFormat              format() const noexcept { return format_; }
             VkExtent3D            extent() const noexcept { return extent_; }
@@ -96,7 +96,7 @@ namespace vulkan_engine::vulkan::memory
             AllocationInfo    allocationInfo() const { return allocationInfo_; }
             const Allocation& allocation() const { return allocation_; }
 
-            // 获取子资源大小
+            // 鑾峰彇瀛愯祫婧愬ぇ灏?
             VkDeviceSize getSubresourceSize(uint32_t mipLevel = 0) const;
 
         private:
@@ -105,7 +105,7 @@ namespace vulkan_engine::vulkan::memory
             Allocation                    allocation_;
             std::vector<VkImageView>      views_;
 
-            // Image 属性
+            // Image 灞炴€?
             VkFormat              format_        = VK_FORMAT_UNDEFINED;
             VkExtent3D            extent_        = {0, 0, 0};
             uint32_t              mipLevels_     = 1;
@@ -118,20 +118,20 @@ namespace vulkan_engine::vulkan::memory
 
             void cleanup() noexcept;
 
-            // 辅助函数
+            // 杈呭姪鍑芥暟
             static VkAccessFlags        getAccessMask(VkImageLayout layout);
             static VkPipelineStageFlags getStageMask(VkImageLayout layout);
     };
 
     using VmaImagePtr = std::shared_ptr<VmaImage>;
 
-    // Image 构建器
+    // Image 鏋勫缓鍣?
     class VmaImageBuilder
     {
         public:
             explicit VmaImageBuilder(std::shared_ptr<VmaAllocator> allocator);
 
-            // 基本配置
+            // 鍩烘湰閰嶇疆
             VmaImageBuilder& type(VkImageType type);
             VmaImageBuilder& extent(uint32_t width, uint32_t height, uint32_t depth = 1);
             VmaImageBuilder& width(uint32_t width);
@@ -145,21 +145,21 @@ namespace vulkan_engine::vulkan::memory
             VmaImageBuilder& tiling(VkImageTiling tiling);
             VmaImageBuilder& initialLayout(VkImageLayout layout);
 
-            // 内存配置
+            // 鍐呭瓨閰嶇疆
             VmaImageBuilder& deviceLocal();
             VmaImageBuilder& hostVisible();
             VmaImageBuilder& dedicatedMemory();
 
-            // 高级选项
+            // 楂樼骇閫夐」
             VmaImageBuilder& pool(VmaPool pool);
             VmaImageBuilder& priority(float priority);
             VmaImageBuilder& allocationFlags(VmaAllocationCreateFlags flags);
 
-            // 构建
+            // 鏋勫缓
             std::unique_ptr<VmaImage> build();
             VmaImagePtr               buildShared();
 
-            // 预设配置
+            // 棰勮閰嶇疆
             static std::unique_ptr<VmaImage> createColorAttachment(
                 std::shared_ptr<VmaAllocator> allocator,
                 uint32_t                      width,
@@ -204,11 +204,11 @@ namespace vulkan_engine::vulkan::memory
             void resetInfo();
     };
 
-    // Image View 描述符
+    // Image View 鎻忚堪绗?
     struct ImageViewDescriptor
     {
         VkImageViewType       viewType = VK_IMAGE_VIEW_TYPE_2D;
-        VkFormat              format   = VK_FORMAT_UNDEFINED; // 使用 image 的 format
+        VkFormat              format   = VK_FORMAT_UNDEFINED; // 浣跨敤 image 鐨?format
         ImageSubresourceRange range;
         VkComponentMapping    components = {
             VK_COMPONENT_SWIZZLE_IDENTITY,

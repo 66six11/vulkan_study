@@ -1,31 +1,31 @@
 #include "EditorAppBootstrap.hpp"
 
-// 使用引擎命名空间
+// 浣跨敤寮曟搸鍛藉悕绌洪棿
 using namespace vulkan_engine;
 
-#include "application/app/Application.hpp"
-#include "core/utils/Logger.hpp"
-#include "platform/filesystem/PathUtils.hpp"
-#include "core/math/Camera.hpp"
-#include "vulkan/device/Device.hpp"
-#include "vulkan/device/SwapChain.hpp"
-#include "vulkan/resources/Buffer.hpp"
-#include "vulkan/memory/VmaAllocator.hpp"
-#include "vulkan/utils/CoordinateTransform.hpp"
+#include "engine/application/app/Application.hpp"
+#include "engine/core/utils/Logger.hpp"
+#include "engine/platform/filesystem/PathUtils.hpp"
+#include "engine/core/math/Camera.hpp"
+#include "engine/rhi/vulkan/device/Device.hpp"
+#include "engine/rhi/vulkan/device/SwapChain.hpp"
+#include "engine/rhi/vulkan/resources/Buffer.hpp"
+#include "engine/rhi/vulkan/memory/VmaAllocator.hpp"
+#include "engine/rhi/vulkan/utils/CoordinateTransform.hpp"
 
-#include "rendering/ComposedRenderer.hpp"
-#include "rendering/Viewport.hpp"
-#include "rendering/resources/RenderTarget.hpp"
-#include "rendering/render_graph/RenderGraph.hpp"
-#include "rendering/render_graph/CubeRenderPass.hpp"
-#include "rendering/material/Material.hpp"
-#include "rendering/material/MaterialLoader.hpp"
-#include "rendering/resources/Mesh.hpp"
-#include "rendering/resources/ObjLoader.hpp"
-#include "rendering/camera/CameraController.hpp"
+#include "engine/rendering/ComposedRenderer.hpp"
+#include "engine/rendering/Viewport.hpp"
+#include "engine/rendering/resources/RenderTarget.hpp"
+#include "engine/rendering/render_graph/RenderGraph.hpp"
+#include "engine/rendering/render_graph/CubeRenderPass.hpp"
+#include "engine/rendering/material/Material.hpp"
+#include "engine/rendering/material/MaterialLoader.hpp"
+#include "engine/rendering/resources/Mesh.hpp"
+#include "engine/rendering/resources/ObjLoader.hpp"
+#include "engine/rendering/camera/CameraController.hpp"
 
-#include "editor/Editor.hpp"
-#include "platform/input/InputManager.hpp"
+#include "engine/editor/Editor.hpp"
+#include "engine/platform/input/InputManager.hpp"
 
 #include "../demo/CubeData.hpp"
 
@@ -37,7 +37,7 @@ using namespace vulkan_engine;
 
 namespace editor::bootstrap
 {
-    // EditorAppConfig 实现
+    // EditorAppConfig 瀹炵幇
     EditorAppConfig EditorAppConfig::parse(int argc, char* argv[])
     {
         EditorAppConfig config;
@@ -76,7 +76,7 @@ namespace editor::bootstrap
         return config;
     }
 
-    // Pimpl 实现类
+    // Pimpl 瀹炵幇绫?
     class EditorApplication::Impl
     {
         public:
@@ -121,7 +121,7 @@ namespace editor::bootstrap
             void cleanup_resources();
     };
 
-    // EditorApplication 实现
+    // EditorApplication 瀹炵幇
     EditorApplication::EditorApplication(const vulkan_engine::application::ApplicationConfig& config)
         : vulkan_engine::application::ApplicationBase(config)
         , impl_(std::make_unique<Impl>())
@@ -279,7 +279,7 @@ namespace editor::bootstrap
 
         impl_->update_mvp_matrix();
 
-        // 1. 首先渲染场景到 RenderTarget
+        // 1. 棣栧厛娓叉煋鍦烘櫙鍒?RenderTarget
         impl_->renderer_->render_scene([this](vulkan::RenderCommandBuffer& cmd, const rendering::SceneRenderer::FrameContext& ctx)
         {
             rendering::RenderContext render_ctx;
@@ -296,11 +296,11 @@ namespace editor::bootstrap
             impl_->renderer_->scene_render_graph().execute(cmd, render_ctx);
         });
 
-        // 2. 然后创建 ImGui UI（可以采样已渲染的场景纹理）
+        // 2. 鐒跺悗鍒涘缓 ImGui UI锛堝彲浠ラ噰鏍峰凡娓叉煋鐨勫満鏅汗鐞嗭級
         impl_->editor_->begin_frame();
         impl_->editor_->end_frame(impl_->renderer_->current_image());
 
-        // 3. 渲染UI到 SwapChain
+        // 3. 娓叉煋UI鍒?SwapChain
         impl_->renderer_->render_ui(*impl_->editor_);
         impl_->renderer_->end_frame();
     }
@@ -329,7 +329,7 @@ namespace editor::bootstrap
         logger::info("Window resized to " + std::to_string(width) + "x" + std::to_string(height));
     }
 
-    // Impl 方法实现
+    // Impl 鏂规硶瀹炵幇
     void EditorApplication::Impl::load_mesh(std::shared_ptr<vulkan::DeviceManager> device)
     {
         rendering::ObjLoader obj_loader;
@@ -419,7 +419,7 @@ namespace editor::bootstrap
 
     void EditorApplication::Impl::initialize_render_graph(std::shared_ptr<vulkan::DeviceManager> device)
     {
-        (void)device; // 当前实现中不需要直接使用 device
+        (void)device; // 褰撳墠瀹炵幇涓笉闇€瑕佺洿鎺ヤ娇鐢?device
         logger::info("Initializing Render Graph");
 
         rendering::CubeRenderPass::Config cube_config;
@@ -509,7 +509,7 @@ namespace editor::bootstrap
         camera_.reset();
     }
 
-    // 工厂函数实现
+    // 宸ュ巶鍑芥暟瀹炵幇
     std::unique_ptr<EditorApplication> create_editor_app(const EditorAppConfig& config)
     {
         vulkan_engine::application::ApplicationConfig app_config{

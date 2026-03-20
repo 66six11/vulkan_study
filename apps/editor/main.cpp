@@ -1,5 +1,5 @@
 #include "bootstrap/EditorAppBootstrap.hpp"
-#include "core/utils/Logger.hpp"
+#include "engine/core/utils/Logger.hpp"
 #include <iostream>
 #include <memory>
 
@@ -7,17 +7,17 @@ using namespace vulkan_engine;
 
 int main(int argc, char* argv[])
 {
-    logger::info("中文打印测试");
+    logger::info("涓枃鎵撳嵃娴嬭瘯");
 
     try
     {
-        // 解析命令行配置
+        // 瑙ｆ瀽鍛戒护琛岄厤缃?
         auto config = editor::bootstrap::EditorAppConfig::parse(argc, argv);
 
-        // 创建 Editor 应用
+        // 鍒涘缓 Editor 搴旂敤
         auto app = editor::bootstrap::create_editor_app(config);
 
-        // 初始化并运行
+        // 鍒濆鍖栧苟杩愯
         if (app->initialize())
         {
             app->run();

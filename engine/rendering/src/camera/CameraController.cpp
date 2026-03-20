@@ -1,4 +1,4 @@
-#include "rendering/camera/CameraController.hpp"
+#include "engine/rendering/camera/CameraController.hpp"
 
 #include <imgui.h>
 
@@ -11,7 +11,7 @@ namespace vulkan_engine::rendering
 
     void OrbitCameraController::set_enabled(bool enabled)
     {
-        // 当从启用变为禁用时，重置拖拽状态
+        // 褰撲粠鍚敤鍙樹负绂佺敤鏃讹紝閲嶇疆鎷栨嫿鐘舵€?
         if (is_enabled() && !enabled)
         {
             is_dragging_ = false;
@@ -26,8 +26,8 @@ namespace vulkan_engine::rendering
         if (!enabled_)
             return;
 
-        // 注意：io.WantCaptureMouse 检查已移除
-        // 由调用者（main.cpp）通过 is_viewport_content_hovered() 精确控制 enabled_ 状态
+        // 娉ㄦ剰锛歩o.WantCaptureMouse 妫€鏌ュ凡绉婚櫎
+        // 鐢辫皟鐢ㄨ€咃紙main.cpp锛夐€氳繃 is_viewport_content_hovered() 绮剧‘鎺у埗 enabled_ 鐘舵€?
 
         handle_rotation();
         handle_zoom();
@@ -45,7 +45,7 @@ namespace vulkan_engine::rendering
 
         if (config_.use_imgui_input)
         {
-            // 使用 ImGui 输入（避免与 ImGui 窗口冲突）
+            // 浣跨敤 ImGui 杈撳叆锛堥伩鍏嶄笌 ImGui 绐楀彛鍐茬獊锛?
             ImGuiIO& io           = ImGui::GetIO();
             int      imgui_button = (config_.rotate_button == platform::MouseButton::Left)
                                         ? 0
@@ -60,7 +60,7 @@ namespace vulkan_engine::rendering
         }
         else
         {
-            // 使用 InputManager
+            // 浣跨敤 InputManager
             auto input = input_manager_.lock();
             if (!input)
                 return;
@@ -75,19 +75,19 @@ namespace vulkan_engine::rendering
 
         if (config_.require_mouse_drag)
         {
-            // 拖拽模式
+            // 鎷栨嫿妯″紡
             if (mouse_pressed)
             {
                 if (!is_dragging_)
                 {
-                    // 开始拖拽
+                    // 寮€濮嬫嫋鎷?
                     is_dragging_  = true;
                     last_mouse_x_ = mouse_x;
                     last_mouse_y_ = mouse_y;
                 }
                 else
                 {
-                    // 正在拖拽
+                    // 姝ｅ湪鎷栨嫿
                     float current_x = mouse_x;
                     float current_y = mouse_y;
 
@@ -110,7 +110,7 @@ namespace vulkan_engine::rendering
         }
         else
         {
-            // 悬停模式（不需要拖拽）
+            // 鎮仠妯″紡锛堜笉闇€瑕佹嫋鎷斤級
             if (delta_x != 0.0f || delta_y != 0.0f)
             {
                 camera->on_mouse_drag(delta_x, delta_y, config_.rotation_sensitivity);
@@ -128,12 +128,12 @@ namespace vulkan_engine::rendering
 
         if (config_.use_imgui_input)
         {
-            // 使用 ImGui 输入
+            // 浣跨敤 ImGui 杈撳叆
             scroll = ImGui::GetIO().MouseWheel;
         }
         else
         {
-            // 使用 InputManager
+            // 浣跨敤 InputManager
             auto input = input_manager_.lock();
             if (!input)
                 return;

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vulkan/memory/VmaAllocator.hpp"
+#include "engine/rhi/vulkan/memory/VmaAllocator.hpp"
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
 #include <memory>
@@ -10,32 +10,32 @@
 
 namespace vulkan_engine::vulkan::memory
 {
-    // VMA 内存池管理器
+    // VMA 鍐呭瓨姹犵鐞嗗櫒
     class MemoryPool
     {
         public:
             struct CreateInfo
             {
-                // 内存类型（如果设置，memoryTypeIndex 将被自动计算）
+                // 鍐呭瓨绫诲瀷锛堝鏋滆缃紝memoryTypeIndex 灏嗚鑷姩璁＄畻锛?
                 std::optional<VkMemoryPropertyFlags> memoryProperties;
 
-                // 直接指定内存类型索引（优先级高于 memoryProperties）
+                // 鐩存帴鎸囧畾鍐呭瓨绫诲瀷绱㈠紩锛堜紭鍏堢骇楂樹簬 memoryProperties锛?
                 uint32_t memoryTypeIndex = UINT32_MAX;
 
-                // 块大小（0 = 使用默认）
+                // 鍧楀ぇ灏忥紙0 = 浣跨敤榛樿锛?
                 VkDeviceSize blockSize = 0;
 
-                // 最小/最大块数量
+                // 鏈€灏?鏈€澶у潡鏁伴噺
                 uint32_t minBlockCount = 0;
                 uint32_t maxBlockCount = 0;
 
-                // 对齐要求
+                // 瀵归綈瑕佹眰
                 VkDeviceSize alignment = 0;
 
-                // 用途标识（用于统计）
+                // 鐢ㄩ€旀爣璇嗭紙鐢ㄤ簬缁熻锛?
                 std::string name;
 
-                // 是否允许创建专用分配
+                // 鏄惁鍏佽鍒涘缓涓撶敤鍒嗛厤
                 bool allowDedicatedAllocations = false;
             };
 
@@ -50,11 +50,11 @@ namespace vulkan_engine::vulkan::memory
             MemoryPool(MemoryPool&& other) noexcept;
             MemoryPool& operator=(MemoryPool&& other) noexcept;
 
-            // 获取原生池句柄
+            // 鑾峰彇鍘熺敓姹犲彞鏌?
             VmaPool handle() const noexcept { return pool_; }
             bool    isValid() const noexcept { return pool_ != VK_NULL_HANDLE; }
 
-            // 获取统计信息
+            // 鑾峰彇缁熻淇℃伅
             struct Stats
             {
                 VkDeviceSize size;
@@ -65,7 +65,7 @@ namespace vulkan_engine::vulkan::memory
 
             Stats getStats() const;
 
-            // 名称
+            // 鍚嶇О
             const std::string& name() const { return name_; }
 
         private:
@@ -78,40 +78,40 @@ namespace vulkan_engine::vulkan::memory
 
     using MemoryPoolPtr = std::shared_ptr<MemoryPool>;
 
-    // 预定义内存池类型
+    // 棰勫畾涔夊唴瀛樻睜绫诲瀷
     enum class PoolType
     {
-        Staging,      // Host-visible, 上传数据
-        Vertex,       // Device-local, 顶点数据
-        Index,        // Device-local, 索引数据
+        Staging,      // Host-visible, 涓婁紶鏁版嵁
+        Vertex,       // Device-local, 椤剁偣鏁版嵁
+        Index,        // Device-local, 绱㈠紩鏁版嵁
         Uniform,      // Host-visible, uniform buffer
-        Texture,      // Device-local, 纹理
-        RenderTarget, // Device-local, 渲染目标
-        Dynamic,      // Host-visible, 动态数据
-        Readback      // Host-visible + cached, 回读数据
+        Texture,      // Device-local, 绾圭悊
+        RenderTarget, // Device-local, 娓叉煋鐩爣
+        Dynamic,      // Host-visible, 鍔ㄦ€佹暟鎹?
+        Readback      // Host-visible + cached, 鍥炶鏁版嵁
     };
 
-    // 内存池管理器 - 管理多个预定义池
+    // 鍐呭瓨姹犵鐞嗗櫒 - 绠＄悊澶氫釜棰勫畾涔夋睜
     class MemoryPoolManager
     {
         public:
             explicit MemoryPoolManager(std::shared_ptr<VmaAllocator> allocator);
             ~MemoryPoolManager() = default;
 
-            // 创建预定义池
+            // 鍒涘缓棰勫畾涔夋睜
             void initializeDefaultPools();
 
-            // 获取池
+            // 鑾峰彇姹?
             MemoryPool* getPool(PoolType type);
             VmaPool     getPoolHandle(PoolType type);
 
-            // 创建自定义池
+            // 鍒涘缓鑷畾涔夋睜
             MemoryPoolPtr createPool(const MemoryPool::CreateInfo& createInfo);
 
-            // 获取所有池的统计信息
+            // 鑾峰彇鎵€鏈夋睜鐨勭粺璁′俊鎭?
             void printStats() const;
 
-            // 获取池名称
+            // 鑾峰彇姹犲悕绉?
             static const char* poolTypeToString(PoolType type);
 
         private:

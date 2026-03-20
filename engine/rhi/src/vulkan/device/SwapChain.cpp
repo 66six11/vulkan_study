@@ -4,9 +4,9 @@
 #undef max
 #endif
 
-#include "vulkan/device/SwapChain.hpp"
-#include "platform/windowing/Window.hpp"
-#include "vulkan/utils/VulkanError.hpp"
+#include "engine/rhi/vulkan/device/SwapChain.hpp"
+#include "engine/platform/windowing/Window.hpp"
+#include "engine/rhi/vulkan/utils/VulkanError.hpp"
 #include <algorithm>
 #include <limits>
 

@@ -1,5 +1,5 @@
-#include "vulkan/memory/ResourceManager.hpp"
-#include "core/utils/Logger.hpp"
+#include "engine/rhi/vulkan/memory/ResourceManager.hpp"
+#include "engine/core/utils/Logger.hpp"
 
 namespace vulkan_engine::vulkan::memory
 {
@@ -11,7 +11,7 @@ namespace vulkan_engine::vulkan::memory
             throw std::runtime_error("ResourceManager: deviceManager is null");
         }
 
-        // 创建 VMA 分配器
+        // 鍒涘缓 VMA 鍒嗛厤鍣?
         VmaAllocator::CreateInfo allocatorInfo;
         allocatorInfo.enableDefragmentation     = createInfo.enableDefragmentation;
         allocatorInfo.enableBudget              = createInfo.enableBudget;
@@ -19,7 +19,7 @@ namespace vulkan_engine::vulkan::memory
 
         allocator_ = std::make_shared<VmaAllocator>(device_, allocatorInfo);
 
-        // 创建内存池管理器
+        // 鍒涘缓鍐呭瓨姹犵鐞嗗櫒
         poolManager_ = std::make_unique<MemoryPoolManager>(allocator_);
 
         if (createInfo.enableDefaultPools)
@@ -47,7 +47,7 @@ namespace vulkan_engine::vulkan::memory
         allocInfo.requiredFlags           = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
         allocInfo.flags                   = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 
-        // 使用 staging pool（如果可用）
+        // 浣跨敤 staging pool锛堝鏋滃彲鐢級
         if (auto pool = poolManager_->getPoolHandle(PoolType::Staging))
         {
             allocInfo.pool = pool;
@@ -62,7 +62,7 @@ namespace vulkan_engine::vulkan::memory
         allocInfo.usage                   = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
         allocInfo.requiredFlags           = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
-        // 使用 vertex pool（如果可用）
+        // 浣跨敤 vertex pool锛堝鏋滃彲鐢級
         if (auto pool = poolManager_->getPoolHandle(PoolType::Vertex))
         {
             allocInfo.pool = pool;
@@ -77,7 +77,7 @@ namespace vulkan_engine::vulkan::memory
         allocInfo.usage                   = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
         allocInfo.requiredFlags           = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
-        // 使用 index pool（如果可用）
+        // 浣跨敤 index pool锛堝鏋滃彲鐢級
         if (auto pool = poolManager_->getPoolHandle(PoolType::Index))
         {
             allocInfo.pool = pool;
@@ -96,11 +96,11 @@ namespace vulkan_engine::vulkan::memory
         if (persistentMap)
         {
             allocInfo.flags |= VMA_ALLOCATION_CREATE_MAPPED_BIT;
-            // VMA 要求：使用 MAPPED_BIT 时必须指定 HOST_ACCESS 标志
+            // VMA 瑕佹眰锛氫娇鐢?MAPPED_BIT 鏃跺繀椤绘寚瀹?HOST_ACCESS 鏍囧織
             allocInfo.flags |= VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
         }
 
-        // 使用 uniform pool（如果可用）
+        // 浣跨敤 uniform pool锛堝鏋滃彲鐢級
         if (auto pool = poolManager_->getPoolHandle(PoolType::Uniform))
         {
             allocInfo.pool = pool;
@@ -147,7 +147,7 @@ namespace vulkan_engine::vulkan::memory
         allocInfo.usage                   = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
         allocInfo.requiredFlags           = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
-        // 使用 render target pool（如果可用）
+        // 浣跨敤 render target pool锛堝鏋滃彲鐢級
         if (auto pool = poolManager_->getPoolHandle(PoolType::RenderTarget))
         {
             allocInfo.pool = pool;
@@ -181,7 +181,7 @@ namespace vulkan_engine::vulkan::memory
         allocInfo.usage                   = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
         allocInfo.requiredFlags           = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
-        // 使用 render target pool（如果可用）
+        // 浣跨敤 render target pool锛堝鏋滃彲鐢級
         if (auto pool = poolManager_->getPoolHandle(PoolType::RenderTarget))
         {
             allocInfo.pool = pool;
@@ -216,7 +216,7 @@ namespace vulkan_engine::vulkan::memory
         allocInfo.usage                   = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
         allocInfo.requiredFlags           = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
-        // 使用 texture pool（如果可用）
+        // 浣跨敤 texture pool锛堝鏋滃彲鐢級
         if (auto pool = poolManager_->getPoolHandle(PoolType::Texture))
         {
             allocInfo.pool = pool;
@@ -314,14 +314,14 @@ namespace vulkan_engine::vulkan::memory
 
     void ResourceManager::defragment()
     {
-        // VMA 3.3.0+ 支持碎片整理
-        // 这是一个占位符实现，完整的实现需要使用 vmaDefragmentationBegin/vmaDefragmentationEnd
+        // VMA 3.3.0+ 鏀寔纰庣墖鏁寸悊
+        // 杩欐槸涓€涓崰浣嶇瀹炵幇锛屽畬鏁寸殑瀹炵幇闇€瑕佷娇鐢?vmaDefragmentationBegin/vmaDefragmentationEnd
         LOG_INFO("ResourceManager::defragment called (placeholder)");
     }
 
     void ResourceManager::flush()
     {
-        // 强制释放未使用的内存块
+        // 寮哄埗閲婃斁鏈娇鐢ㄧ殑鍐呭瓨鍧?
         if (allocator_)
         {
             vmaSetCurrentFrameIndex(allocator_->handle(), 0);

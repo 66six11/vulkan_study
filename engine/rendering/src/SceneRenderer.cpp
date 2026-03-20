@@ -1,10 +1,10 @@
-#include "rendering/SceneRenderer.hpp"
-#include "rendering/Viewport.hpp"
-#include "vulkan/device/Device.hpp"
-#include "vulkan/pipelines/RenderPassManager.hpp"
-#include "vulkan/memory/VmaAllocator.hpp"
-#include "vulkan/memory/VmaImage.hpp"
-#include "core/utils/Logger.hpp"
+#include "engine/rendering/SceneRenderer.hpp"
+#include "engine/rendering/Viewport.hpp"
+#include "engine/rhi/vulkan/device/Device.hpp"
+#include "engine/rhi/vulkan/pipelines/RenderPassManager.hpp"
+#include "engine/rhi/vulkan/memory/VmaAllocator.hpp"
+#include "engine/rhi/vulkan/memory/VmaImage.hpp"
+#include "engine/core/utils/Logger.hpp"
 
 #include <algorithm>
 
@@ -205,7 +205,7 @@ namespace vulkan_engine::rendering
             }
         }
 
-        // 初始化查询池
+        // 鍒濆鍖栨煡璇㈡睜
         {
             VkCommandBufferAllocateInfo alloc_info{};
             alloc_info.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -334,7 +334,7 @@ namespace vulkan_engine::rendering
             return false;
         }
 
-        // 等待上一帧完成
+        // 绛夊緟涓婁竴甯у畬鎴?
         auto& sync = frame_syncs_[current_frame_];
         sync.in_flight_fence->wait();
         sync.in_flight_fence->reset();
@@ -345,7 +345,7 @@ namespace vulkan_engine::rendering
             vkResetCommandBuffer(command_buffers_[current_frame_].handle(), 0);
         }
 
-        // 更新 GPU 计时
+        // 鏇存柊 GPU 璁℃椂
         if (config_.enable_gpu_timing && !query_pools_.empty())
         {
             update_gpu_timing();
@@ -380,7 +380,7 @@ namespace vulkan_engine::rendering
         vkResetCommandBuffer(cmd_handle, 0);
         cmd.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
-        // 写入开始时间戳
+        // 鍐欏叆寮€濮嬫椂闂存埑
         if (!query_pools_.empty() && query_pools_[current_frame_] != VK_NULL_HANDLE)
         {
             vkCmdResetQueryPool(cmd_handle, query_pools_[current_frame_], 0, 2);
@@ -393,13 +393,13 @@ namespace vulkan_engine::rendering
 
         if (color_view != VK_NULL_HANDLE && depth_view != VK_NULL_HANDLE)
         {
-            // 将 color image 转换为 COLOR_ATTACHMENT_OPTIMAL
-            // 注意：第一帧时图像可能是 COLOR_ATTACHMENT_OPTIMAL（初始状态）
-            // 后续帧是 SHADER_READ_ONLY_OPTIMAL（上一帧结束时转换）
-            // 使用 UNDEFINED 作为 oldLayout 可以处理两种情况
+            // 灏?color image 杞崲涓?COLOR_ATTACHMENT_OPTIMAL
+            // 娉ㄦ剰锛氱涓€甯ф椂鍥惧儚鍙兘鏄?COLOR_ATTACHMENT_OPTIMAL锛堝垵濮嬬姸鎬侊級
+            // 鍚庣画甯ф槸 SHADER_READ_ONLY_OPTIMAL锛堜笂涓€甯х粨鏉熸椂杞崲锛?
+            // 浣跨敤 UNDEFINED 浣滀负 oldLayout 鍙互澶勭悊涓ょ鎯呭喌
             VkImageMemoryBarrier barrier{};
             barrier.sType                           = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-            barrier.oldLayout                       = VK_IMAGE_LAYOUT_UNDEFINED; // 兼容初始状态和后续帧
+            barrier.oldLayout                       = VK_IMAGE_LAYOUT_UNDEFINED; // 鍏煎鍒濆鐘舵€佸拰鍚庣画甯?
             barrier.newLayout                       = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
             barrier.srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
             barrier.dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
@@ -409,13 +409,13 @@ namespace vulkan_engine::rendering
             barrier.subresourceRange.levelCount     = 1;
             barrier.subresourceRange.baseArrayLayer = 0;
             barrier.subresourceRange.layerCount     = 1;
-            barrier.srcAccessMask                   = 0; // UNDEFINED 不需要等待之前的访问
+            barrier.srcAccessMask                   = 0; // UNDEFINED 涓嶉渶瑕佺瓑寰呬箣鍓嶇殑璁块棶
             barrier.dstAccessMask                   = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
             vkCmdPipelineBarrier(
                                  cmd_handle,
                                  VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                                 // 最早阶段
+                                 // 鏈€鏃╅樁娈?
                                  VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                                  0,
                                  0,
@@ -450,7 +450,7 @@ namespace vulkan_engine::rendering
             cmd.end_dynamic_rendering();
         }
 
-        // 转换 color image 到 SHADER_READ_ONLY_OPTIMAL
+        // 杞崲 color image 鍒?SHADER_READ_ONLY_OPTIMAL
         if (render_target_ && render_target_->color_image())
         {
             VkImageMemoryBarrier barrier{};
@@ -481,7 +481,7 @@ namespace vulkan_engine::rendering
                                  &barrier);
         }
 
-        // 写入结束时间戳
+        // 鍐欏叆缁撴潫鏃堕棿鎴?
         if (!query_pools_.empty() && query_pools_[current_frame_] != VK_NULL_HANDLE)
         {
             vkCmdWriteTimestamp(cmd_handle, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, query_pools_[current_frame_], 1);

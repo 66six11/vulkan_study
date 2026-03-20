@@ -1,7 +1,7 @@
-#include "rendering/render_graph/RenderGraphPass.hpp"
-#include "vulkan/command/CommandBuffer.hpp"
-#include "vulkan/resources/Buffer.hpp"
-#include "core/utils/Logger.hpp"
+#include "engine/rendering/render_graph/RenderGraphPass.hpp"
+#include "engine/rhi/vulkan/command/CommandBuffer.hpp"
+#include "engine/rhi/vulkan/resources/Buffer.hpp"
+#include "engine/core/utils/Logger.hpp"
 
 namespace vulkan_engine::rendering
 {

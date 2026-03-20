@@ -1,6 +1,6 @@
 /**
  * @file IImage.hpp
- * @brief Image 资源接口
+ * @brief Image 璧勬簮鎺ュ彛
  */
 
 #pragma once
@@ -12,7 +12,7 @@
 namespace vulkan_engine::vulkan::memory
 {
     /**
-     * @brief Image 子资源范围描述
+     * @brief Image 瀛愯祫婧愯寖鍥存弿杩?
      */
     struct ImageSubresourceRange
     {
@@ -24,59 +24,59 @@ namespace vulkan_engine::vulkan::memory
     };
 
     /**
-     * @brief Image 接口
+     * @brief Image 鎺ュ彛
      * 
-     * 抽象的 GPU Image 资源，支持不同的实现
+     * 鎶借薄鐨?GPU Image 璧勬簮锛屾敮鎸佷笉鍚岀殑瀹炵幇
      */
     class IImage
     {
         public:
             virtual ~IImage() = default;
 
-            // 禁止拷贝
+            // 绂佹鎷疯礉
             IImage(const IImage&)            = delete;
             IImage& operator=(const IImage&) = delete;
 
-            // 句柄访问
+            // 鍙ユ焺璁块棶
             [[nodiscard]] virtual VkImage handle() const noexcept = 0;
             [[nodiscard]] virtual bool    isValid() const noexcept = 0;
 
-            // 尺寸访问
+            // 灏哄璁块棶
             [[nodiscard]] virtual uint32_t width() const noexcept = 0;
             [[nodiscard]] virtual uint32_t height() const noexcept = 0;
             [[nodiscard]] virtual uint32_t depth() const noexcept = 0;
             [[nodiscard]] virtual uint32_t mipLevels() const noexcept = 0;
             [[nodiscard]] virtual uint32_t arrayLayers() const noexcept = 0;
 
-            // 格式和属性
+            // 鏍煎紡鍜屽睘鎬?
             [[nodiscard]] virtual int      format() const noexcept = 0;        // VkFormat
             [[nodiscard]] virtual uint32_t samples() const noexcept = 0;       // VkSampleCountFlagBits
             [[nodiscard]] virtual int      currentLayout() const noexcept = 0; // VkImageLayout
 
-            // 布局转换
-            virtual void setLayout(int newLayout) = 0; // VkImageLayout，仅设置跟踪状态
+            // 甯冨眬杞崲
+            virtual void setLayout(int newLayout) = 0; // VkImageLayout锛屼粎璁剧疆璺熻釜鐘舵€?
             virtual void transitionLayout(VkCommandBuffer cmd, int newLayout, const ImageSubresourceRange& range = {}) = 0;
 
-            // Image View 管理
+            // Image View 绠＄悊
             [[nodiscard]] virtual VkImageView createView(
                 int viewType,
                 // VkImageViewType
                 int format,
-                // VkFormat，VK_FORMAT_UNDEFINED 表示使用 Image 格式
+                // VkFormat锛孷K_FORMAT_UNDEFINED 琛ㄧず浣跨敤 Image 鏍煎紡
                 const ImageSubresourceRange& range
             ) = 0;
 
             virtual void destroyView(VkImageView view) = 0;
             virtual void destroyAllViews() = 0;
 
-            // 数据上传/下载（需要 Command Buffer）
+            // 鏁版嵁涓婁紶/涓嬭浇锛堥渶瑕?Command Buffer锛?
             virtual void uploadData(const void* data, uint64_t size, uint32_t mipLevel = 0, uint32_t arrayLayer = 0) = 0;
             virtual void downloadData(void* data, uint64_t size, uint32_t mipLevel = 0, uint32_t arrayLayer = 0) = 0;
 
-            // Mipmap 生成
+            // Mipmap 鐢熸垚
             virtual void generateMipmaps(VkCommandBuffer cmd) = 0;
 
-            // 获取分配信息
+            // 鑾峰彇鍒嗛厤淇℃伅
             [[nodiscard]] virtual const void* allocationInfo() const = 0;
     };
 
@@ -84,7 +84,7 @@ namespace vulkan_engine::vulkan::memory
     using IImageWeakPtr = std::weak_ptr<IImage>;
 
     /**
-     * @brief 2D Texture 包装类
+     * @brief 2D Texture 鍖呰绫?
      */
     class ITexture2D
     {

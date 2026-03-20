@@ -1,7 +1,7 @@
 #pragma once
 
-#include "vulkan/resources/Image.hpp"
-#include "vulkan/device/Device.hpp"
+#include "engine/rhi/vulkan/resources/Image.hpp"
+#include "engine/rhi/vulkan/device/Device.hpp"
 
 #include <string>
 #include <memory>

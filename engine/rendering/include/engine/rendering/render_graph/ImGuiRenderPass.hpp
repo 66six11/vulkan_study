@@ -1,7 +1,7 @@
 #pragma once
 
-#include "rendering/render_graph/RenderGraphPass.hpp"
-#include "vulkan/command/CommandBuffer.hpp"
+#include "engine/rendering/render_graph/RenderGraphPass.hpp"
+#include "engine/rhi/vulkan/command/CommandBuffer.hpp"
 #include <imgui.h>
 #include <imgui_impl_vulkan.h>
 

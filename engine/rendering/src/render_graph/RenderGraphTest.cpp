@@ -1,7 +1,7 @@
-#include "rendering/render_graph/RenderGraph.hpp"
-#include "rendering/render_graph/RenderGraphPass.hpp"
-#include "rendering/render_graph/RenderGraphResource.hpp"
-#include "core/utils/Logger.hpp"
+#include "engine/rendering/render_graph/RenderGraph.hpp"
+#include "engine/rendering/render_graph/RenderGraphPass.hpp"
+#include "engine/rendering/render_graph/RenderGraphResource.hpp"
+#include "engine/core/utils/Logger.hpp"
 
 namespace vulkan_engine::rendering
 {

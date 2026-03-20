@@ -1,9 +1,9 @@
-#include "rendering/ComposedRenderer.hpp"
-#include "editor/Editor.hpp"
-#include "vulkan/device/Device.hpp"
-#include "vulkan/device/SwapChain.hpp"
-#include "platform/windowing/Window.hpp"
-#include "core/utils/Logger.hpp"
+#include "engine/rendering/ComposedRenderer.hpp"
+#include "engine/editor/Editor.hpp"
+#include "engine/rhi/vulkan/device/Device.hpp"
+#include "engine/rhi/vulkan/device/SwapChain.hpp"
+#include "engine/platform/windowing/Window.hpp"
+#include "engine/core/utils/Logger.hpp"
 
 namespace vulkan_engine::rendering
 {
@@ -64,7 +64,7 @@ namespace vulkan_engine::rendering
 
         logger::info("Initializing ComposedRenderer...");
 
-        // 初始化场景渲染器
+        // 鍒濆鍖栧満鏅覆鏌撳櫒
         SceneRenderer::Config scene_config;
         scene_config.width                = config.scene_width;
         scene_config.height               = config.scene_height;
@@ -77,7 +77,7 @@ namespace vulkan_engine::rendering
             return false;
         }
 
-        // 初始化UI渲染器
+        // 鍒濆鍖朥I娓叉煋鍣?
         UIRenderer::Config ui_config;
         ui_config.max_frames_in_flight = config.max_frames_in_flight;
         ui_config.enable_vsync         = config.enable_vsync;
@@ -121,10 +121,10 @@ namespace vulkan_engine::rendering
             return false;
         }
 
-        // 1. 开始场景帧（场景渲染器有自己的暂停控制）
+        // 1. 寮€濮嬪満鏅抚锛堝満鏅覆鏌撳櫒鏈夎嚜宸辩殑鏆傚仠鎺у埗锛?
         scene_renderer_.begin_frame();
 
-        // 2. 获取UI的 swap chain image
+        // 2. 鑾峰彇UI鐨?swap chain image
         bool ui_ready = ui_renderer_.acquire_next_image();
 
         if (!ui_ready)
@@ -132,7 +132,7 @@ namespace vulkan_engine::rendering
             return false;
         }
 
-        // 场景渲染器可能暂停，但UI必须继续
+        // 鍦烘櫙娓叉煋鍣ㄥ彲鑳芥殏鍋滐紝浣哢I蹇呴』缁х画
         return true;
     }
 
@@ -143,7 +143,7 @@ namespace vulkan_engine::rendering
             return;
         }
 
-        // 场景渲染器有自己的暂停控制
+        // 鍦烘櫙娓叉煋鍣ㄦ湁鑷繁鐨勬殏鍋滄帶鍒?
         scene_renderer_.render(callback);
     }
 
@@ -154,12 +154,12 @@ namespace vulkan_engine::rendering
             return;
         }
 
-        // 如果场景没有暂停，传递场景完成的信号量供UI等待
+        // 濡傛灉鍦烘櫙娌℃湁鏆傚仠锛屼紶閫掑満鏅畬鎴愮殑淇″彿閲忎緵UI绛夊緟
         VkSemaphore scene_semaphore = scene_renderer_.is_paused()
                                           ? VK_NULL_HANDLE
                                           : scene_renderer_.get_scene_finished_semaphore();
 
-        // 传递场景渲染目标供UI显示
+        // 浼犻€掑満鏅覆鏌撶洰鏍囦緵UI鏄剧ず
         ui_renderer_.render(editor, scene_renderer_.render_target(), scene_semaphore);
     }
 
@@ -170,13 +170,13 @@ namespace vulkan_engine::rendering
             return;
         }
 
-        // 1. 结束场景帧（推进到下一帧）
+        // 1. 缁撴潫鍦烘櫙甯э紙鎺ㄨ繘鍒颁笅涓€甯э級
         scene_renderer_.end_frame();
 
-        // 2. 呈现UI
+        // 2. 鍛堢幇UI
         ui_renderer_.present();
 
-        current_frame_ = (current_frame_ + 1) % 2; // 假设 max_frames_in_flight = 2
+        current_frame_ = (current_frame_ + 1) % 2; // 鍋囪 max_frames_in_flight = 2
     }
 
     // ============================================================================
@@ -185,7 +185,7 @@ namespace vulkan_engine::rendering
 
     void ComposedRenderer::resize(uint32_t width, uint32_t height)
     {
-        // 同时调整场景和UI
+        // 鍚屾椂璋冩暣鍦烘櫙鍜孶I
         resize_scene(width, height);
         resize_ui(width, height);
     }

@@ -1,5 +1,5 @@
-﻿#include "rendering/shaders/ShaderManager.hpp"
-#include "platform/filesystem/PathUtils.hpp"
+#include "engine/rendering/shaders/ShaderManager.hpp"
+#include "engine/platform/filesystem/PathUtils.hpp"
 #include <fstream>
 #include <sstream>
 #include <stdexcept>

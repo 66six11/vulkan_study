@@ -1,7 +1,7 @@
 #pragma once
 
-#include "vulkan/resources/Buffer.hpp"
-#include "vulkan/command/CommandBuffer.hpp"
+#include "engine/rhi/vulkan/resources/Buffer.hpp"
+#include "engine/rhi/vulkan/command/CommandBuffer.hpp"
 #include <glm/glm.hpp>
 #include <vector>
 #include <memory>

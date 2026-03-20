@@ -1,8 +1,8 @@
 #pragma once
 
-// 需要包含 Application 头文件来获取基类定义
-// 注意：这是 apps/editor 的特权，它作为应用程序入口可以访问引擎各层
-#include "application/app/Application.hpp"
+// 闇€瑕佸寘鍚?Application 澶存枃浠舵潵鑾峰彇鍩虹被瀹氫箟
+// 娉ㄦ剰锛氳繖鏄?apps/editor 鐨勭壒鏉冿紝瀹冧綔涓哄簲鐢ㄧ▼搴忓叆鍙ｅ彲浠ヨ闂紩鎿庡悇灞?
+#include "engine/application/app/Application.hpp"
 #include <memory>
 #include <string>
 #include <cstdint>
@@ -14,13 +14,13 @@ namespace vulkan_engine::rendering
 
 namespace editor::bootstrap
 {
-    // 使用引擎命名空间
+    // 浣跨敤寮曟搸鍛藉悕绌洪棿
     using namespace vulkan_engine;
 
     // Forward declarations
     class EditorApplication;
 
-    // Editor App 配置结构
+    // Editor App 閰嶇疆缁撴瀯
     struct EditorAppConfig
     {
         std::string title             = "Vulkan Engine - Editor";
@@ -30,25 +30,25 @@ namespace editor::bootstrap
         bool        enable_validation = true;
         bool        enable_profiling  = true;
 
-        // 从命令行参数解析配置
+        // 浠庡懡浠よ鍙傛暟瑙ｆ瀽閰嶇疆
         static EditorAppConfig parse(int argc, char* argv[]);
     };
 
-    // Editor Application 工厂函数
+    // Editor Application 宸ュ巶鍑芥暟
     std::unique_ptr<EditorApplication> create_editor_app(const EditorAppConfig& config);
 
-    // Editor Application 类声明
+    // Editor Application 绫诲０鏄?
     class EditorApplication : public vulkan_engine::application::ApplicationBase
     {
         public:
             explicit EditorApplication(const vulkan_engine::application::ApplicationConfig& config);
             ~EditorApplication() override = default;
 
-            // 禁用拷贝
+            // 绂佺敤鎷疯礉
             EditorApplication(const EditorApplication&)            = delete;
             EditorApplication& operator=(const EditorApplication&) = delete;
 
-            // 允许移动
+            // 鍏佽绉诲姩
             EditorApplication(EditorApplication&&) noexcept            = default;
             EditorApplication& operator=(EditorApplication&&) noexcept = default;
 

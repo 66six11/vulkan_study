@@ -1,8 +1,8 @@
 #pragma once
 
-#include "rendering/render_graph/RenderGraphPass.hpp"
-#include "rendering/material/Material.hpp"
-#include "vulkan/resources/Buffer.hpp"
+#include "engine/rendering/render_graph/RenderGraphPass.hpp"
+#include "engine/rendering/material/Material.hpp"
+#include "engine/rhi/vulkan/resources/Buffer.hpp"
 
 #include <memory>
 #include <glm/glm.hpp>

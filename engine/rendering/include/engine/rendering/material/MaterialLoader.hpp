@@ -1,7 +1,7 @@
 #pragma once
 
-#include "rendering/material/Material.hpp"
-#include "rendering/resources/TextureLoader.hpp"
+#include "engine/rendering/material/Material.hpp"
+#include "engine/rendering/resources/TextureLoader.hpp"
 
 #include <string>
 #include <memory>

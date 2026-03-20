@@ -1,5 +1,5 @@
-#include "vulkan/pipelines/ShaderModule.hpp"
-#include "vulkan/utils/VulkanError.hpp"
+#include "engine/rhi/vulkan/pipelines/ShaderModule.hpp"
+#include "engine/rhi/vulkan/utils/VulkanError.hpp"
 #include <fstream>
 #include <cstring>
 

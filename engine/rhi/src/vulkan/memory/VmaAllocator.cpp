@@ -1,8 +1,8 @@
-// 定义 VMA 实现宏（必须在一个 .cpp 文件中定义）
+// 瀹氫箟 VMA 瀹炵幇瀹忥紙蹇呴』鍦ㄤ竴涓?.cpp 鏂囦欢涓畾涔夛級
 #define VMA_IMPLEMENTATION
 
-#include "vulkan/memory/VmaAllocator.hpp"
-#include "core/utils/Logger.hpp"
+#include "engine/rhi/vulkan/memory/VmaAllocator.hpp"
+#include "engine/core/utils/Logger.hpp"
 #include <cstring>
 #include <sstream>
 
@@ -22,7 +22,7 @@ namespace vulkan_engine::vulkan::memory
         allocatorInfo.device                 = deviceManager_->device().handle();
         allocatorInfo.instance               = deviceManager_->instance().handle();
 
-        // 启用 VMA 标志
+        // 鍚敤 VMA 鏍囧織
         allocatorInfo.flags = 0;
         if (createInfo.enableDefragmentation)
         {
@@ -33,7 +33,7 @@ namespace vulkan_engine::vulkan::memory
             allocatorInfo.flags |= VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT;
         }
 
-        // 在 Debug 构建中启用内存泄漏检测
+        // 鍦?Debug 鏋勫缓涓惎鐢ㄥ唴瀛樻硠婕忔娴?
         #ifdef VULKAN_ENGINE_DEBUG
         if (createInfo.enableMemoryLeakDetection)
         {
@@ -108,7 +108,7 @@ namespace vulkan_engine::vulkan::memory
     {
         if (allocator_ != VK_NULL_HANDLE)
         {
-            // 销毁所有池
+            // 閿€姣佹墍鏈夋睜
             for (VmaPool pool : pools_)
             {
                 vmaDestroyPool(allocator_, pool);
@@ -153,7 +153,7 @@ namespace vulkan_engine::vulkan::memory
 
     void VmaAllocator::printStats() const
     {
-        // 使用 VMA 原生预算查询获取统计信息
+        // 浣跨敤 VMA 鍘熺敓棰勭畻鏌ヨ鑾峰彇缁熻淇℃伅
         std::vector<VmaBudget> budgets = getHeapBudgets();
 
         std::ostringstream oss;
@@ -170,7 +170,7 @@ namespace vulkan_engine::vulkan::memory
             LOG_INFO(heapOss.str());
         }
 
-        // 使用 JSON 字符串获取详细统计
+        // 浣跨敤 JSON 瀛楃涓茶幏鍙栬缁嗙粺璁?
         std::string detailedStats = buildStatsString(true);
         LOG_INFO("Detailed VMA Statistics:\n" + detailedStats);
     }

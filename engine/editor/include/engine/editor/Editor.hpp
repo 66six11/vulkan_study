@@ -1,9 +1,9 @@
 #pragma once
 
-#include "editor/ImGuiManager.hpp"
-#include "vulkan/device/Device.hpp"
-#include "vulkan/device/SwapChain.hpp"
-#include "platform/windowing/Window.hpp"
+#include "engine/editor/ImGuiManager.hpp"
+#include "engine/rhi/vulkan/device/Device.hpp"
+#include "engine/rhi/vulkan/device/SwapChain.hpp"
+#include "engine/platform/windowing/Window.hpp"
 
 #include <memory>
 

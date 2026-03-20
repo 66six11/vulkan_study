@@ -1,6 +1,6 @@
-﻿#include "rendering/resources/TextureLoader.hpp"
-#include "core/utils/Logger.hpp"
-#include "platform/filesystem/PathUtils.hpp"
+#include "engine/rendering/resources/TextureLoader.hpp"
+#include "engine/core/utils/Logger.hpp"
+#include "engine/platform/filesystem/PathUtils.hpp"
 
 
 #define STB_IMAGE_IMPLEMENTATION

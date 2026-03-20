@@ -1,15 +1,15 @@
-#include "rendering/Renderer.hpp"
-#include "rendering/Viewport.hpp"
-#include "rendering/render_graph/RenderGraphPass.hpp"
-#include "vulkan/device/SwapChain.hpp"
-#include "vulkan/resources/DepthBuffer.hpp"
-#include "vulkan/pipelines/RenderPassManager.hpp"
-#include "vulkan/resources/Framebuffer.hpp"
-#include "vulkan/memory/VmaAllocator.hpp"
-#include "vulkan/memory/VmaImage.hpp"
-#include "vulkan/utils/VulkanError.hpp"
-#include "core/utils/Logger.hpp"
-#include "editor/Editor.hpp"
+#include "engine/rendering/Renderer.hpp"
+#include "engine/rendering/Viewport.hpp"
+#include "engine/rendering/render_graph/RenderGraphPass.hpp"
+#include "engine/rhi/vulkan/device/SwapChain.hpp"
+#include "engine/rhi/vulkan/resources/DepthBuffer.hpp"
+#include "engine/rhi/vulkan/pipelines/RenderPassManager.hpp"
+#include "engine/rhi/vulkan/resources/Framebuffer.hpp"
+#include "engine/rhi/vulkan/memory/VmaAllocator.hpp"
+#include "engine/rhi/vulkan/memory/VmaImage.hpp"
+#include "engine/rhi/vulkan/utils/VulkanError.hpp"
+#include "engine/core/utils/Logger.hpp"
+#include "engine/editor/Editor.hpp"
 
 #include <algorithm>
 
@@ -129,7 +129,7 @@ namespace vulkan_engine::rendering
 
         logger::info("Initializing Renderer...");
 
-        // 初始化子系统（顺序很重要）
+        // 鍒濆鍖栧瓙绯荤粺锛堥『搴忓緢閲嶈锛?
         if (!initialize_vma_allocator()) return false;
         if (!initialize_depth_buffer()) return false;
         if (!initialize_render_pass_manager()) return false;
@@ -140,7 +140,7 @@ namespace vulkan_engine::rendering
         if (!initialize_viewport()) return false;
         if (!initialize_query_pools()) return false;
 
-        // 初始化 RenderGraph
+        // 鍒濆鍖?RenderGraph
         render_graph_.initialize(device_);
 
         initialized_ = true;
@@ -184,20 +184,20 @@ namespace vulkan_engine::rendering
 
     bool Renderer::initialize_command_pools()
     {
-        // 场景渲染命令池
+        // 鍦烘櫙娓叉煋鍛戒护姹?
         scene_cmd_pool_ = std::make_unique<vulkan::RenderCommandPool>(
                                                                       device_,
                                                                       0,
                                                                       // graphics queue family
                                                                       VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 
-        // UI 渲染命令池
+        // UI 娓叉煋鍛戒护姹?
         ui_cmd_pool_ = std::make_unique<vulkan::RenderCommandPool>(
                                                                    device_,
                                                                    0,
                                                                    VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 
-        // 分配命令缓冲
+        // 鍒嗛厤鍛戒护缂撳啿
         scene_cmd_buffers_ = scene_cmd_pool_->allocate(config_.max_frames_in_flight);
         ui_cmd_buffers_    = ui_cmd_pool_->allocate(config_.max_frames_in_flight);
 
@@ -213,7 +213,7 @@ namespace vulkan_engine::rendering
             return true;
         }
 
-        // 检查设备是否支持时间戳查询
+        // 妫€鏌ヨ澶囨槸鍚︽敮鎸佹椂闂存埑鏌ヨ
         VkPhysicalDeviceProperties props;
         vkGetPhysicalDeviceProperties(device_->physical_device().handle(), &props);
         if (props.limits.timestampComputeAndGraphics == VK_FALSE)
@@ -240,7 +240,7 @@ namespace vulkan_engine::rendering
             }
         }
 
-        // 初始化查询池（重置所有查询）
+        // 鍒濆鍖栨煡璇㈡睜锛堥噸缃墍鏈夋煡璇級
         {
             VkCommandBufferAllocateInfo alloc_info{};
             alloc_info.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -284,7 +284,7 @@ namespace vulkan_engine::rendering
     {
         framebuffer_pool_ = std::make_unique<vulkan::FramebufferPool>(device_);
 
-        // 为 swap chain images 创建 framebuffer
+        // 涓?swap chain images 鍒涘缓 framebuffer
         std::vector<VkImageView> image_views;
         image_views.reserve(swap_chain_->image_count());
         for (uint32_t i = 0; i < swap_chain_->image_count(); ++i)
@@ -320,12 +320,12 @@ namespace vulkan_engine::rendering
         render_target_ = std::make_shared<RenderTarget>();
         render_target_->initialize(vma_allocator_, rt_info);
 
-        // 创建离屏 RenderPass
+        // 鍒涘缓绂诲睆 RenderPass
         auto offscreen_pass = render_pass_manager_->get_offscreen_render_pass(
                                                                               render_target_->color_format(),
                                                                               render_target_->depth_format());
 
-        // 创建 Framebuffer
+        // 鍒涘缓 Framebuffer
         render_target_->create_framebuffer(offscreen_pass);
 
         logger::info("RenderTarget initialized: " + std::to_string(config_.width) + "x" + std::to_string(config_.height));
@@ -349,7 +349,7 @@ namespace vulkan_engine::rendering
 
         logger::info("Shutting down Renderer...");
 
-        // 等待设备空闲
+        // 绛夊緟璁惧绌洪棽
         vkDeviceWaitIdle(device_->device().handle());
 
         cleanup_resources();
@@ -360,35 +360,35 @@ namespace vulkan_engine::rendering
 
     void Renderer::cleanup_resources()
     {
-        // 1. 清理 RenderGraph
+        // 1. 娓呯悊 RenderGraph
         render_graph_.reset();
 
-        // 2. 清理 query pools
+        // 2. 娓呯悊 query pools
         destroy_query_pools();
 
-        // 3. 清理 viewport 和 render target
+        // 3. 娓呯悊 viewport 鍜?render target
         viewport_.reset();
         render_target_.reset();
 
-        // 4. 清理命令缓冲和池
+        // 4. 娓呯悊鍛戒护缂撳啿鍜屾睜
         scene_cmd_buffers_.clear();
         ui_cmd_buffers_.clear();
         scene_cmd_pool_.reset();
         ui_cmd_pool_.reset();
 
-        // 5. 清理 framebuffer pool
+        // 5. 娓呯悊 framebuffer pool
         framebuffer_pool_.reset();
 
-        // 6. 清理同步对象
+        // 6. 娓呯悊鍚屾瀵硅薄
         frame_sync_.reset();
 
-        // 7. 清理深度缓冲
+        // 7. 娓呯悊娣卞害缂撳啿
         depth_buffer_.reset();
 
-        // 8. 清理 render pass manager
+        // 8. 娓呯悊 render pass manager
         render_pass_manager_.reset();
 
-        // 9. 清理 VMA 分配器
+        // 9. 娓呯悊 VMA 鍒嗛厤鍣?
         vma_allocator_.reset();
     }
 
@@ -417,10 +417,10 @@ namespace vulkan_engine::rendering
             return false;
         }
 
-        // 等待上一帧完成（CPU-GPU 同步）
+        // 绛夊緟涓婁竴甯у畬鎴愶紙CPU-GPU 鍚屾锛?
         frame_sync_->wait_and_reset_current_frame_fence();
 
-        // 获取下一帧 image
+        // 鑾峰彇涓嬩竴甯?image
         bool acquired = swap_chain_->acquire_next_image(
                                                         frame_sync_->get_current_acquire_semaphore().handle(),
                                                         VK_NULL_HANDLE,
@@ -434,7 +434,7 @@ namespace vulkan_engine::rendering
         current_frame_ = frame_sync_->current_frame();
         frame_started_ = true;
 
-        // 更新 GPU 计时（读取上一帧结果）
+        // 鏇存柊 GPU 璁℃椂锛堣鍙栦笂涓€甯х粨鏋滐級
         if (config_.enable_gpu_timing && !query_pools_.empty())
         {
             update_gpu_timing();
@@ -459,25 +459,25 @@ namespace vulkan_engine::rendering
         auto&           cmd        = scene_cmd_buffers_[current_frame_];
         VkCommandBuffer cmd_handle = cmd.handle();
 
-        // 检查 RenderTarget 是否有效
+        // 妫€鏌?RenderTarget 鏄惁鏈夋晥
         if (!render_target_ || render_target_->width() < 10 || render_target_->height() < 10)
         {
             logger::warn("RenderTarget too small, skipping scene render");
             return;
         }
 
-        // 重置并录制命令缓冲
+        // 閲嶇疆骞跺綍鍒跺懡浠ょ紦鍐?
         vkResetCommandBuffer(cmd_handle, 0);
         cmd.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
-        // 写入开始时间戳
+        // 鍐欏叆寮€濮嬫椂闂存埑
         if (!query_pools_.empty() && query_pools_[current_frame_] != VK_NULL_HANDLE)
         {
             vkCmdResetQueryPool(cmd_handle, query_pools_[current_frame_], 0, 2);
             vkCmdWriteTimestamp(cmd_handle, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, query_pools_[current_frame_], 0);
         }
 
-        // 使用 Dynamic Rendering 执行场景渲染
+        // 浣跨敤 Dynamic Rendering 鎵ц鍦烘櫙娓叉煋
         VkImageView color_view = render_target_->color_image_view();
         VkImageView depth_view = render_target_->depth_image_view();
 
@@ -496,7 +496,7 @@ namespace vulkan_engine::rendering
                                         &color_clear,
                                         &depth_clear);
 
-            // 执行场景渲染回调（包含 RenderGraph 执行）
+            // 鎵ц鍦烘櫙娓叉煋鍥炶皟锛堝寘鍚?RenderGraph 鎵ц锛?
             FrameContext ctx{};
             ctx.frame_index  = current_frame_;
             ctx.image_index  = current_image_;
@@ -510,7 +510,7 @@ namespace vulkan_engine::rendering
             cmd.end_dynamic_rendering();
         }
 
-        // 转换 RenderTarget color image 到 SHADER_READ_ONLY_OPTIMAL，供 ImGui 读取
+        // 杞崲 RenderTarget color image 鍒?SHADER_READ_ONLY_OPTIMAL锛屼緵 ImGui 璇诲彇
         if (render_target_ && render_target_->color_image())
         {
             VkImageMemoryBarrier barrier{};
@@ -541,7 +541,7 @@ namespace vulkan_engine::rendering
                                  &barrier);
         }
 
-        // 写入结束时间戳
+        // 鍐欏叆缁撴潫鏃堕棿鎴?
         if (!query_pools_.empty() && query_pools_[current_frame_] != VK_NULL_HANDLE)
         {
             vkCmdWriteTimestamp(cmd_handle, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, query_pools_[current_frame_], 1);
@@ -554,7 +554,7 @@ namespace vulkan_engine::rendering
     {
         auto& cmd = scene_cmd_buffers_[current_frame_];
 
-        // 提交场景渲染，信号 scene_finished semaphore
+        // 鎻愪氦鍦烘櫙娓叉煋锛屼俊鍙?scene_finished semaphore
         VkSemaphore signal_semaphores[] = {frame_sync_->get_current_scene_finished_semaphore().handle()};
 
         VkSubmitInfo submit_info{};
@@ -565,7 +565,7 @@ namespace vulkan_engine::rendering
         submit_info.signalSemaphoreCount = 1;
         submit_info.pSignalSemaphores    = signal_semaphores;
 
-        // 场景提交不需要 fence，ImGui 提交会使用 frame_fence
+        // 鍦烘櫙鎻愪氦涓嶉渶瑕?fence锛孖mGui 鎻愪氦浼氫娇鐢?frame_fence
         vkQueueSubmit(device_->graphics_queue().handle(), 1, &submit_info, VK_NULL_HANDLE);
     }
 
@@ -576,7 +576,7 @@ namespace vulkan_engine::rendering
             return;
         }
 
-        // 使用 Dynamic Rendering 渲染 UI 到 SwapChain
+        // 浣跨敤 Dynamic Rendering 娓叉煋 UI 鍒?SwapChain
         record_ui_commands_dynamic(editor);
         submit_ui_commands_dynamic();
     }
@@ -586,11 +586,11 @@ namespace vulkan_engine::rendering
         auto&           cmd        = ui_cmd_buffers_[current_frame_];
         VkCommandBuffer cmd_handle = cmd.handle();
 
-        // 重置并录制
+        // 閲嶇疆骞跺綍鍒?
         vkResetCommandBuffer(cmd_handle, 0);
         cmd.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
-        // 转换 swap chain image 到 COLOR_ATTACHMENT_OPTIMAL
+        // 杞崲 swap chain image 鍒?COLOR_ATTACHMENT_OPTIMAL
         VkImageMemoryBarrier barrier{};
         barrier.sType                           = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
         barrier.oldLayout                       = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -618,7 +618,7 @@ namespace vulkan_engine::rendering
                              1,
                              &barrier);
 
-        // 开始 Dynamic Rendering
+        // 寮€濮?Dynamic Rendering
         VkRenderingAttachmentInfo color_attachment{};
         color_attachment.sType            = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
         color_attachment.imageView        = swap_chain_->get_image(current_image_).view;
@@ -636,12 +636,12 @@ namespace vulkan_engine::rendering
 
         vkCmdBeginRendering(cmd_handle, &rendering_info);
 
-        // 渲染 ImGui
+        // 娓叉煋 ImGui
         editor.render_to_command_buffer(cmd_handle);
 
         vkCmdEndRendering(cmd_handle);
 
-        // 转换 swap chain image 到 PRESENT_SRC_KHR
+        // 杞崲 swap chain image 鍒?PRESENT_SRC_KHR
         barrier.oldLayout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         barrier.newLayout     = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
         barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
@@ -666,7 +666,7 @@ namespace vulkan_engine::rendering
     {
         auto& cmd = ui_cmd_buffers_[current_frame_];
 
-        // 等待：1) swap chain image 可用, 2) 场景渲染完成
+        // 绛夊緟锛?) swap chain image 鍙敤, 2) 鍦烘櫙娓叉煋瀹屾垚
         VkSemaphore wait_semaphores[] = {
             frame_sync_->get_current_acquire_semaphore().handle(),
             frame_sync_->get_current_scene_finished_semaphore().handle()
@@ -676,7 +676,7 @@ namespace vulkan_engine::rendering
             VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
         };
 
-        // 信号：render finished（per-image）
+        // 淇″彿锛歳ender finished锛坧er-image锛?
         VkSemaphore signal_semaphores[] = {frame_sync_->get_render_finished_semaphore(current_image_).handle()};
 
         VkSubmitInfo submit_info{};
@@ -690,7 +690,7 @@ namespace vulkan_engine::rendering
         submit_info.signalSemaphoreCount = 1;
         submit_info.pSignalSemaphores    = signal_semaphores;
 
-        // 使用 frame fence
+        // 浣跨敤 frame fence
         VkFence frame_fence = frame_sync_->get_current_frame_fence().handle();
         vkQueueSubmit(device_->graphics_queue().handle(), 1, &submit_info, frame_fence);
     }
@@ -706,11 +706,11 @@ namespace vulkan_engine::rendering
         VkSemaphore present_semaphore = frame_sync_->get_render_finished_semaphore(current_image_).handle();
         swap_chain_->present(device_->graphics_queue().handle(), current_image_, present_semaphore);
 
-        // 推进到下一帧
+        // 鎺ㄨ繘鍒颁笅涓€甯?
         frame_sync_->advance_frame();
         frame_started_ = false;
 
-        // 应用待处理的 resize（在帧边界）
+        // 搴旂敤寰呭鐞嗙殑 resize锛堝湪甯ц竟鐣岋級
         if (resize_pending_)
         {
             apply_pending_resize();
@@ -742,7 +742,7 @@ namespace vulkan_engine::rendering
             return;
         }
 
-        // 标记为待处理，在帧边界应用
+        // 鏍囪涓哄緟澶勭悊锛屽湪甯ц竟鐣屽簲鐢?
         resize_pending_ = true;
         pending_width_  = width;
         pending_height_ = height;
@@ -784,17 +784,17 @@ namespace vulkan_engine::rendering
 
         resize_pending_ = false;
 
-        // 等待 GPU 完成
+        // 绛夊緟 GPU 瀹屾垚
         vkDeviceWaitIdle(device_->device().handle());
 
-        // 重建 swap chain
+        // 閲嶅缓 swap chain
         if (!swap_chain_->recreate())
         {
             logger::error("Failed to recreate swap chain");
             return;
         }
 
-        // 重建相关资源
+        // 閲嶅缓鐩稿叧璧勬簮
         recreate_swap_chain_resources();
 
         logger::info("Renderer resize applied: " + std::to_string(pending_width_) + "x" + std::to_string(pending_height_));
@@ -802,14 +802,14 @@ namespace vulkan_engine::rendering
 
     void Renderer::recreate_swap_chain_resources()
     {
-        // 重建深度缓冲
+        // 閲嶅缓娣卞害缂撳啿
         depth_buffer_.reset();
         depth_buffer_ = std::make_unique<vulkan::DepthBuffer>(
                                                               device_,
                                                               swap_chain_->width(),
                                                               swap_chain_->height());
 
-        // 重建 framebuffers
+        // 閲嶅缓 framebuffers
         framebuffer_pool_.reset();
         framebuffer_pool_ = std::make_unique<vulkan::FramebufferPool>(device_);
 
@@ -831,12 +831,12 @@ namespace vulkan_engine::rendering
                                                  swap_chain_->height(),
                                                  depth_buffer_->view());
 
-        // 重建同步对象
+        // 閲嶅缓鍚屾瀵硅薄
         frame_sync_.reset();
         frame_sync_ = std::make_unique<vulkan::FrameSyncManager>(device_, config_.max_frames_in_flight);
         frame_sync_->resize_render_finished_semaphores(swap_chain_->image_count());
 
-        // 重建 RenderTarget
+        // 閲嶅缓 RenderTarget
         recreate_render_target();
     }
 
@@ -849,14 +849,14 @@ namespace vulkan_engine::rendering
 
         render_target_->resize(swap_chain_->width(), swap_chain_->height());
 
-        // 重新创建 framebuffer
+        // 閲嶆柊鍒涘缓 framebuffer
         auto offscreen_pass = render_pass_manager_->get_offscreen_render_pass(
                                                                               render_target_->color_format(),
                                                                               render_target_->depth_format());
 
         render_target_->create_framebuffer(offscreen_pass);
 
-        // 更新 viewport
+        // 鏇存柊 viewport
         if (viewport_)
         {
             viewport_->resize(swap_chain_->width(), swap_chain_->height());
@@ -874,7 +874,7 @@ namespace vulkan_engine::rendering
             return;
         }
 
-        // 读取上一帧的结果
+        // 璇诲彇涓婁竴甯х殑缁撴灉
         uint32_t prev_frame = (current_frame_ + 1) % config_.max_frames_in_flight;
         if (!query_pools_initialized_[prev_frame])
         {
@@ -894,7 +894,7 @@ namespace vulkan_engine::rendering
 
         if (result == VK_SUCCESS && timestamps[1] > timestamps[0])
         {
-            // 计算 GPU 时间
+            // 璁＄畻 GPU 鏃堕棿
             VkPhysicalDeviceProperties props;
             vkGetPhysicalDeviceProperties(device_->physical_device().handle(), &props);
             float timestamp_period = props.limits.timestampPeriod; // nanoseconds per tick
@@ -902,17 +902,17 @@ namespace vulkan_engine::rendering
             uint64_t gpu_time_ns = static_cast<uint64_t>((timestamps[1] - timestamps[0]) * timestamp_period);
             float    gpu_time_us = static_cast<float>(gpu_time_ns) / 1000.0f;
 
-            // 存入环形缓冲区
+            // 瀛樺叆鐜舰缂撳啿鍖?
             gpu_frame_times_[gpu_time_write_index_] = gpu_time_us;
             gpu_time_write_index_                   = (gpu_time_write_index_ + 1) % GPU_TIME_HISTORY_SIZE;
 
-            // 计算平滑平均值
+            // 璁＄畻骞虫粦骞冲潎鍊?
             float sum = 0.0f;
             for (float t : gpu_frame_times_)
             {
                 sum += t;
             }
-            gpu_render_time_ms_ = (sum / GPU_TIME_HISTORY_SIZE) / 1000.0f; // 转换为毫秒
+            gpu_render_time_ms_ = (sum / GPU_TIME_HISTORY_SIZE) / 1000.0f; // 杞崲涓烘绉?
         }
     }
 } // namespace vulkan_engine::rendering

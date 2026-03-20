@@ -1,9 +1,9 @@
-﻿#include "application/app/Application.hpp"
-#include "platform/windowing/Window.hpp"
-#include "platform/input/InputManager.hpp"
-#include "platform/filesystem/PathUtils.hpp"
-#include "vulkan/device/Device.hpp"
-#include "vulkan/device/SwapChain.hpp"
+#include "engine/application/app/Application.hpp"
+#include "engine/platform/windowing/Window.hpp"
+#include "engine/platform/input/InputManager.hpp"
+#include "engine/platform/filesystem/PathUtils.hpp"
+#include "engine/rhi/vulkan/device/Device.hpp"
+#include "engine/rhi/vulkan/device/SwapChain.hpp"
 #include <iostream>
 
 #ifdef _WIN32

@@ -1,6 +1,6 @@
-#include "rendering/Viewport.hpp"
-#include "vulkan/utils/VulkanError.hpp"
-#include "core/utils/Logger.hpp"
+#include "engine/rendering/Viewport.hpp"
+#include "engine/rhi/vulkan/utils/VulkanError.hpp"
+#include "engine/core/utils/Logger.hpp"
 
 namespace vulkan_engine::rendering
 {
@@ -67,7 +67,7 @@ namespace vulkan_engine::rendering
 
     void Viewport::request_resize(uint32_t width, uint32_t height)
     {
-        // 更新显示尺寸
+        // 鏇存柊鏄剧ず灏哄
         display_width_  = width;
         display_height_ = height;
 
@@ -98,7 +98,7 @@ namespace vulkan_engine::rendering
             render_target_->resize(width, height);
         }
 
-        // 标记 ImGui 纹理需要更新
+        // 鏍囪 ImGui 绾圭悊闇€瑕佹洿鏂?
         imgui_texture_dirty_ = true;
 
         logger::info("Viewport resized to: " + std::to_string(width) + "x" + std::to_string(height));

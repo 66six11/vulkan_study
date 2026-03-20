@@ -1,6 +1,6 @@
-#include "rendering/resources/ObjLoader.hpp"
-#include "core/utils/Logger.hpp"
-#include "platform/filesystem/PathUtils.hpp"
+#include "engine/rendering/resources/ObjLoader.hpp"
+#include "engine/core/utils/Logger.hpp"
+#include "engine/platform/filesystem/PathUtils.hpp"
 #include <fstream>
 #include <sstream>
 #include <algorithm>

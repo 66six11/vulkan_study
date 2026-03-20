@@ -1,4 +1,4 @@
-﻿#include "rendering/resources/ResourceManager.hpp"
+#include "engine/rendering/resources/ResourceManager.hpp"
 #include <stdexcept>
 
 namespace vulkan_engine::rendering

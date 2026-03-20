@@ -1,7 +1,7 @@
 #pragma once
 
-#include "vulkan/device/Device.hpp"
-#include "vulkan/utils/VulkanError.hpp"
+#include "engine/rhi/vulkan/device/Device.hpp"
+#include "engine/rhi/vulkan/utils/VulkanError.hpp"
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
 #include <memory>
@@ -10,27 +10,27 @@
 
 namespace vulkan_engine::vulkan::memory
 {
-    // 使用 VMA 原生的 VmaBudget 和 VmaStats
+    // 浣跨敤 VMA 鍘熺敓鐨?VmaBudget 鍜?VmaStats
 
-    // VMA 池创建信息
+    // VMA 姹犲垱寤轰俊鎭?
     struct PoolCreateInfo
     {
         uint32_t     memoryTypeIndex = 0;
-        VkDeviceSize blockSize       = 0; // 0 = 使用默认
+        VkDeviceSize blockSize       = 0; // 0 = 浣跨敤榛樿
         uint32_t     minBlockCount   = 0;
         uint32_t     maxBlockCount   = 0;
         std::string  name;
     };
 
-    // VMA 分配器管理器
+    // VMA 鍒嗛厤鍣ㄧ鐞嗗櫒
     class VmaAllocator
     {
         public:
             struct CreateInfo
             {
                 bool enableDefragmentation     = true;
-                bool enableBudget              = true;  // 启用预算查询
-                bool recordAllocations         = false; // Debug build 时启用
+                bool enableBudget              = true;  // 鍚敤棰勭畻鏌ヨ
+                bool recordAllocations         = false; // Debug build 鏃跺惎鐢?
                 bool enableMemoryLeakDetection = false;
             };
 
@@ -45,34 +45,34 @@ namespace vulkan_engine::vulkan::memory
             VmaAllocator(VmaAllocator&& other) noexcept;
             VmaAllocator& operator=(VmaAllocator&& other) noexcept;
 
-            // 获取原生 VMA 分配器
+            // 鑾峰彇鍘熺敓 VMA 鍒嗛厤鍣?
             ::VmaAllocator handle() const noexcept { return allocator_; }
             bool           isValid() const noexcept { return allocator_ != VK_NULL_HANDLE; }
 
-            // 设备访问
+            // 璁惧璁块棶
             std::shared_ptr<DeviceManager> device() const { return deviceManager_; }
 
-            // 内存池管理
+            // 鍐呭瓨姹犵鐞?
             VmaPool createPool(const PoolCreateInfo& info);
             void    destroyPool(VmaPool pool);
 
-            // 统计信息 - 直接使用 VMA 原生功能
-            // 打印统计信息到日志
+            // 缁熻淇℃伅 - 鐩存帴浣跨敤 VMA 鍘熺敓鍔熻兘
+            // 鎵撳嵃缁熻淇℃伅鍒版棩蹇?
             void printStats() const;
 
-            // 获取 JSON 格式的详细统计（适合调试）
+            // 鑾峰彇 JSON 鏍煎紡鐨勮缁嗙粺璁★紙閫傚悎璋冭瘯锛?
             std::string buildStatsString(bool detailed = true) const;
 
-            // 预算查询（GPU 内存预算）- 返回堆预算数组
+            // 棰勭畻鏌ヨ锛圙PU 鍐呭瓨棰勭畻锛? 杩斿洖鍫嗛绠楁暟缁?
             std::vector<VmaBudget> getHeapBudgets() const;
 
-            // 导出详细分配信息到日志
+            // 瀵煎嚭璇︾粏鍒嗛厤淇℃伅鍒版棩蹇?
             void dumpAllocations() const;
 
-            // 检查是否支持特定内存类型
+            // 妫€鏌ユ槸鍚︽敮鎸佺壒瀹氬唴瀛樼被鍨?
             bool supportsMemoryType(uint32_t memoryTypeIndex, VkMemoryPropertyFlags requiredFlags) const;
 
-            // 工具函数
+            // 宸ュ叿鍑芥暟
             static std::string allocationFlagsToString(VmaAllocationCreateFlags flags);
 
         private:

@@ -1,6 +1,6 @@
-#include "vulkan/pipelines/RenderPassManager.hpp"
-#include "vulkan/utils/VulkanError.hpp"
-#include "core/utils/Logger.hpp"
+#include "engine/rhi/vulkan/pipelines/RenderPassManager.hpp"
+#include "engine/rhi/vulkan/utils/VulkanError.hpp"
+#include "engine/core/utils/Logger.hpp"
 
 namespace vulkan_engine::vulkan
 {
@@ -127,8 +127,8 @@ namespace vulkan_engine::vulkan
 
     void RenderPassManager::cleanup_unused()
     {
-        // 目前简单实现：清空所有缓存
-        // 后续可以实现引用计数
+        // 鐩墠绠€鍗曞疄鐜帮細娓呯┖鎵€鏈夌紦瀛?
+        // 鍚庣画鍙互瀹炵幇寮曠敤璁℃暟
         clear();
     }
 
@@ -247,7 +247,7 @@ namespace vulkan_engine::vulkan
     {
         std::vector<VkAttachmentDescription> attachments(2);
 
-        // Color attachment - 最终布局为 SHADER_READ_ONLY
+        // Color attachment - 鏈€缁堝竷灞€涓?SHADER_READ_ONLY
         attachments[0].format         = color_format;
         attachments[0].samples        = VK_SAMPLE_COUNT_1_BIT;
         attachments[0].loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;

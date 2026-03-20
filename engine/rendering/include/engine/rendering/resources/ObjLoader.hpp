@@ -1,6 +1,6 @@
 #pragma once
 
-#include "rendering/resources/Mesh.hpp"
+#include "engine/rendering/resources/Mesh.hpp"
 #include <string>
 #include <memory>
 #include <unordered_map>

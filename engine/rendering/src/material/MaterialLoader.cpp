@@ -1,7 +1,7 @@
-#include "rendering/material/MaterialLoader.hpp"
-#include "core/utils/Logger.hpp"
-#include "platform/filesystem/PathUtils.hpp"
-#include "platform/filesystem/FileSystem.hpp"
+#include "engine/rendering/material/MaterialLoader.hpp"
+#include "engine/core/utils/Logger.hpp"
+#include "engine/platform/filesystem/PathUtils.hpp"
+#include "engine/platform/filesystem/FileSystem.hpp"
 
 #include <fstream>
 #include <nlohmann/json.hpp>
@@ -29,7 +29,7 @@ namespace vulkan_engine::rendering
 
     std::shared_ptr<Material> MaterialLoader::load(const std::string& path, VkRenderPass render_pass)
     {
-        // 直接写死路径，不解析
+        // 鐩存帴鍐欐璺緞锛屼笉瑙ｆ瀽
         std::string full_path = "D:/TechArt/Vulkan/materials/" + path;
 
         // Parse JSON and create material
@@ -225,7 +225,7 @@ namespace vulkan_engine::rendering
 
     std::shared_ptr<Material> MaterialLoader::load(const std::string& path, VkFormat color_format, VkFormat depth_format)
     {
-        // 直接写死路径，不解析
+        // 鐩存帴鍐欐璺緞锛屼笉瑙ｆ瀽
         std::string full_path = "D:/TechArt/Vulkan/materials/" + path;
 
         // Parse JSON and create material

@@ -1,4 +1,4 @@
-#include "core/utils/Logger.hpp"
+#include "engine/core/utils/Logger.hpp"
 
 #include <iostream>
 #include <iomanip>
@@ -14,7 +14,7 @@
 
 namespace vulkan_engine::logger
 {
-    // 日志级别转字符串
+    // 鏃ュ織绾у埆杞瓧绗︿覆
     static const char* level_to_string(Level level)
     {
         switch (level)
@@ -28,7 +28,7 @@ namespace vulkan_engine::logger
         }
     }
 
-    // 日志级别转控制台颜色（Windows）
+    // 鏃ュ織绾у埆杞帶鍒跺彴棰滆壊锛圵indows锛?
     #ifdef _WIN32
     static WORD level_to_color(Level level)
     {
@@ -44,7 +44,7 @@ namespace vulkan_engine::logger
     }
     #endif
 
-    // 内部实现类
+    // 鍐呴儴瀹炵幇绫?
     class LoggerImpl
     {
         public:
@@ -58,13 +58,13 @@ namespace vulkan_engine::logger
                 config_      = config;
                 initialized_ = true;
 
-                // 初始化控制台输出
+                // 鍒濆鍖栨帶鍒跺彴杈撳嚭
                 if (static_cast<int>(config.target) & static_cast<int>(OutputTarget::Console))
                 {
                     initialize_console();
                 }
 
-                // 初始化文件输出
+                // 鍒濆鍖栨枃浠惰緭鍑?
                 if (static_cast<int>(config.target) & static_cast<int>(OutputTarget::File))
                 {
                     open_log_file(config.log_file_path);
@@ -86,7 +86,7 @@ namespace vulkan_engine::logger
 
             void log(Level level, const std::string& message)
             {
-                // 快速路径：检查日志级别（无锁）
+                // 蹇€熻矾寰勶細妫€鏌ユ棩蹇楃骇鍒紙鏃犻攣锛?
                 if (static_cast<int>(level) < static_cast<int>(config_.min_level))
                     return;
 
@@ -94,20 +94,20 @@ namespace vulkan_engine::logger
 
                 if (!initialized_)
                 {
-                    // 未初始化时，初始化默认配置
+                    // 鏈垵濮嬪寲鏃讹紝鍒濆鍖栭粯璁ら厤缃?
                     initialize_default();
                 }
 
-                // 格式化日志消息
+                // 鏍煎紡鍖栨棩蹇楁秷鎭?
                 std::string formatted = format_message(level, message);
 
-                // 输出到控制台
+                // 杈撳嚭鍒版帶鍒跺彴
                 if (static_cast<int>(config_.target) & static_cast<int>(OutputTarget::Console))
                 {
                     write_to_console(level, formatted);
                 }
 
-                // 输出到文件
+                // 杈撳嚭鍒版枃浠?
                 if (file_stream_.is_open())
                 {
                     file_stream_ << formatted << std::endl;
@@ -187,14 +187,14 @@ namespace vulkan_engine::logger
             void initialize_console()
             {
                 #ifdef _WIN32
-                // 获取标准输出句柄
+                // 鑾峰彇鏍囧噯杈撳嚭鍙ユ焺
                 stdout_handle_ = GetStdHandle(STD_OUTPUT_HANDLE);
                 stderr_handle_ = GetStdHandle(STD_ERROR_HANDLE);
 
-                // 尝试设置控制台代码页为 UTF-8
+                // 灏濊瘯璁剧疆鎺у埗鍙颁唬鐮侀〉涓?UTF-8
                 SetConsoleOutputCP(CP_UTF8);
 
-                // 如果 stdout 被重定向到文件，尝试启用虚拟终端处理
+                // 濡傛灉 stdout 琚噸瀹氬悜鍒版枃浠讹紝灏濊瘯鍚敤铏氭嫙缁堢澶勭悊
                 DWORD mode = 0;
                 if (GetConsoleMode(stdout_handle_, &mode))
                 {
@@ -202,11 +202,11 @@ namespace vulkan_engine::logger
                     SetConsoleMode(stdout_handle_, mode);
                 }
 
-                // 设置控制台字体支持 Unicode
+                // 璁剧疆鎺у埗鍙板瓧浣撴敮鎸?Unicode
                 CONSOLE_FONT_INFOEX font_info = {sizeof(CONSOLE_FONT_INFOEX)};
                 if (GetCurrentConsoleFontEx(stdout_handle_, FALSE, &font_info))
                 {
-                    // 使用 Consolas 或 Lucida Console 字体
+                    // 浣跨敤 Consolas 鎴?Lucida Console 瀛椾綋
                     wcscpy_s(font_info.FaceName, L"Consolas");
                     SetCurrentConsoleFontEx(stdout_handle_, FALSE, &font_info);
                 }
@@ -218,7 +218,7 @@ namespace vulkan_engine::logger
                 std::string path = file_path;
                 if (path.empty())
                 {
-                    // 生成默认日志文件名
+                    // 鐢熸垚榛樿鏃ュ織鏂囦欢鍚?
                     auto    now  = std::chrono::system_clock::now();
                     auto    time = std::chrono::system_clock::to_time_t(now);
                     std::tm local_time;
@@ -235,7 +235,7 @@ namespace vulkan_engine::logger
                     path = oss.str();
                 }
 
-                // 确保目录存在
+                // 纭繚鐩綍瀛樺湪
                 #ifdef _WIN32
                 std::string dir = path.substr(0, path.find_last_of("/\\"));
                 if (!dir.empty())
@@ -253,7 +253,7 @@ namespace vulkan_engine::logger
                 file_stream_.open(path, std::ios::out | std::ios::app);
                 if (!file_stream_.is_open())
                 {
-                    // 文件打开失败，输出错误到控制台
+                    // 鏂囦欢鎵撳紑澶辫触锛岃緭鍑洪敊璇埌鎺у埗鍙?
                     write_to_console(Level::Error, "[ERROR] Failed to open log file: " + path);
                 }
             }
@@ -262,25 +262,25 @@ namespace vulkan_engine::logger
             {
                 std::ostringstream oss;
 
-                // 时间戳
+                // 鏃堕棿鎴?
                 if (config_.include_timestamp)
                 {
                     oss << "[" << Logger::get_timestamp() << "] ";
                 }
 
-                // 日志级别
+                // 鏃ュ織绾у埆
                 if (config_.include_level)
                 {
                     oss << "[" << std::setw(5) << std::left << level_to_string(level) << "] ";
                 }
 
-                // 线程ID
+                // 绾跨▼ID
                 if (config_.include_thread_id)
                 {
                     oss << "[" << Logger::get_thread_id() << "] ";
                 }
 
-                // 消息内容
+                // 娑堟伅鍐呭
                 oss << message;
 
                 return oss.str();
@@ -289,12 +289,12 @@ namespace vulkan_engine::logger
             void write_to_console(Level level, const std::string& message)
             {
                 #ifdef _WIN32
-                // 使用 Windows API 写入控制台，支持 Unicode
+                // 浣跨敤 Windows API 鍐欏叆鎺у埗鍙帮紝鏀寔 Unicode
                 HANDLE handle = (level >= Level::Error) ? stderr_handle_ : stdout_handle_;
 
                 if (handle != INVALID_HANDLE_VALUE)
                 {
-                    // 设置颜色
+                    // 璁剧疆棰滆壊
                     CONSOLE_SCREEN_BUFFER_INFO console_info;
                     WORD                       original_attributes = 0;
                     bool                       has_console_info    = GetConsoleScreenBufferInfo(handle, &console_info);
@@ -304,12 +304,12 @@ namespace vulkan_engine::logger
                         SetConsoleTextAttribute(handle, level_to_color(level));
                     }
 
-                    // 转换为宽字符并写入
+                    // 杞崲涓哄瀛楃骞跺啓鍏?
                     std::wstring wmessage = utf8_to_wstring(message + "\n");
                     DWORD        written  = 0;
                     WriteConsoleW(handle, wmessage.c_str(), static_cast<DWORD>(wmessage.size()), &written, nullptr);
 
-                    // 恢复原始颜色
+                    // 鎭㈠鍘熷棰滆壊
                     if (has_console_info)
                     {
                         SetConsoleTextAttribute(handle, original_attributes);
@@ -317,7 +317,7 @@ namespace vulkan_engine::logger
                 }
                 else
                 {
-                    // 控制台句柄无效，使用标准输出（可能被重定向到文件）
+                    // 鎺у埗鍙板彞鏌勬棤鏁堬紝浣跨敤鏍囧噯杈撳嚭锛堝彲鑳借閲嶅畾鍚戝埌鏂囦欢锛?
                     if (level >= Level::Error)
                     {
                         std::cerr << message << std::endl;
@@ -328,7 +328,7 @@ namespace vulkan_engine::logger
                     }
                 }
                 #else
-                // Linux/Mac 使用 ANSI 颜色代码
+                // Linux/Mac 浣跨敤 ANSI 棰滆壊浠ｇ爜
                 const char* color_code = "";
                 switch (level)
                 {
@@ -368,7 +368,7 @@ namespace vulkan_engine::logger
                 MultiByteToWideChar(CP_UTF8, 0, str.c_str(), (int)str.size(), &wstr[0], size_needed);
                 return wstr;
                 #else
-                // Linux/Mac 使用标准转换
+                // Linux/Mac 浣跨敤鏍囧噯杞崲
                 std::wstring wstr;
                 wstr.reserve(str.size());
                 for (char c : str)
@@ -391,7 +391,7 @@ namespace vulkan_engine::logger
             #endif
     };
 
-    // Logger 类实现
+    // Logger 绫诲疄鐜?
 
     Logger& Logger::instance()
     {
@@ -485,7 +485,7 @@ namespace vulkan_engine::logger
         std::ostringstream oss;
         oss << std::put_time(&local_time, "%Y-%m-%d %H:%M:%S");
 
-        // 添加毫秒
+        // 娣诲姞姣
         auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                                                                         now.time_since_epoch()) % 1000;
         oss << "." << std::setfill('0') << std::setw(3) << ms.count();

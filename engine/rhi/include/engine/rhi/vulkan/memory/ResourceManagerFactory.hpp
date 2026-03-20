@@ -1,11 +1,11 @@
 /**
  * @file ResourceManagerFactory.hpp
- * @brief 资源管理器工厂
+ * @brief 璧勬簮绠＄悊鍣ㄥ伐鍘?
  */
 
 #pragma once
 
-#include "vulkan/memory/IAllocator.hpp"
+#include "engine/rhi/vulkan/memory/IAllocator.hpp"
 #include <memory>
 
 namespace vulkan_engine::vulkan
@@ -16,45 +16,45 @@ namespace vulkan_engine::vulkan
 namespace vulkan_engine::vulkan::memory
 {
     /**
-     * @brief 资源管理器类型
+     * @brief 璧勬簮绠＄悊鍣ㄧ被鍨?
      */
     enum class ResourceManagerType
     {
         VMA,    // Vulkan Memory Allocator
-        Custom, // 自定义实现
-        Mock    // 测试用 Mock
+        Custom, // 鑷畾涔夊疄鐜?
+        Mock    // 娴嬭瘯鐢?Mock
     };
 
     /**
-     * @brief 资源管理器创建配置
+     * @brief 璧勬簮绠＄悊鍣ㄥ垱寤洪厤缃?
      */
     struct ResourceManagerConfig
     {
         ResourceManagerType type = ResourceManagerType::VMA;
 
-        // 通用选项
+        // 閫氱敤閫夐」
         bool enableDefaultPools = true;
         bool enableBudget       = true;
 
-        // VMA 特定选项
+        // VMA 鐗瑰畾閫夐」
         bool enableDefragmentation     = true;
         bool enableMemoryLeakDetection = false;
 
-        // 调试选项
+        // 璋冭瘯閫夐」
         bool recordAllocations = false;
         bool detailedLogging   = false;
     };
 
     /**
-     * @brief 资源管理器工厂
+     * @brief 璧勬簮绠＄悊鍣ㄥ伐鍘?
      * 
-     * 用于创建不同类型的资源管理器实例
+     * 鐢ㄤ簬鍒涘缓涓嶅悓绫诲瀷鐨勮祫婧愮鐞嗗櫒瀹炰緥
      */
     class ResourceManagerFactory
     {
         public:
             /**
-         * @brief 创建资源管理器
+         * @brief 鍒涘缓璧勬簮绠＄悊鍣?
          */
             [[nodiscard]] static IResourceManagerPtr create(
                 std::shared_ptr<DeviceManager> device,
@@ -62,7 +62,7 @@ namespace vulkan_engine::vulkan::memory
             );
 
             /**
-         * @brief 创建 VMA 资源管理器（默认）
+         * @brief 鍒涘缓 VMA 璧勬簮绠＄悊鍣紙榛樿锛?
          */
             [[nodiscard]] static IResourceManagerPtr createVMA(
                 std::shared_ptr<DeviceManager> device,
@@ -70,22 +70,22 @@ namespace vulkan_engine::vulkan::memory
             );
 
             /**
-         * @brief 创建 Mock 资源管理器（用于测试）
+         * @brief 鍒涘缓 Mock 璧勬簮绠＄悊鍣紙鐢ㄤ簬娴嬭瘯锛?
          */
             [[nodiscard]] static IResourceManagerPtr createMock();
 
             /**
-         * @brief 获取默认配置
+         * @brief 鑾峰彇榛樿閰嶇疆
          */
             [[nodiscard]] static ResourceManagerConfig defaultConfig();
 
             /**
-         * @brief 获取调试配置
+         * @brief 鑾峰彇璋冭瘯閰嶇疆
          */
             [[nodiscard]] static ResourceManagerConfig debugConfig();
 
             /**
-         * @brief 获取高性能配置
+         * @brief 鑾峰彇楂樻€ц兘閰嶇疆
          */
             [[nodiscard]] static ResourceManagerConfig performanceConfig();
     };
