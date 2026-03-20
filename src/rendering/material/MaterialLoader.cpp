@@ -10,6 +10,18 @@ namespace vulkan_engine::rendering
 {
     using json = nlohmann::json;
 
+    // Helper to generate cache key that includes format information
+    static std::string generate_cache_key(const std::string& name, VkFormat color_format, VkFormat depth_format)
+    {
+        return name + "_" + std::to_string(color_format) + "_" + std::to_string(depth_format);
+    }
+
+    // Helper to generate cache key for traditional render pass
+    static std::string generate_cache_key(const std::string& name, VkRenderPass render_pass)
+    {
+        return name + "_rp_" + std::to_string(reinterpret_cast<uint64_t>(render_pass));
+    }
+
     MaterialLoader::MaterialLoader(std::shared_ptr<vulkan::DeviceManager> device)
         : device_(std::move(device)), texture_loader_(device_)
     {
@@ -40,11 +52,14 @@ namespace vulkan_engine::rendering
             config.render_pass = render_pass;
             config.name        = j.value("name", "DefaultMaterial");
 
-            // Check cache using material name (not full_path)
-            auto it = material_cache_.find(config.name);
+            // Generate cache key that includes render pass
+            std::string cache_key = generate_cache_key(config.name, render_pass);
+
+            // Check cache using generated key
+            auto it = material_cache_.find(cache_key);
             if (it != material_cache_.end())
             {
-                logger::info("Material '" + config.name + "' found in cache");
+                logger::info("Material '" + config.name + "' (render pass) found in cache");
                 return it->second;
             }
 
@@ -194,8 +209,8 @@ namespace vulkan_engine::rendering
             logger::warn("MaterialLoader::load(path, render_pass) is deprecated, use load(path, color_format, depth_format) instead");
             material->build(VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_D32_SFLOAT);
 
-            // Cache the material using name as key (consistent with get() and has())
-            material_cache_[config.name] = material;
+            // Cache the material using key that includes render pass
+            material_cache_[cache_key] = material;
 
             logger::info("Material " + config.name + " loaded from " + full_path);
 
@@ -234,11 +249,15 @@ namespace vulkan_engine::rendering
             config.depth_format = depth_format;
             config.name         = j.value("name", "DefaultMaterial");
 
-            // Check cache using material name
-            auto it = material_cache_.find(config.name);
+            // Generate cache key that includes color and depth formats
+            std::string cache_key = generate_cache_key(config.name, color_format, depth_format);
+
+            // Check cache using generated key
+            auto it = material_cache_.find(cache_key);
             if (it != material_cache_.end())
             {
-                logger::info("Material '" + config.name + "' found in cache");
+                logger::info("Material '" + config.name + "' (" + std::to_string(color_format) + "/" + std::to_string(depth_format) +
+                             ") found in cache");
                 return it->second;
             }
 
@@ -334,6 +353,9 @@ namespace vulkan_engine::rendering
 
             // Build for dynamic rendering
             material->build(color_format, depth_format);
+
+            // Cache the material using key that includes formats
+            material_cache_[cache_key] = material;
 
             logger::info("Material " + config.name + " loaded from " + full_path);
             return material;

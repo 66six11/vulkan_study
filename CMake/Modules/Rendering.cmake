@@ -1,10 +1,11 @@
 # 渲染系统模块（Rendering Module）
 # 包含渲染图、资源管理、场景管理等
+# 依赖层级：Rendering -> Vulkan -> Platform -> Core
 
 # 创建Rendering模块
 create_vulkan_module(Rendering STATIC)
 
-# 链接依赖
+# 链接依赖 - Rendering 依赖 Vulkan 底层模块
 target_link_libraries(VulkanEngineRendering PUBLIC
         VulkanEngineVulkan
         VulkanEnginePlatform

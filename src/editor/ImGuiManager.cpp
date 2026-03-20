@@ -58,7 +58,8 @@ namespace vulkan_engine::editor
         // Create descriptor pool
         create_descriptor_pool(image_count);
 
-        // Setup Vulkan bindings
+        // Setup Vulkan bindings with traditional RenderPass
+        // Note: ImGui does not support Dynamic Rendering, must use RenderPass
         ImGui_ImplVulkan_InitInfo init_info = {};
         init_info.Instance                  = device->instance();
         init_info.PhysicalDevice            = device->physical_device();
@@ -67,7 +68,7 @@ namespace vulkan_engine::editor
         init_info.Queue                     = device->graphics_queue();
         init_info.PipelineCache             = VK_NULL_HANDLE;
         init_info.DescriptorPool            = descriptor_pool_;
-        init_info.RenderPass                = render_pass; // Use provided render pass for ImGui
+        init_info.RenderPass                = render_pass; // Must use traditional RenderPass
         init_info.Subpass                   = 0;
         init_info.MinImageCount             = image_count;
         init_info.ImageCount                = image_count;

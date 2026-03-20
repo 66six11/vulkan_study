@@ -29,15 +29,21 @@ add_library(VulkanEngineEditor STATIC
 
 add_library(VulkanEngine::Editor ALIAS VulkanEngineEditor)
 
-# 设置包含目录
-target_include_directories(VulkanEngineEditor PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
+# 强封口配置：
+# PUBLIC  - 其他模块只能通过 editor/xxx.hpp 访问本模块公共接口
+# PRIVATE - 内部实现需要访问完整 include/ 目录（兼容现有代码的包含方式）
+target_include_directories(VulkanEngineEditor
+        PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/editor>
+        PRIVATE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/editor>
 )
 
-# 链接依赖
+# 链接依赖 - Editor 只依赖上层 Rendering 模块
+# 注意：不直接依赖 Vulkan 模块，通过 Rendering 间接使用
 target_link_libraries(VulkanEngineEditor PUBLIC
         VulkanEngineRendering
-        VulkanEngineVulkan
         VulkanEnginePlatform
         VulkanEngineCore
 )

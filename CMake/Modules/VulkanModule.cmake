@@ -1,15 +1,21 @@
 # 模块化CMake构建系统
 # 自动创建和配置Vulkan引擎各个模块
 
-# 定义模块列表（按依赖顺序）
+# 定义模块列表（按依赖顺序 - 从底层到上层）
 set(VULKAN_ENGINE_MODULES
         Core
         Platform
-        Rendering
         Vulkan
+        Rendering
+        Editor
+        Application
 )
 
 # 创建Vulkan模块的通用函数
+# 强封口设计：
+#   - PUBLIC:  只暴露 include/<module>/ 目录（模块公共接口）
+#   - PRIVATE: 只暴露 src/<module>/ 目录（模块私有实现）
+#   - 禁止直接暴露整个 include/ 和 src/ 目录
 function(create_vulkan_module MODULE_NAME MODULE_TYPE)
     # MODULE_TYPE可以是:
     #   INTERFACE - 头文件模块
@@ -19,7 +25,7 @@ function(create_vulkan_module MODULE_NAME MODULE_TYPE)
     # 将模块名转换为小写用于目录匹配
     string(TOLOWER ${MODULE_NAME} MODULE_NAME_LOWER)
 
-    # 确定源目录和头目录
+    # 确定源目录和头目录（严格按模块隔离）
     set(MODULE_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/${MODULE_NAME_LOWER}")
     set(MODULE_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include/${MODULE_NAME_LOWER}")
 
@@ -49,6 +55,11 @@ function(create_vulkan_module MODULE_NAME MODULE_TYPE)
     if (MODULE_TYPE STREQUAL "INTERFACE")
         add_library(VulkanEngine${MODULE_NAME} INTERFACE)
         target_sources(VulkanEngine${MODULE_NAME} INTERFACE ${module_headers})
+
+        # INTERFACE 模块：只暴露公共头文件目录
+        target_include_directories(VulkanEngine${MODULE_NAME} INTERFACE
+                $<BUILD_INTERFACE:${MODULE_INCLUDE_DIR}>
+        )
     else ()
         if ("${module_sources}" STREQUAL "")
             message(WARNING "  No source files found for ${MODULE_NAME}, creating empty library")
@@ -57,18 +68,19 @@ function(create_vulkan_module MODULE_NAME MODULE_TYPE)
                 ${module_sources}
                 ${module_headers}
         )
-    endif ()
 
-    # 配置包含目录
-    if (MODULE_TYPE STREQUAL "INTERFACE")
-        target_include_directories(VulkanEngine${MODULE_NAME} INTERFACE
+        # 强封口配置：
+        # PUBLIC  - 模块公共接口（其他模块可见）：只暴露本模块的 include/<module>/
+        # PRIVATE - 模块内部使用（仅本模块可见）：暴露整个 include/ 和 src/<module>/
+        target_include_directories(VulkanEngine${MODULE_NAME}
+                PUBLIC
+                # 强封口：其他模块只能通过 <module>/xxx.hpp 访问本模块公共接口
+                $<BUILD_INTERFACE:${MODULE_INCLUDE_DIR}>
+                PRIVATE
+                # 内部实现需要访问完整 include/ 目录（兼容现有代码的包含方式）
                 $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-                $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
-        )
-    else ()
-        target_include_directories(VulkanEngine${MODULE_NAME} PUBLIC
-                $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-                $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+                # 本模块的 src 目录
+                $<BUILD_INTERFACE:${MODULE_SRC_DIR}>
         )
     endif ()
 

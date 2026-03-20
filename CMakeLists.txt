@@ -54,6 +54,9 @@ include(cmake/Modules/Editor.cmake)
 # 加载应用程序模块
 include(cmake/Modules/Application.cmake)
 
+# 加载应用程序入口模块（Editor、Demo 等）
+include(cmake/Modules/Apps.cmake)
+
 # 打印配置摘要
 include(cmake/Utils.cmake)
 print_configuration_summary()
