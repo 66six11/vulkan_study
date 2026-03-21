@@ -1,0 +1,10 @@
+[requires]
+vulkan-memory-allocator/3.0.1
+
+[generators]
+CMakeDeps
+CMakeToolchain
+
+[options]
+
+[imports]
